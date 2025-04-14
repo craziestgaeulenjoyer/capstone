@@ -1,0 +1,37 @@
+.hero-section {
+    background-image: url('/images/HeroSection-img.png');
+    background-repeat: no-repeat;
+    background-size: cover; 
+    background-position: center;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+    padding: 40px 20px;
+    height: 600px; 
+    width: 100%; 
+    max-width: 2300px; 
+}
+
+.hero-button {
+    background-color: #B47B50;
+    color: white;
+    padding: 12px 48px;
+    border: none;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+    
+    position: relative;
+    top: -70px; 
+    margin-bottom: 40px; 
+    margin-left: 300px; 
+}
+
+.hero-button:hover {
+    background-color: #c7794e; 
+}
+
+

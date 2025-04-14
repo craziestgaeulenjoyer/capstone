@@ -2,14 +2,14 @@
 import React from 'react';
 import NavbarLayout from '@/layouts/navbar_layouts/GuestNavBar_Layout';
 import Footer from '@/components/footer/Footer_MiAmore';
+import HeroSection from '@/components/HeroSection'; 
 
 const Home: React.FC = () => {
   return (
     <>
       <NavbarLayout>
-        <div className="p-6 text-2xl font-bold text-center">
-          Test
-        </div>
+        <HeroSection/>
+
       </NavbarLayout>
 
       <Footer />
@@ -18,3 +18,4 @@ const Home: React.FC = () => {
 };
 
 export default Home;
+
