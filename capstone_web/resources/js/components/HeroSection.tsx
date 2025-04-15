@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from '@inertiajs/react';
-import '../../css/HeroSection.css';
+import "../../css/HeroSection.css";
+
 
 const HeroSection: React.FC = () => {
   return (
@@ -13,4 +14,3 @@ const HeroSection: React.FC = () => {
 };
 
 export default HeroSection;
-

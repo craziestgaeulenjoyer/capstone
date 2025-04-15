@@ -7,9 +7,9 @@
     justify-content: flex-start;
     align-items: flex-end;
     padding: 40px 20px;
-    height: 600px; 
+    height: 500px; 
     width: 100%; 
-    max-width: 2300px; 
+    max-width: 1440px; 
 }
 
 .hero-button {
@@ -26,8 +26,8 @@
     
     position: relative;
     top: -70px; 
-    margin-bottom: 40px; 
-    margin-left: 300px; 
+    margin-bottom: 30px; 
+    margin-left: 130px; 
 }
 
 .hero-button:hover {
