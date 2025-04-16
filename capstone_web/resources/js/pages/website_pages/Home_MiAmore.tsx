@@ -2,8 +2,10 @@
 import React from 'react';
 import NavbarLayout from '@/layouts/navbar_layouts/GuestNavBar_Layout';
 import Footer from '@/components/footer/Footer_MiAmore';
-import HeroSection from '@/components/HeroSection';
-import FeatureSection from '@/components/FeatureSection';
+import HeroSection from '@/components/home_sections/HeroSection';
+import FeatureSection from '@/components/home_sections/FeatureSection';
+import WhyChooseUsSection from '@/components/home_sections/WhyChooseUsSEction';
+import BestSellerSection from '@/components/home_sections/BestSellerSection';
 
 const Home: React.FC = () => {
   return (
@@ -11,6 +13,8 @@ const Home: React.FC = () => {
       <NavbarLayout>
         <HeroSection/>
         <FeatureSection/>
+        <WhyChooseUsSection/>
+        <BestSellerSection/>
 
       </NavbarLayout>
 
