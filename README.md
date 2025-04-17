@@ -7,5 +7,12 @@ Official Repository for Capstone 1
 ------
 
 ✅ Website Repository
-❌ Mobile Repository (will initial once fixed)
+✅ Mobile Repository 
+
+------
+
+Dependencies to Install (PowerShell Terminal):
+
+- `npm install react-icons`
+- `npm install framer-motion`
 
