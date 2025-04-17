@@ -15,4 +15,5 @@ Dependencies to Install (PowerShell Terminal):
 
 - `npm install react-icons`
 - `npm install framer-motion`
+- `npm install react-intersection-observer`
 
