@@ -27,7 +27,7 @@ const FeaturesSection: React.FC = () => {
         <motion.img
           src="/images/green-cup.png"
           alt="Green Cup"
-          className="absolute top-0 left-0 w-72 md:w-56 lg:w-95 -rotate-[-35deg] -translate-y-1/4 -translate-x-1/3 z-0"
+          className="absolute top-0 left-0 w-75 md:w-56 lg:w-95 -rotate-[-35deg] -translate-y-1/4 -translate-x-1/3 z-0"
           variants={fadeLeft}
           initial="hidden"
           animate={inView ? 'visible' : 'hidden'}
@@ -79,7 +79,7 @@ const FeaturesSection: React.FC = () => {
           ].map((item, i) => (
             <div
               key={i}
-              className="bg-gray-200 border border-gray-400 h-70 w-70 p-8 text-center shadow-xl hover:bg-[#76B13A] transition-all duration-300"
+              className="bg-gray-200 border border-gray-400 h-70 w-70 p-8 text-center shadow-2xl hover:bg-[#c3ff8a] transition-all duration-300"
             >
               {item.icon}
               <h3 className="font-bold text-gray-800 text-xl">{item.title}</h3>
@@ -91,7 +91,7 @@ const FeaturesSection: React.FC = () => {
         <motion.img
           src="/images/choco-cup.png"
           alt="Choco Cup"
-          className="absolute left-245 w-52 md:w-50 lg:w-60 -rotate-[15deg] translate-x-1/4 -top-35 z-20"
+          className="absolute left-245 w-70 md:w-70 lg:w-65 -rotate-[15deg] translate-x-1/4 -top-35 z-20"
           variants={fadeRight}
           initial="hidden"
           animate={inView ? 'visible' : 'hidden'}

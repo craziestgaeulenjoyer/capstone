@@ -7,6 +7,7 @@ import FeatureSection from '@/components/home_sections/FeatureSection';
 import WhyChooseUsSection from '@/components/home_sections/WhyChooseUsSEction';
 import BestSellerSection from '@/components/home_sections/BestSellerSection';
 
+
 const Home: React.FC = () => {
   return (
     <>
