@@ -6,6 +6,8 @@ import HeroSection from '@/components/home_sections/HeroSection';
 import FeatureSection from '@/components/home_sections/FeatureSection';
 import WhyChooseUsSection from '@/components/home_sections/WhyChooseUsSEction';
 import BestSellerSection from '@/components/home_sections/BestSellerSection';
+import ContactSection from '@/components/home_sections/ContactSection';
+
 
 const Home: React.FC = () => {
   return (
@@ -15,6 +17,7 @@ const Home: React.FC = () => {
         <FeatureSection/>
         <WhyChooseUsSection/>
         <BestSellerSection/>
+        <ContactSection/>
 
       </NavbarLayout>
 
