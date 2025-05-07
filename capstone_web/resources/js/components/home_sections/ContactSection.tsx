@@ -1,73 +1,117 @@
-import React from 'react';
-import { FaPhoneAlt } from 'react-icons/fa';
+import React from "react";
+import { FaPhoneAlt } from "react-icons/fa";
+import { MdEmail } from "react-icons/md";
+import { IoMdSend } from "react-icons/io";
+import { motion } from "framer-motion";
 
 const ContactSection: React.FC = () => {
-
   return (
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-        {/* Left Side - Image & Text */}
+    <section className="py-16 px-4 bg-white" id="contact">
+      <div className="flex flex-col md:flex-row w-full max-w-6xl mx-auto overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          viewport={{ once: false, amount: 0.5 }}
+          className="w-full md:w-1/2 flex items-center justify-center p-2"
+        >
           <img
             src="/images/coffee-splash.png"
             alt="Coffee cups and beans"
-            className="w-full max-w-md object-contain"
+            className="w-full max-w-lg object-contain"
           />
+        </motion.div>
 
-          <div className="absolute bottom-4 left-4 bg-[#95C763] text-white p-6 rounded-xl w-[280px] sm:w-[300px] shadow-xl">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-white w-12 h-12 rounded-full flex items-center justify-center mb-3">
-                <span className="text-[#95C763] text-2xl font-bold">?</span>
-              </div>
-              <p className="text-white text-sm">
-                We’d love to hear from you — connect with us for inquiries, orders, or just a friendly chat!
-              </p>
-              <div className="mt-4 flex items-center text-white font-semibold">
+        <div className="w-full md:w-1/2 flex">
+          <div className="bg-[#8CB662] flex flex-col items-center justify-center p-6 text-white rounded-l-xl w-[60%]">
+            <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mb-4">
+              <span className="text-[#9D7353] text-3xl font-bold">?</span>
+            </div>
+            <p className="text-center text-sm max-w-xs mb-6">
+              We’d love to hear from you connect with us for inquiries, orders, or just a friendly chat!
+            </p>
+            <div className="flex flex-col gap-2 items-center text-sm">
+              <div className="flex items-center">
                 <FaPhoneAlt className="mr-2" />
                 +63 917 892 4125
+              </div>
+              <div className="flex items-center">
+                <MdEmail className="mr-2" />
+                miamore.cml@gmail.com
               </div>
             </div>
           </div>
 
-        {/* Right Side - Contact Form */}
-          <p className="text-sm text-[#00B2A9] font-semibold uppercase">Contact Us</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
-            <span className="text-[#95C763]">Reach</span> & Get in Touch With Us!
-          </h2>
+          <div className="bg-[#9D7353] p-8 text-white flex flex-col justify-center rounded-r-xl w-[90%]">
+            <p className="text-sm text-[#41E2DA] font-semibold uppercase">Contact Us</p>
 
-          <form className="space-y-4">
-            <input
-              type="text"
-              placeholder="Your Name"
-              className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#95C763]"
-            />
-            <input
-              type="email"
-              placeholder="example@gmail.com"
-              className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#95C763]"
-            />
-            <div className="flex">
-              <span className="inline-flex items-center px-3 border border-r-0 border-gray-300 bg-gray-100 rounded-l-md text-sm">
-                +63
-              </span>
-              <input
-                type="text"
-                placeholder="--- --- ----"
-                className="w-full border border-gray-300 rounded-r-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#95C763]"
-              />
-            </div>
-            <textarea
-              placeholder="Enter message"
-              rows={4}
-              className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#95C763]"
-            />
-            <button
-              type="submit"
-              className="w-full bg-[#95C763] text-white text-sm font-semibold py-2 rounded-md hover:bg-[#7ab44e] transition-all"
+            <motion.h2
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              viewport={{ once: false, amount: 0.5 }}
+              className="text-3xl font-bold mt-1 mb-6 leading-snug"
             >
-              SEND
-            </button>
-          </form>
+              <span className="text-[#8CB662]">Reach</span> & Get in Touch With Us!
+            </motion.h2>
+
+            <form className="space-y-4">
+              {[
+                { label: "Name", type: "text" },
+                { label: "Email", type: "email" },
+                { label: "Phone Number", type: "text" }
+              ].map((input, index) => (
+                <div key={index} className="relative">
+                  <input
+                    type={input.type}
+                    required
+                    className="peer w-full px-4 pt-6 pb-2 rounded-md text-sm bg-white text-black focus:outline-none"
+                    placeholder=" "
+                  />
+                  <label className="absolute left-4 top-2 text-xs text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-2 peer-focus:text-xs peer-focus:text-[#8CB662]">
+                    {input.label}
+                  </label>
+                </div>
+              ))}
+
+              <div className="relative">
+                <textarea
+                  rows={4}
+                  required
+                  className="peer w-full px-4 pt-6 pb-2 rounded-md text-sm bg-white text-black focus:outline-none"
+                  placeholder=" "
+                ></textarea>
+                <label className="absolute left-4 top-2 text-xs text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-2 peer-focus:text-xs peer-focus:text-[#8CB662]">
+                  Enter message
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                className="relative overflow-hidden group flex items-center justify-between px-6 py-2 rounded-full text-white font-semibold bg-[#8CB662] transition-all"
+              >
+                <span className="absolute inset-0 w-0 bg-[#7ab44e] transition-all duration-300 group-hover:w-full"></span>
+                <span className="relative flex items-center gap-2 transition-all duration-300 group-hover:translate-x-1">
+                  Send Message
+                  <span className="bg-white text-[#8CB662] rounded-full p-1">
+                    <IoMdSend className="text-lg" />
+                  </span>
+                </span>
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
+    </section>
   );
 };
 
 export default ContactSection;
+
+
+
+
+
+
+
+
