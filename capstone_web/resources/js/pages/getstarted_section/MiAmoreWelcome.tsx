@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from '@inertiajs/react';
 
 const MiAmoreWelcome = () => {
     return (
@@ -18,25 +19,32 @@ const MiAmoreWelcome = () => {
               <div className="relative rounded-md overflow-hidden shadow-sm mb-6">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-white opacity-70"></div>
                 <div className="relative p-4 flex justify-center items-center">
-                  <img src={""} alt="MI Amore Product" className="h-32 w-32 object-contain rounded-md shadow-inner" />
+                  <img src={"/images/green-cup.png"} alt="MI Amore Product" className="h-32 w-32 object-contain rounded-md shadow-inner" />
                   {/* Mint Leaves Images */}
                   <div className="absolute top-0 right-4 transform rotate-12">
-                    <img src={""} alt="Mint Leaf" className="w-8 h-8 text-green-300" />
+                    <img src={"/images/leaf-icon.png"} alt="Mint Leaf" className="w-8 h-8 text-green-300" />
                   </div>
                   <div className="absolute bottom-2 left-2 transform -rotate-6">
-                    <img src={""} alt="Mint Leaf" className="w-6 h-6 text-green-200" />
+                    <img src={"/images/leaf-icon.png"} alt="Mint Leaf" className="w-6 h-6 text-green-200" />
                   </div>
                 </div>
               </div>
     
               {/* Buttons */}
               <div className="flex gap-4">
-                <button className="bg-green-500 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
-                  Sign In
-                </button>
-                <button className="bg-white hover:bg-gray-100 text-green-500 font-semibold py-3 px-6 rounded-md border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">
-                  Sign Up
-                </button>
+              <Link
+    href={route('SignInCard')}
+    className="bg-white text-green-500 font-semibold py-3 px-6 rounded-full border border-green-500 hover:bg-green-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-all transform hover:scale-115"
+  >
+    Sign In
+  </Link>
+
+  <Link
+    href={route('SignUpForm')}
+    className="bg-white text-green-500 font-semibold py-3 px-6 rounded-full border border-green-500 hover:bg-green-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-all transform hover:scale-115"
+  >
+    Sign Up
+  </Link>
               </div>
             </div>
     
