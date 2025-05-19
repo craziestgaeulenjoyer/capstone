@@ -4,58 +4,72 @@ const VerificationCodeInputUI = () => {
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   const handleBack = () => {
-    // Add your back button logic here (e.g., navigate to the previous page)
+    // Add back button logic here 
     console.log('Back button clicked');
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <section className="bg-white p-15 rounded shadow-md flex flex-col items-center w-full max-w-md">
-        {/* Simple Back Button */}
-        <button onClick={handleBack} className=" top-4 left-4 focus:outline-none text-gray-500">
-          Back
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
+      <section className="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center w-full max-w-md relative">
+        
+        {/* Back Button using Unicode Arrow */}
+        <button
+          onClick={handleBack}
+          className="absolute top-4 left-4 flex items-center space-x-1 text-gray-600 hover:text-gray-900 focus:outline-none text-xl font-semibold"
+          aria-label="Go back"
+        >
+          <span className="select-none">←</span>
+          <span className="hidden sm:inline">Back</span>
         </button>
 
-        {/* Blank Image Section */}
-        <div className="w-32 h-20 mb-4" />
+        {/* Image Section */}
+        <div className="w-40 h-28 mb-6 mx-auto">
+          <img
+            src="/images/Two Factor Authentication-bro.png" // Replace with your image path or URL
+            alt="Verification Illustration"
+            className="w-full h-full object-contain"
+          />
+        </div>
 
-        <div className="text-center">
-          <h2 className="text-xl font-semibold">Verification</h2>
+        {/* Title and Instructions */}
+        <div className="text-center mb-6 px-4">
+          <h2 className="text-2xl font-semibold mb-2 text-gray-800">Verification</h2>
           <p className="text-gray-600 text-sm">
-            Please enter the code we sent to <span className="font-medium">jo*****123@gmail.com</span>
+            Please enter the code we sent to{' '}
+            <span className="font-medium text-gray-900">jo*****123@gmail.com</span>
           </p>
         </div>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            maxLength={1}
-            className="w-12 h-12 rounded border border-gray-300 text-center text-xl font-mono focus:ring-indigo-500 focus:border-indigo-500"
-            ref={inputRefs[0]}
-          />
-          <input
-            type="text"
-            maxLength={1}
-            className="w-12 h-12 rounded border border-gray-300 text-center text-xl font-mono focus:ring-indigo-500 focus:border-indigo-500"
-            ref={inputRefs[1]}
-          />
-          <input
-            type="text"
-            maxLength={1}
-            className="w-12 h-12 rounded border border-gray-300 text-center text-xl font-mono focus:ring-indigo-500 focus:border-indigo-500"
-            ref={inputRefs[2]}
-          />
-          <input
-            type="text"
-            maxLength={1}
-            className="w-12 h-12 rounded border border-gray-300 text-center text-xl font-mono focus:ring-indigo-500 focus:border-indigo-500"
-            ref={inputRefs[3]}
-          />
+
+        {/* Code Input Fields */}
+        <div className="flex space-x-3 mb-6">
+          {[0, 1, 2, 3].map((i) => (
+            <input
+              key={i}
+              type="text"
+              maxLength={1}
+              className="w-14 h-14 rounded-lg border border-gray-300 text-center text-2xl font-mono text-gray-800
+                focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              ref={inputRefs[i]}
+            />
+          ))}
         </div>
-        <p className="text-gray-600 text-sm">
-          If you don't receive a code! <button className="text-red-500 hover:underline focus:outline-none">Resend</button>
+
+        {/* Resend Text */}
+        <p className="text-gray-600 text-sm mb-6">
+          Didn't receive a code?{' '}
+          <button
+            className="text-indigo-600 font-semibold hover:underline focus:outline-none"
+            type="button"
+          >
+            Resend
+          </button>
         </p>
+
+        {/* Verify Button */}
         <button
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg
+            focus:outline-none focus:ring-4 focus:ring-indigo-300 transition"
+          type="submit"
         >
           Verify
         </button>
