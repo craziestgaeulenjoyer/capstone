@@ -2,71 +2,66 @@ import React from "react";
 import { Link } from '@inertiajs/react';
 
 const MiAmoreWelcome = () => {
-    return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-100">
-          <div className="bg-white rounded-lg shadow-md flex overflow-hidden w-11/12 max-w-2xl">
-            {/* Left Section (Get Started) */}
-            <div className="p-8 w-1/2 flex flex-col justify-between">
-              <div>
-                {/* Logo */}
-                <div className="text-green-500 text-3xl font-bold mb-4">m.</div>
-                {/* Get Started Text */}
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">GET STARTED</h2>
-                <p className="text-sm text-gray-600 mb-6">Sign up to join or log in to continue.</p>
-              </div>
-    
-              {/* Image Placeholder */}
-              <div className="relative rounded-md overflow-hidden shadow-sm mb-6">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-white opacity-70"></div>
-                <div className="relative p-4 flex justify-center items-center">
-                  <img src={"/images/green-cup.png"} alt="MI Amore Product" className="h-32 w-32 object-contain rounded-md shadow-inner" />
-                  {/* Mint Leaves Images */}
-                  <div className="absolute top-0 right-4 transform rotate-12">
-                    <img src={"/images/leaf-icon.png"} alt="Mint Leaf" className="w-8 h-8 text-green-300" />
-                  </div>
-                  <div className="absolute bottom-2 left-2 transform -rotate-6">
-                    <img src={"/images/leaf-icon.png"} alt="Mint Leaf" className="w-6 h-6 text-green-200" />
-                  </div>
-                </div>
-              </div>
-    
-              {/* Buttons */}
-              <div className="flex gap-4">
-              <Link
+  return (
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
+      <div className="bg-white rounded-2xl shadow-xl flex flex-col md:flex-row overflow-hidden w-full max-w-4xl transition-transform duration-300 ease-in-out">
+        
+        {/* Left Section */}
+        <div className="p-8 md:w-1/2 flex flex-col justify-between">
+          {/* Header */}
+          <div>
+            <div className="text-green-500 text-4xl font-bold mb-4">m.</div>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Get Started</h2>
+            <p className="text-sm text-gray-600 mb-6">Sign up to join or log in to continue.</p>
+          </div>
+
+          {/* Image */}
+          <div className="relative rounded-lg overflow-hidden shadow-md mb-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-white opacity-60 z-0" />
+            <div className="relative p-4 flex justify-center items-center z-10">
+              <img src="/images/green-cup.png" alt="MI Amore Product" className="h-28 w-28 md:h-32 md:w-32 object-contain rounded-md shadow-inner" />
+              {/* Mint Leaves */}
+              <img src="/images/leaf-icon.png" alt="Mint Leaf" className="absolute top-0 right-4 w-6 h-6 md:w-8 md:h-8 rotate-12" />
+              <img src="/images/leaf-icon.png" alt="Mint Leaf" className="absolute bottom-2 left-2 w-5 h-5 md:w-6 md:h-6 -rotate-6" />
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+  <Link
     href={route('SignInCard')}
-    className="bg-white text-green-500 font-semibold py-3 px-6 rounded-full border border-green-500 hover:bg-green-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-all transform hover:scale-115"
+    className="bg-white text-green-600 font-semibold py-3 px-6 rounded-full border border-[#8CB662] hover:bg-[#8CB662] hover:text-white transition transform hover:scale-105 text-center"
   >
     Sign In
   </Link>
 
   <Link
     href={route('SignUpForm')}
-    className="bg-white text-green-500 font-semibold py-3 px-6 rounded-full border border-green-500 hover:bg-green-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-all transform hover:scale-115"
+    className="bg-white text-green-600 font-semibold py-3 px-6 rounded-full border border-green-500 hover:bg-[#8CB662] hover:text-white transition transform hover:scale-105 text-center ml-0 sm:ml-4"
   >
     Sign Up
   </Link>
-              </div>
-            </div>
-    
-            {/* Right Section (Welcome) */}
-            <div className="bg-green-400 text-white p-8 w-1/2 flex flex-col justify-center items-center">
-              {/* Circular Logo */}
-              <div className="bg-white rounded-full p-6 mb-6 shadow-md">
-                <div className="text-green-400 text-5xl font-bold relative">
-                  m.
-                  <span className="absolute bottom-0 right-0 text-xs">+</span>
-                </div>
-                <div className="text-green-400 text-xs font-semibold text-center">MY AMORE</div>
-              </div>
-              {/* Welcome Text */}
-              <h2 className="text-3xl font-bold text-center mb-4">WELCOME</h2>
-              <p className="text-sm text-center opacity-80">
-                to MI Amore Café, your cozy corner for coffee and comfort!
-              </p>
-            </div>
-          </div>
+</div>
         </div>
-      );
-    }
+
+        {/* Right Section */}
+        <div className="bg-[#8CB662] text-white p-8 md:w-1/2 flex flex-col justify-center items-center text-center">
+          <div className="bg-white rounded-full p-6 mb-6 shadow-md">
+            <div className="text-green-500 text-5xl font-bold relative">
+              m.
+              <span className="absolute bottom-0 right-10 text-xs">+</span>
+            </div>
+            <div className="text-green-500 text-xs font-semibold">Mi Amore</div>
+          </div>
+
+          <h2 className="text-3xl font-bold mb-4">Welcome</h2>
+          <p className="text-sm opacity-90">
+            to Mi Amore Café, your cozy corner for coffee and comfort!
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default MiAmoreWelcome;

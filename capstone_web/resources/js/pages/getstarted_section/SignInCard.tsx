@@ -87,9 +87,9 @@ const SignInCard = () => {
           </p>
           <div className="rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300">
             <img
-              src=""
+              src="/images/Coffee shop-amico.png"
               alt="Cafe Illustration"
-              className="rounded-md hover:scale-105 transition-transform duration-300"
+              className="rounded-md  transition-transform duration-300"
             />
           </div>
         </div>
