@@ -1,52 +1,71 @@
 import React, { useState } from 'react';
+import { Link } from '@inertiajs/react';
 
-const ForgotPasswordForm = () => {
+  const ForgotPasswordForm = () => {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-100">
-        <div className="bg-white p-15 rounded shadow-md w-full max-w-md">
+      <div className="flex justify-center items-center h-screen bg-gray-100 px-4">
+        <div className="relative bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+  
           {/* Back Button */}
-          <button onClick={() => console.log('Back clicked')} className="absolute top-4 left-4 focus:outline-none text-cyan-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+          <button
+            onClick={() => console.log('Back clicked')}
+            className="absolute top-4 left-4 text-cyan-600 hover:text-cyan-800 font-semibold text-sm flex items-center gap-1 transition"
+          >
+            <span className="text-lg select-none">←</span>
+            <span className="hidden sm:inline">Back</span>
           </button>
   
-          {/* Logo (Placeholder) */}
+          {/* Logo */}
           <div className="absolute top-4 right-4 text-green-500 text-xl font-bold">m.</div>
   
-          {/* Forgot Password Heading */}
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Forgot password</h2>
+          {/* Image Section */}
+          <div className="mb-6 mt-12 flex justify-center">
+            <img
+              src="/images/Forgot password-bro.png" // Replace with your actual image path or URL
+              alt="Forgot Password"
+              className="w-40 h-auto object-contain"
+            />
+          </div>
+  
+          {/* Heading */}
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2 text-center">
+            Forgot password
+          </h2>
   
           {/* Description */}
-          <p className="text-gray-600 mb-4 text-sm">
-            Enter your email for the verification process, we will send 4 digits code to your email
+          <p className="text-gray-600 mb-6 text-sm text-center px-2">
+            Enter your email for the verification process. We'll send a 4-digit code to your inbox.
           </p>
   
-          {/* Email Input Form */}
+          {/* Email Form */}
           <form className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
+              <label
+                htmlFor="email"
+                className="block text-gray-700 text-sm font-medium mb-1"
+              >
                 Email
               </label>
               <input
                 type="email"
                 id="email"
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 placeholder="example@gmail.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
               />
             </div>
   
             {/* Continue Button */}
-            <button
-              type="submit"
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-            >
-              Continue
-            </button>
+            <Link
+            href={route('VerificationCode')} // Replace with your actual route name
+            className="w-full block text-center bg-green-500 hover:bg-green-600 text-white font-semibold py-2.5 rounded-lg transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300"
+          >
+            Continue
+          </Link>
           </form>
         </div>
       </div>
     );
   };
   
-  export default ForgotPasswordForm  ;
+  export default ForgotPasswordForm;
+  
