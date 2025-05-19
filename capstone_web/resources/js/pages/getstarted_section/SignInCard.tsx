@@ -43,18 +43,22 @@ const SignInCard = () => {
           </div>
 
           {/* Remember + Forgot */}
-          <div className="mb-6 flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
-              <input type="checkbox" className="form-checkbox text-green-600 focus:ring-green-400" />
-              Remember me
-            </label>
-            <a
-  href={route('forgotpasswordform')} // Replace with your actual named route
-  className="text-green-600 hover:text-green-800 transition"
->
-  Forgot password?
-</a>
-          </div>
+          <div className="mb-6 flex flex-col sm:flex-row items-center justify-between text-sm">
+  <label className="flex items-center gap-2 text-gray-600 cursor-pointer mb-3 sm:mb-0">
+    <input
+      type="checkbox"
+      className="form-checkbox text-green-600 focus:ring-green-400"
+    />
+    Remember me
+  </label>
+
+  <a
+    href="forgotpasswordform"
+    className="text-green-600 hover:text-green-800 transition"
+  >
+    Forgot password?
+  </a>
+</div>
 
           {/* Sign In Link Button */}
           <Link
