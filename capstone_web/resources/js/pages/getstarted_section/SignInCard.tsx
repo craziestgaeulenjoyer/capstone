@@ -48,7 +48,12 @@ const SignInCard = () => {
               <input type="checkbox" className="form-checkbox text-green-600 focus:ring-green-400" />
               Remember me
             </label>
-            <a href="#" className="text-green-600 hover:text-green-800 transition">Forgot password?</a>
+            <a
+  href={route('forgotpasswordform')} // Replace with your actual named route
+  className="text-green-600 hover:text-green-800 transition"
+>
+  Forgot password?
+</a>
           </div>
 
           {/* Sign In Link Button */}
