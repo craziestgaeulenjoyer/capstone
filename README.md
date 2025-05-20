@@ -10,10 +10,17 @@ Official Repository for Capstone 1
 ✅ Mobile Repository 
 
 ------
+``` Web Version ```
 
 Dependencies to Install (PowerShell Terminal):
 
 - `npm install react-icons`
 - `npm install framer-motion`
 - `npm install react-intersection-observer`
+
+``` Mobile Version ```
+
+Dependencies to Install (PowerShell Terminal):
+
+- `npm install react-native-vector-icons`
 
