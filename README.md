@@ -23,4 +23,5 @@ Dependencies to Install (PowerShell Terminal):
 Dependencies to Install (PowerShell Terminal):
 
 - `npm install react-native-vector-icons`
+- `npm install react-native-phone-number-input`
 
