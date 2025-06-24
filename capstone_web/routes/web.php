@@ -47,5 +47,23 @@ Route::get('/resetpasswordform', function () {
     return Inertia::render('getstarted_section/ResetPasswordForm');
 })->name('ResetPassWordForm');
 
+/* DASHBOARD ADMIN*/
+
+Route::get('/dashboardgetstarted', function () {
+    return Inertia::render('Dashboard_Section/DashboardGetStarted');
+})->name('DashboardGetStarted');
+
+Route::get('/dashboardloginform', function () {
+    return Inertia::render('Dashboard_Section/DashboardLoginForm');
+})->name('DashboardLoginForm');
+
+Route::get('/dashboardemailverification', function () {
+    return Inertia::render('Dashboard_Section/DashboardEmailVerification');
+})->name('DashboardEmailVerification');
+
+Route::get('/dashboardemailverificationresend', function () {
+    return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
+})->name('DashboardEmailVerificationResend');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
