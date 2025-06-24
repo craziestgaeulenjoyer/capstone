@@ -17,7 +17,7 @@ const ResetPasswordForm = () => {
         transition={{ duration: 0.4 }}
         className="relative bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col"
       >
-        {/* Back Button */}
+       
         <button
           onClick={() => console.log('Back clicked')}
           className="absolute top-4 left-4 text-cyan-600 hover:text-cyan-800 text-sm font-medium"
@@ -25,18 +25,18 @@ const ResetPasswordForm = () => {
           ← Back
         </button>
 
-        {/* Logo */}
+   
         <div className="absolute top-4 right-4 text-green-600 text-2xl font-bold">m.</div>
 
-        {/* Heading */}
+      
         <h2 className="text-2xl font-semibold text-gray-800 mb-2 mt-8">Reset Password</h2>
 
-        {/* Description */}
+      
         <p className="text-gray-600 text-sm mb-6">
           Set a new password for your account to regain access and enjoy all features.
         </p>
 
-        {/* New Password */}
+       
         <div className="mb-4">
           <label htmlFor="new-password" className="block text-gray-700 text-sm font-medium mb-2">
             New Password
@@ -58,7 +58,7 @@ const ResetPasswordForm = () => {
           </div>
         </div>
 
-        {/* Confirm Password */}
+       
         <div className="mb-6">
           <label htmlFor="confirm-password" className="block text-gray-700 text-sm font-medium mb-2">
             Confirm Password
@@ -80,14 +80,14 @@ const ResetPasswordForm = () => {
           </div>
         </div>
 
-        {/* Reset Button */}
+   
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
           <Link
-            href='NextPage' // Replace with your actual route
+            href='NextPage' 
             className="block text-center bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition transform hover:scale-105"
           >
             Reset Password

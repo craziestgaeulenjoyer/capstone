@@ -14,7 +14,7 @@ function SignUpForm() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        {/* Sign Up Section */}
+  
         <div className="md:w-2/3 w-full p-6">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h2>
           <p className="text-sm text-gray-500 mb-4">Join us and start your MI Amore journey today.</p>
@@ -83,13 +83,13 @@ function SignUpForm() {
             />
           </div>
 
-          <Link
-  href={route('AccountVerification')} // Replace with your actual route name
-  className="w-full block text-center py-3 bg-[#8CB662] hover:bg-[#7da954] text-white font-semibold rounded-xl transition transform hover:scale-105"
->
-  Create Account
-</Link>
-        </form>
+                  <Link
+          href={route('AccountVerification')} 
+          className="w-full block text-center py-3 bg-[#8CB662] hover:bg-[#7da954] text-white font-semibold rounded-xl transition transform hover:scale-105"
+        >
+          Create Account
+        </Link>
+                </form>
 
 
           <div className="relative my-5">
@@ -111,7 +111,7 @@ function SignUpForm() {
           </div>
         </div>
 
-        {/* Right Panel */}
+        
         <motion.div
           className="bg-[#8CB662] text-white md:w-1/3 w-full flex flex-col justify-center items-center p-6 text-center"
           initial={{ opacity: 0, x: 60 }}

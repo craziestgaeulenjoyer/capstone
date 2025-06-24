@@ -16,15 +16,16 @@ const MiAmoreWelcome = () => {
           </div>
 
           {/* Image */}
-          <div className="relative rounded-lg overflow-hidden shadow-md mb-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-white opacity-60 z-0" />
-            <div className="relative p-4 flex justify-center items-center z-10">
-              <img src="/images/green-cup.png" alt="MI Amore Product" className="h-28 w-28 md:h-32 md:w-32 object-contain rounded-md shadow-inner" />
-              {/* Mint Leaves */}
-              <img src="/images/leaf-icon.png" alt="Mint Leaf" className="absolute top-0 right-4 w-6 h-6 md:w-8 md:h-8 rotate-12" />
-              <img src="/images/leaf-icon.png" alt="Mint Leaf" className="absolute bottom-2 left-2 w-5 h-5 md:w-6 md:h-6 -rotate-6" />
+           <div
+              className="relative w-72 h-72 bg-[#EFF5EE] overflow-hidden flex items-center justify-center
+                         rounded-tl-[100px] rounded-br-[100px] shadow-lg ml-10"
+            >
+              <img
+                src="/images/img2.jpg"
+                alt="Product with Leaves"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             </div>
-          </div>
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">

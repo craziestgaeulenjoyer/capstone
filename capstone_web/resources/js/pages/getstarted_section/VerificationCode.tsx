@@ -13,7 +13,7 @@ const VerificationCode = () => {
         transition={{ duration: 0.4 }}
         className="relative bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center"
       >
-        {/* Back Button */}
+      
         <button
           onClick={() => console.log('Back clicked')}
           className="absolute top-4 left-4 text-cyan-600 hover:text-cyan-800 font-medium text-sm transition"
@@ -21,18 +21,18 @@ const VerificationCode = () => {
           ← Back
         </button>
 
-        {/* Logo (Top Right) */}
+    
         <div className="absolute top-4 right-4 text-green-600 text-2xl font-bold">m.</div>
 
-        {/* Heading */}
+      
         <h2 className="text-2xl font-semibold text-gray-800 mb-2 mt-8">Enter 4-Digit Code</h2>
 
-        {/* Description */}
+      
         <p className="text-gray-600 text-sm text-center mb-6">
           Enter the 4-digit code that we sent to your email.
         </p>
 
-        {/* Input Fields */}
+      
         <motion.div
           className="flex space-x-3 mb-6"
           initial={{ scale: 0.9, opacity: 0 }}
@@ -50,7 +50,7 @@ const VerificationCode = () => {
           ))}
         </motion.div>
 
-        {/* Resend Message */}
+       
         <p className="text-sm text-gray-500 mb-6">
           Didn't receive the code?{" "}
           <button
@@ -61,7 +61,7 @@ const VerificationCode = () => {
           </button>
         </p>
 
-        {/* Continue Button */}
+     
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
