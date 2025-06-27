@@ -19,5 +19,51 @@ Route::get('/home', function () {
     return Inertia::render('website_pages/Home_MiAmore');
 })->name('home');
 
+Route::get('/signin', function () {
+    return Inertia::render('getstarted_section/MiAmoreWelcome');
+})->name('SignIn');
+
+Route::get('/signincard', function () {
+    return Inertia::render('getstarted_section/SignInCard');
+})->name('SignInCard');
+
+Route::get('/signupform', function () {
+    return Inertia::render('getstarted_section/SignUpForm');
+})->name('SignUpForm');
+
+Route::get('/accountverification', function () {
+    return Inertia::render('getstarted_section/AccountVerification');
+})->name('AccountVerification');
+
+Route::get('/forgotpasswordform', function () {
+    return Inertia::render('getstarted_section/ForgotPasswordForm');
+})->name('FogotPasswordForm');
+
+Route::get('/verificationcode', function () {
+    return Inertia::render('getstarted_section/VerificationCode');
+})->name('VerificationCode');
+
+Route::get('/resetpasswordform', function () {
+    return Inertia::render('getstarted_section/ResetPasswordForm');
+})->name('ResetPassWordForm');
+
+/* DASHBOARD ADMIN*/
+
+Route::get('/dashboardgetstarted', function () {
+    return Inertia::render('Dashboard_Section/DashboardGetStarted');
+})->name('DashboardGetStarted');
+
+Route::get('/dashboardloginform', function () {
+    return Inertia::render('Dashboard_Section/DashboardLoginForm');
+})->name('DashboardLoginForm');
+
+Route::get('/dashboardemailverification', function () {
+    return Inertia::render('Dashboard_Section/DashboardEmailVerification');
+})->name('DashboardEmailVerification');
+
+Route::get('/dashboardemailverificationresend', function () {
+    return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
+})->name('DashboardEmailVerificationResend');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

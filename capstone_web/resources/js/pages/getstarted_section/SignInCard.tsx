@@ -1,95 +1,109 @@
 import React from "react";
+import { Link } from "@inertiajs/react";
 import { FaGoogle, FaFacebookF } from "react-icons/fa";
 
 const SignInCard = () => {
   return (
-    <section className="min-h-screen bg-green-100 flex items-center justify-center px-4">
-      <div className="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-[1.01]">
-        {/* Left Panel */}
-        <div className="w-full md:w-1/2 p-8">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-4">
+    <section className="min-h-screen  from-green-100 to-white flex items-center justify-center px-4 py-12">
+      <div className="flex flex-col md:flex-row w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden transition-transform duration-300 hover:scale-[1.01]">
+
+
+        <div className="w-full md:w-1/2 p-8 sm:p-10">
+       
+          <div className="flex justify-between items-center mb-6">
             <button className="text-gray-500 text-xl hover:text-green-600 transition-colors">&larr;</button>
-            <div className="text-green-600 font-bold text-2xl hover:scale-110 transition-transform">mi.</div>
+            <div className="text-green-600 font-bold text-3xl hover:scale-110 transition-transform duration-300">mi.</div>
           </div>
 
-          {/* Sign In Heading */}
-          <h2 className="text-2xl font-semibold text-blue-800 mb-1">Sign In</h2>
+          
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
           <p className="text-sm text-gray-600 mb-6">
-            Welcome back!{" "}
-            <span className="text-blue-600 underline cursor-pointer hover:text-blue-800 transition-colors">
-              Sign in to savor the moments.
-            </span>
+            Sign in to savor the moments at{" "}
+            <span className="text-green-600 font-medium">Mi Amore Café</span>.
           </p>
 
-          {/* Email Input */}
+         
           <div className="mb-4">
             <label className="text-sm block mb-1 text-gray-700">Email</label>
             <input
               type="email"
-              placeholder="example@gmail.com"
-              className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-100 transition-all"
+              placeholder="you@example.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none transition"
             />
           </div>
 
-          {/* Password Input */}
-          <div className="mb-2">
+          
+          <div className="mb-4">
             <label className="text-sm block mb-1 text-gray-700">Password</label>
             <input
               type="password"
-              placeholder="Enter password"
-              className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-100 transition-all"
+              placeholder="••••••••"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none transition"
             />
           </div>
 
-          {/* Remember + Forgot */}
-          <div className="mb-6 flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
-              <input type="checkbox" className="form-checkbox" />
-              Remember me
-            </label>
-            <a href="#" className="text-blue-600 hover:text-blue-800 transition-colors">
-              Forgot your password?
-            </a>
-          </div>
+          
+          <div className="mb-6 flex flex-col sm:flex-row items-center justify-between text-sm">
+  <label className="flex items-center gap-2 text-gray-600 cursor-pointer mb-3 sm:mb-0">
+    <input
+      type="checkbox"
+      className="form-checkbox text-green-600 focus:ring-green-400"
+    />
+    Remember me
+  </label>
 
-          {/* Sign In Button */}
-          <button className="w-full bg-green-600 text-white py-2 rounded-full font-semibold hover:bg-green-700 hover:shadow-md transition-all duration-300">
+  <a
+    href="forgotpasswordform"
+    className="text-green-600 hover:text-green-800 transition"
+  >
+    Forgot password?
+  </a>
+</div>
+
+       
+          <Link
+            href={route('dashboard')} 
+            className="block text-center w-full bg-green-600 text-white py-2 rounded-full font-semibold hover:bg-green-700 shadow-md hover:shadow-lg transition-all duration-300"
+          >
             SIGN IN
-          </button>
+          </Link>
 
-          {/* Divider */}
-          <div className="mt-6 text-center text-gray-400 text-sm">or</div>
+        
+          <div className="my-6 text-center text-gray-400 text-sm">or sign in with</div>
 
-          {/* Social Buttons */}
-          <div className="flex mt-4 gap-4">
-            <button className="flex-1 flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors">
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button className="flex-1 flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-md hover:bg-red-50 hover:border-red-400 transition">
               <FaGoogle className="text-red-500" /> Google
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors">
+            <button className="flex-1 flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-md hover:bg-blue-50 hover:border-blue-400 transition">
               <FaFacebookF className="text-blue-600" /> Facebook
             </button>
           </div>
 
-          {/* Sign Up Prompt */}
-          <p className="text-center text-sm text-gray-600 mt-4">
+         
+          <p className="text-center text-sm text-gray-600 mt-6">
             Don’t have an account?{" "}
-            <a href="#" className="text-blue-600 hover:text-blue-800 transition-colors">
+            <Link
+              href={route('SignUpForm')} 
+              className="text-green-600 font-medium hover:text-green-800 transition"
+            >
               Sign Up
-            </a>
+            </Link>
           </p>
         </div>
 
-        {/* Right Panel with Image */}
-        <div className="w-full md:w-1/2 bg-green-50 flex flex-col items-center justify-center p-8">
-          <p className="text-green-800 text-lg font-medium text-center mb-6 px-6 leading-relaxed">
-            Fall in love with every flavor — <br /> experience Mi Amore Café today!
+       
+        <div className="w-full md:w-1/2 bg-green-50 flex flex-col items-center justify-center p-8 md:p-12">
+          <p className="text-green-800 text-xl font-medium text-center mb-6 px-6 leading-relaxed">
+            Fall in love with every flavor — <br />
+            experience Mi Amore Café today!
           </p>
-          <div className="rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300">
+          <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 w-3/4">
             <img
-              src="https://i.ibb.co/CsBpWXV/cup-mint.png"
+              src="/images/Coffee shop-amico.png"
               alt="Cafe Illustration"
-              className="rounded-md hover:scale-105 transition-transform duration-300"
+              className="w-full object-cover"
             />
           </div>
         </div>
