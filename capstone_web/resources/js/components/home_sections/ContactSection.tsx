@@ -1,112 +1,171 @@
 import React from "react";
 import { FaPhoneAlt } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";
-import { IoMdSend } from "react-icons/io";
+import { IoMdArrowForward } from "react-icons/io";
 import { motion } from "framer-motion";
 
 const ContactSection: React.FC = () => {
   return (
-    <section className="py-16 px-4 bg-white" id="contact">
-      <div className="flex flex-col md:flex-row w-full max-w-6xl mx-auto overflow-hidden">
+    <motion.section
+      id="contact"
+      className="bg-white px-4 py-16"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      viewport={{ once: true, amount: 0.2 }}
+    >
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-stretch">
+        {/* Left */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: false, amount: 0.5 }}
-          className="w-full md:w-1/2 flex items-center justify-center p-2"
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true, amount: 0.4 }}
+          className="md:w-1/2 pl-12 pr-6 flex flex-col justify-center"
         >
-          <img
-            src="/images/coffee-splash.png"
-            alt="Coffee cups and beans"
-            className="w-full max-w-lg object-contain"
-          />
-        </motion.div>
-
-        <div className="w-full md:w-1/2 flex">
-          <div className="bg-[#8CB662] flex flex-col items-center justify-center p-6 text-white rounded-l-xl w-[60%]">
-            <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mb-4">
-              <span className="text-[#9D7353] text-3xl font-bold">?</span>
-            </div>
-            <p className="text-center text-sm max-w-xs mb-6">
-              We’d love to hear from you connect with us for inquiries, orders, or just a friendly chat!
+          <div className="mb-2">
+            <motion.img
+              src="/images/coffee-splash.png"
+              alt="Coffee splash"
+              className="mb-2 w-full max-w-xs"
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true, amount: 0.4 }}
+            />
+            <motion.h2
+              className="text-3xl font-extrabold mb-4 leading-tight text-left"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true, amount: 0.4 }}
+            >
+              <span className="text-[#76B13A]">We’d </span>
+              <span className="text-[#B13A3A]">Love </span>
+              <span className="text-[#76B13A]">to </span>
+              <span className="text-[#76B13A]">Hear </span>
+              <span className="text-blue-400">From </span>
+              <span className="text-blue-400">You!</span>
+            </motion.h2>
+            <p className="text-black text-md mb-6 max-w-md text-left">
+              Whether you’re craving a cup, planning a visit, or just want to say hello—Mi Amore is here for you.
             </p>
-            <div className="flex flex-col gap-2 items-center text-sm">
-              <div className="flex items-center">
-                <FaPhoneAlt className="mr-2" />
-                +63 917 892 4125
+          </div>
+
+          {/* Contact Info */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <MdEmail className="text-[#76B13A] text-xl mt-1" />
+              <div>
+                <p className="text-sm font-semibold text-[#4e4c4c] mb-1">E-mail</p>
+                <p className="text-sm font-bold text-[#1b1b1b]">miamore.cml@gmail.com</p>
               </div>
-              <div className="flex items-center">
-                <MdEmail className="mr-2" />
-                miamore.cml@gmail.com
+            </div>
+            <div className="flex items-start gap-3">
+              <FaPhoneAlt className="text-[#76B13A] text-xl mt-1" />
+              <div>
+                <p className="text-sm font-semibold text-[#4e4c4c] mb-1">Phone Number</p>
+                <p className="text-sm font-bold text-[#1b1b1b]">+63 917 892 4125</p>
               </div>
             </div>
           </div>
+        </motion.div>
 
-          <div className="bg-[#9D7353] p-8 text-white flex flex-col justify-center rounded-r-xl w-[90%]">
-            <p className="text-sm text-[#41E2DA] font-semibold uppercase">Contact Us</p>
-
+        {/* Right */}
+        <div className="md:w-1/2 pr-12">
+          <div className="bg-white p-8 rounded-xl shadow-xl border border-gray-300 h-full">
+            <p className="text-[#41E2DA] uppercase text-sm font-semibold mb-2">
+              Contact Us
+            </p>
             <motion.h2
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              viewport={{ once: false, amount: 0.5 }}
-              className="text-3xl font-bold mt-1 mb-6 leading-snug"
+              transition={{ duration: 0.8, delay: 0.1 }}
+              viewport={{ once: true, amount: 0.5 }}
+              className="text-3xl font-bold text-[#9D7353] leading-snug mb-6"
             >
-              <span className="text-[#8CB662]">Reach</span> & Get in Touch With Us!
+              <span className="text-[#76B13A]">Reach</span> & Get in Touch With Us!
             </motion.h2>
 
-            <form className="space-y-4">
+            {/* Form */}
+            <motion.form
+              className="space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true, amount: 0.4 }}
+            >
               {[
-                { label: "Name", type: "text" },
-                { label: "Email", type: "email" },
-                { label: "Phone Number", type: "text" }
-              ].map((input, index) => (
-                <div key={index} className="relative">
-                  <input
-                    type={input.type}
-                    required
-                    className="peer w-full px-4 pt-6 pb-2 rounded-md text-sm bg-white text-black focus:outline-none"
-                    placeholder=" "
-                  />
-                  <label className="absolute left-4 top-2 text-xs text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-2 peer-focus:text-xs peer-focus:text-[#8CB662]">
-                    {input.label}
+                { id: "name", label: "Name", type: "text" },
+                { id: "email", label: "Email", type: "email" },
+                { id: "phone", label: "Phone Number", type: "text" }
+              ].map(field => (
+                <div key={field.id}>
+                  <label
+                    htmlFor={field.id}
+                    className="block text-sm text-black mb-1"
+                  >
+                    {field.label}
                   </label>
+                  <input
+                    id={field.id}
+                    type={field.type}
+                    required
+                    className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
                 </div>
               ))}
 
-              <div className="relative">
-                <textarea
-                  rows={4}
-                  required
-                  className="peer w-full px-4 pt-6 pb-2 rounded-md text-sm bg-white text-black focus:outline-none"
-                  placeholder=" "
-                ></textarea>
-                <label className="absolute left-4 top-2 text-xs text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-focus:top-2 peer-focus:text-xs peer-focus:text-[#8CB662]">
+              <div>
+                <label
+                  htmlFor="message"
+                  className="block text-sm text-black mb-1"
+                >
                   Enter message
                 </label>
+                <textarea
+                  id="message"
+                  rows={4}
+                  required
+                  className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-500"
+                ></textarea>
               </div>
 
-              <button
-                type="submit"
-                className="relative overflow-hidden group flex items-center justify-between px-6 py-2 rounded-full text-white font-semibold bg-[#8CB662] transition-all"
-              >
-                <span className="absolute inset-0 w-0 bg-[#7ab44e] transition-all duration-300 group-hover:w-full"></span>
-                <span className="relative flex items-center gap-2 transition-all duration-300 group-hover:translate-x-1">
-                  Send Message
-                  <span className="bg-white text-[#8CB662] rounded-full p-1">
-                    <IoMdSend className="text-lg" />
+              {/* Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="group bg-[#8CB662] hover:bg-[#7AB44E] text-white font-semibold text-sm rounded-full py-2 px-5 flex items-center transition-all duration-300"
+                >
+                  <span>Send Message</span>
+                  <span className="ml-3 bg-white text-[#8CB662] p-1 rounded-full transition-transform duration-300 group-hover:translate-x-1">
+                    <IoMdArrowForward className="text-base" />
                   </span>
-                </span>
-              </button>
-            </form>
+                </button>
+              </div>
+            </motion.form>
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 };
 
 export default ContactSection;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
