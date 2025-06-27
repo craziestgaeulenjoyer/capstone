@@ -7,16 +7,16 @@ function DashboardEmailVerification() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden max-w-xl w-full p-8 text-center flex flex-col items-center">
-        {/* Back Button */}
+       
         <div className="self-start mb-8">
-          <Link href="/" className="text-gray-500 hover:text-gray-700"> {/* Adjust href as needed */}
+          <Link href="/" className="text-gray-500 hover:text-gray-700"> 
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
         </div>
 
-        {/* Illustration */}
+       
         <div className="mb-8">
           <img src="/images/Emails-amico.png" alt="Email Verification Illustration" className="max-w-full h-[300px]" />
         
@@ -30,12 +30,23 @@ function DashboardEmailVerification() {
         </p>
 
        
+       <Link
+        href="/your-verification-route" 
+        className="block w-full" 
+      >
         <button
           type="button"
-          className="px-8 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition duration-300 ease-in-out font-medium"
+          className="px-8 py-3 bg-white text-[#4A6030] rounded-full
+                          border border-[#8CB662] shadow-sm font-bold
+                          hover:bg-[#8CB662] hover:text-white hover:shadow-md
+                          focus:outline-none focus:ring-2 focus:ring-[#8CB662] focus:ring-opacity-75
+                          transition duration-300 ease-in-out transform hover:scale-105"
         >
           Verify your email
         </button>
+      </Link>
+
+
       </div>
     </div>
   );

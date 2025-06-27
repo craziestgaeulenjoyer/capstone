@@ -1,36 +1,29 @@
 import React, { useRef } from 'react';
+import { Link } from '@inertiajs/react'; 
 
 const VerificationCodeInputUI = () => {
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
-  const handleBack = () => {
-  
-    console.log('Back button clicked');
-  };
-
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
       <section className="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center w-full max-w-md relative">
-        
-      
-        <button
-          onClick={handleBack}
-          className="absolute top-4 left-4 flex items-center space-x-1 text-gray-600 hover:text-gray-900 focus:outline-none text-xl font-semibold"
-          aria-label="Go back"
-        >
-          <span className="select-none">←</span>
-          <span className="hidden sm:inline">Back</span>
-        </button>
 
         
+        <div className="absolute top-4 left-4">
+          <Link href="/" className="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+        </div>
+
         <div className="w-40 h-28 mb-6 mx-auto">
           <img
-            src="/images/Two Factor Authentication-bro.png" 
+            src="/images/Two Factor Authentication-bro.png"
             alt="Verification Illustration"
             className="w-full h-full object-contain"
           />
         </div>
-
 
         <div className="text-center mb-6 px-4">
           <h2 className="text-2xl font-semibold mb-2 text-gray-800">Verification</h2>
@@ -47,13 +40,12 @@ const VerificationCodeInputUI = () => {
               type="text"
               maxLength={1}
               className="w-14 h-14 rounded-lg border border-gray-300 text-center text-2xl font-mono text-gray-800
-                focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               ref={inputRefs[i]}
             />
           ))}
         </div>
 
-   
         <p className="text-gray-600 text-sm mb-6">
           Didn't receive a code?{' '}
           <button
@@ -64,10 +56,12 @@ const VerificationCodeInputUI = () => {
           </button>
         </p>
 
-       
         <button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg
-            focus:outline-none focus:ring-4 focus:ring-indigo-300 transition"
+          className="bg-white text-[#4A6030] rounded-lg
+                     border border-[#8CB662] shadow-sm font-bold py-3 px-10
+                     hover:bg-[#8CB662] hover:text-white hover:shadow-md
+                     focus:outline-none focus:ring-2 focus:ring-[#8CB662] focus:ring-opacity-75
+                     transition duration-300 ease-in-out transform hover:scale-105"
           type="submit"
         >
           Verify

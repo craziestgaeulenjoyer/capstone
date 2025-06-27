@@ -25,7 +25,7 @@ const LoginPage = () => {
             <img src="/images/MiAmore2.png" alt="Mi Amore Cafe Logo" className="h-10 w-10" /> 
           </div>
 
-          <h2 className="text-3xl font-bold text-gray-800 mb-3">Login to continue</h2> 
+          <h2 className="text-3xl font-bold text-[#8CB662] mb-3">Login to continue</h2>
           <p className="text-gray-600 text-lg mb-10 leading-relaxed"> 
             Enter your credentials to manage and monitor Mi Amore Café operations.
           </p>
@@ -99,16 +99,16 @@ const LoginPage = () => {
 
          
             <Link href="/dashboard" className="w-full">
-              <button
-                type="button"
-                className="w-full px-8 py-3 bg-white text-[#4A6030] rounded-full
-                           border border-[#8CB662] shadow-sm
-                           hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
-                           focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
-                           transform hover:scale-105"
-              >
-                Login
-              </button>
+             <button
+              type="button"
+              className="w-full px-8 py-3 bg-white text-[#4A6030] rounded-full
+                                border border-[#8CB662] shadow-sm font-bold
+                                hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
+                                focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
+                                transform hover:scale-105"
+            >
+              Login
+            </button>
             </Link>
           </form>
         </div>
@@ -116,7 +116,7 @@ const LoginPage = () => {
        
         <div className="w-1/2 bg-[#8CB662] p-10 flex flex-col items-center justify-center text-white text-center rounded-r-xl">
           <div className="mb-8">
-            <img src="/images/Computer login-bro.png" alt="Login Illustration" className="max-w-full h-auto drop-shadow-lg" /> {/* Illustration src updated, added shadow */}
+            <img src="/images/Computer login-bro.png" alt="Login Illustration" className="max-w-full h-auto drop-shadow-lg" />
           </div>
          
           <h1 className="text-4xl font-extrabold mb-3 leading-tight">Welcome to Mi Amore Café</h1>

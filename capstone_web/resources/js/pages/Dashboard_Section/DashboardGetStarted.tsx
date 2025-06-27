@@ -11,7 +11,7 @@ function DashboardGetStarted() {
             <img src="/images/MiAmore2.png" alt="Mi Amore Cafe Logo" className="h-10 w-10 mr-3" />
           </div>
 
-          <h2 className="text-3xl font-bold text-gray-800 mb-3">Admin Access</h2>
+          <h2 className="text-3xl text-[#8cb662] font-bold mb-3">Admin Access</h2>
           <p className="text-gray-600 text-lg mb-10 leading-relaxed">
             Login as Admin or Super Admin to manage the system.
           </p>
@@ -32,32 +32,37 @@ function DashboardGetStarted() {
 
           <div className="flex justify-center space-x-6">
            
-            <Link href="/admin-login" className="block w-full max-w-[180px]">
-              <button
-                type="button"
-                className="w-full px-8 py-3 bg-white text-[#4A6030] rounded-full
-                           border border-[#8CB662] shadow-sm
-                           hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
-                           focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
-                           transform hover:scale-105"
-              >
-                Admin
-              </button>
-            </Link>
+           <Link
+            href="/admin-login"
+            className="block w-full max-w-[120px]"
+          >
+            <button
+              type="button"
+              className="w-full px-3 py-1.5 bg-white text-[#4A6030] rounded-full
+                              border border-[#8CB662] shadow-sm font-bold text-sm
+                              hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
+                              focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
+                              transform hover:scale-105"
+            >
+              Admin
+            </button>
+          </Link>
 
-
-            <Link href="/super-admin-login" className="block w-full max-w-[180px]">
-              <button
-                type="button"
-                className="w-full px-8 py-3 bg-white text-[#4A6030] rounded-full
-                           border border-[#8CB662] shadow-sm
-                           hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
-                           focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
-                           transform hover:scale-105"
-              >
-                Super Admin
-              </button>
-            </Link>
+          <Link
+            href="/super-admin-login"
+            className="block w-full max-w-[120px]"
+          >
+            <button
+              type="button"
+              className="w-full px-3 py-1.5 bg-white text-[#4A6030] rounded-full
+                              border border-[#8CB662] shadow-sm font-bold text-sm
+                              hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
+                              focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
+                              transform hover:scale-105"
+            >
+              Super Admin
+            </button>
+          </Link>
           </div>
         </div>
       

@@ -16,7 +16,7 @@ function SignUpForm() {
       >
   
         <div className="md:w-2/3 w-full p-6">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h2>
+         <h2 className="text-3xl font-bold text-[#8CB662] mb-2">Create Account</h2>
           <p className="text-sm text-gray-500 mb-4">Join us and start your MI Amore journey today.</p>
           <form>
           <div className="mb-4 flex flex-col sm:flex-row gap-4">
