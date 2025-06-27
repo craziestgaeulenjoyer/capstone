@@ -1,20 +1,10 @@
 import React from 'react';
-import { GiCoffeeCup, GiCupcake, GiGlassCelebration } from 'react-icons/gi';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { GiCoffeeBeans, GiTruck, GiSwipeCard } from 'react-icons/gi';
 
 const FeaturesSection: React.FC = () => {
   const [ref, inView] = useInView({ triggerOnce: false, threshold: 0.3 });
-
-  const fadeLeft = {
-    hidden: { opacity: 0, x: -50 },
-    visible: { opacity: 1, x: 0 },
-  };
-
-  const fadeRight = {
-    hidden: { opacity: 0, x: 50 },
-    visible: { opacity: 1, x: 0 },
-  };
 
   const fadeUp = {
     hidden: { opacity: 0, y: 50 },
@@ -22,87 +12,71 @@ const FeaturesSection: React.FC = () => {
   };
 
   return (
-    <section ref={ref} className="relative overflow-hidden">
-      <div className="relative bg-[#B4D9DD] pt-20 pb-32 px-4 sm:px-6 lg:px-24">
-        <motion.img
-          src="/images/green-cup.png"
-          alt="Green Cup"
-          className="absolute top-0 left-0 w-75 md:w-56 lg:w-95 -rotate-[-35deg] -translate-y-1/4 -translate-x-1/3 z-0"
-          variants={fadeLeft}
-          initial="hidden"
-          animate={inView ? 'visible' : 'hidden'}
-          transition={{ duration: 0.8 }}
-        />
+    <section ref={ref} className="relative bg-[#CBE9F3] pt-10 pb-60 px-4 sm:px-6 lg:px-24 overflow-hidden">
+      {/* Header */}
+      <motion.div
+        className="text-left max-w-3xl ml-0 sm:ml-8 mb-36 z-10 relative"
+        variants={fadeUp}
+        initial="hidden"
+        animate={inView ? 'visible' : 'hidden'}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-black leading-snug">
+          Discover. Delight. <span className="text-[#6FC14B]">Mi Amore</span>
+        </h2>
+        <p className="mt-4 text-gray-700 text-md sm:text-lg">
+          Experience the perfect blend of coffee, cuisine, and unforgettable moments at Mi Amore Café.
+        </p>
+      </motion.div>
 
-        <motion.div
-          className="text-left right-40 max-w-3xl mx-auto mb-14 z-10 relative"
-          variants={fadeUp}
-          initial="hidden"
-          animate={inView ? 'visible' : 'hidden'}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <h2 className="text-2xl sm:text-3xl font-semibold text-black">
-            Discover. Delight. Mi Amore.
-          </h2>
-          <p className="mt-2 text-gray-700 text-base sm:text-md">
-            Experience the perfect blend of coffee, cuisine, and unforgettable moments at Mi Amore Café.
-          </p>
-        </motion.div>
-      </div>
+      <div className="bg-white h-56 w-full absolute bottom-0 left-0 z-0" />
 
-      <div className="bg-white h-60 sm:h-72 lg:h-80 w-full absolute bottom-0 left-0 z-0" />
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -translate-y-28">
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-1"
-          variants={fadeUp}
-          initial="hidden"
-          animate={inView ? 'visible' : 'hidden'}
-          transition={{ duration: 0.8, delay: 0.3 }}
-        >
-          {[
-            {
-              icon: <GiCoffeeCup className="text-[#8a6d23] mx-auto w-11 h-11 mb-4" />,
-              title: 'Coffee',
-              desc: `From rich hot coffee to refreshing iced blends, Mi Amore Café offers creamy frappes, flavorful milk teas, and fruity infusions perfect for every mood.`,
-            },
-            {
-              icon: <GiCupcake className="text-[#8a6d23] mx-auto w-11 h-11 mb-4" />,
-              title: 'Meals',
-              desc: `Indulge in a variety of savory dishes and satisfying meals, thoughtfully prepared to complement your favorite drink.`,
-            },
-            {
-              icon: <GiGlassCelebration className="text-[#8a6d23] mx-auto w-11 h-11 mb-4" />,
-              title: 'Mini Events',
-              desc: `Celebrate life’s special moments at Mi Amore Café — a cozy space perfect for intimate gatherings, casual meetups, or memorable celebrations.`,
-            },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="bg-gray-200 border border-gray-400 h-70 w-70 p-8 text-center shadow-2xl hover:bg-[#c3ff8a] transition-all duration-300"
-            >
-              {item.icon}
-              <h3 className="font-bold text-gray-800 text-xl">{item.title}</h3>
-              <p className="text-sm text-gray-800 mt-2">{item.desc}</p>
+      <motion.div
+        className="flex flex-col md:flex-row gap-6 justify-center items-center max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 absolute left-1/2 transform -translate-x-1/2 -translate-y-[35%] z-20"
+        variants={fadeUp}
+        initial="hidden"
+        animate={inView ? 'visible' : 'hidden'}
+        transition={{ duration: 0.8, delay: 0.3 }}
+      >
+        {[{
+          icon: <GiCoffeeBeans className="text-[#6FC14B] text-4xl" />, 
+          text: "Crafted with care, our coffee and food are made to comfort. From bold brews to fresh bites, there's love in every sip and every plate."
+        }, {
+          icon: <GiTruck className="text-[#6FC14B] text-4xl" />, 
+          text: "Bringing amore to your doorstep! Order your favorites and enjoy fast, reliable delivery perfect for cozy mornings or busy afternoons."
+        }, {
+          icon: <GiSwipeCard className="text-[#6FC14B] text-4xl" />, 
+          text: "Sip, earn, repeat. Collect points with every visit and get rewarded for loving Mi Amore as much as we love serving you."
+        }].map((card, idx) => (
+          <motion.div
+            key={idx}
+            className="bg-[#D29368] w-[300px] md:w-[380px] text-center px-6 py-8 rounded-2xl shadow-2xl hover:-translate-y-3 transition-transform duration-300"
+            whileHover={{ scale: 1.05 }}
+          >
+            <div className="bg-white w-16 h-16 flex items-center justify-center rounded-full mx-auto shadow-md mb-6">
+              {card.icon}
             </div>
-          ))}
-        </motion.div>
-
-        <motion.img
-          src="/images/choco-cup.png"
-          alt="Choco Cup"
-          className="absolute left-245 w-70 md:w-70 lg:w-65 -rotate-[15deg] translate-x-1/4 -top-35 z-20"
-          variants={fadeRight}
-          initial="hidden"
-          animate={inView ? 'visible' : 'hidden'}
-          transition={{ duration: 0.8 }}
-        />
-      </div>
+            <p className="text-sm text-black">
+              {card.text}
+            </p>
+          </motion.div>
+        ))}
+      </motion.div>
     </section>
   );
 };
 
 export default FeaturesSection;
+
+
+
+
+
+
+
+
+
+
 
 
 

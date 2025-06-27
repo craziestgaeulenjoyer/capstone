@@ -78,7 +78,7 @@ const CustomerReviewSection: React.FC = () => {
   };
 
   return (
-    <section className="bg-[#F4F4F4] py-16 relative">
+    <section className="bg-[#bfe6f5] py-16 relative">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12 relative">
           <motion.h2
@@ -116,8 +116,8 @@ const CustomerReviewSection: React.FC = () => {
         </div>
 
         <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full justify-center transition-transform duration-700 ease-in-out">
-          <FaQuoteLeft className="text-5xl text-gray-300 absolute top-[-50px] left-[-30px] transform -translate-x-4 -translate-y-4 z-10" />
-          <FaQuoteRight className="text-5xl text-gray-300 absolute bottom-[-50px] right-[-30px] transform translate-x-4 translate-y-4 z-10" />
+          <FaQuoteLeft className="text-5xl text-gray-400 absolute top-[-50px] left-[-30px] transform -translate-x-4 -translate-y-4 z-10" />
+          <FaQuoteRight className="text-5xl text-gray-400 absolute bottom-[-50px] right-[-30px] transform translate-x-4 translate-y-4 z-10" />
 
           {reviews
             .slice(currentSlide * cardsPerSlide, (currentSlide + 1) * cardsPerSlide)
