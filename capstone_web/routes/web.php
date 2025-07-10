@@ -19,6 +19,10 @@ Route::get('/home', function () {
     return Inertia::render('website_pages/Home_MiAmore');
 })->name('home');
 
+Route::get('/aboutus', function () {
+    return Inertia::render('website_pages/AboutUs');
+})->name('AboutUs');
+
 Route::get('/signin', function () {
     return Inertia::render('getstarted_section/MiAmoreWelcome');
 })->name('SignIn');
