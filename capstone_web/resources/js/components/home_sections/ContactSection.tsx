@@ -15,7 +15,6 @@ const ContactSection: React.FC = () => {
       viewport={{ once: true, amount: 0.2 }}
     >
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-stretch">
-        {/* Left */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -71,7 +70,6 @@ const ContactSection: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Right */}
         <div className="md:w-1/2 pr-12">
           <div className="bg-white p-8 rounded-xl shadow-xl border border-gray-300 h-full">
             <p className="text-[#41E2DA] uppercase text-sm font-semibold mb-2">
@@ -87,7 +85,6 @@ const ContactSection: React.FC = () => {
               <span className="text-[#76B13A]">Reach</span> & Get in Touch With Us!
             </motion.h2>
 
-            {/* Form */}
             <motion.form
               className="space-y-4"
               initial={{ opacity: 0, y: 20 }}
@@ -131,7 +128,6 @@ const ContactSection: React.FC = () => {
                 ></textarea>
               </div>
 
-              {/* Button */}
               <div className="pt-2">
                 <button
                   type="submit"

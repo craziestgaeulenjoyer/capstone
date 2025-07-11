@@ -16,8 +16,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 /* Website Web Routes */
 
 Route::get('/home', function () {
-    return Inertia::render('website_pages/Home_MiAmore');
+    return Inertia::render('website_pages/Home');
 })->name('home');
+
+Route::get('/menu', function () {
+    return Inertia::render('website_pages/Menu');
+})->name('menu');
 
 Route::get('/signin', function () {
     return Inertia::render('getstarted_section/MiAmoreWelcome');
