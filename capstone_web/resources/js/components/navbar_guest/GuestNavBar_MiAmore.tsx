@@ -3,7 +3,7 @@ import { Link } from '@inertiajs/react';
 
 const GuestNavBar_MiAmore: React.FC = () => {
     const leftLinks = [
-        { name: 'Home', href: '/' },
+        { name: 'Home', href: '/home' },
         { name: 'Menu', href: '/menu' },
         { name: 'About Us', href: '/aboutus' },
     ];
@@ -54,12 +54,12 @@ const GuestNavBar_MiAmore: React.FC = () => {
 
                     { /* Button */ }
                     <div className="relative">
-                    <Link
-  href={route('SignIn')}
-  className="bg-[#88B04B] text-white px-10 py-2 rounded-full font-bold shadow hover:bg-[#7BA642] transition-all hover:cursor-pointer"
->
-  Join Now
-</Link>
+                           <Link
+                            href={route('SignIn')}
+                            className="bg-[#88B04B] text-white px-10 py-2 rounded-full font-bold shadow hover:bg-[#7BA642] transition-all hover:cursor-pointer"
+                            >
+                            Join Now
+                            </Link>
 
                     </div>
                 </div>
