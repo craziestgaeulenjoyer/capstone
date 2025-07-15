@@ -5,7 +5,7 @@ const GuestNavBar_MiAmore: React.FC = () => {
     const leftLinks = [
         { name: 'Home', href: '/' },
         { name: 'Menu', href: '/menu' },
-        { name: 'About Us', href: '/about' },
+        { name: 'About Us', href: '/aboutus' },
     ];
 
     const rightLinks = [
