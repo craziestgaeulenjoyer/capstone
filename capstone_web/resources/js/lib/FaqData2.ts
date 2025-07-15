@@ -6,4 +6,5 @@ const faqData2 = [
     { question: "Can I book a table or event space?", answer: "We offer limited table reservations for small groups and have a private event space available for booking. Please contact us in advance to discuss your needs." },
 ];
 
+
 export default faqData2;

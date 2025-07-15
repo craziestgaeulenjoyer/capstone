@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 
+
 interface FaqItem {
     question: string;
     answer: string;

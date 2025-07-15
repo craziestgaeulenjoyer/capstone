@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
+
 /* Website Web Routes */
 
 Route::get('/home', function () {

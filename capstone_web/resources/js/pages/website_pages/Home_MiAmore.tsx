@@ -11,21 +11,22 @@ import CustomerReviewSection from '@/components/home_sections/CustomerReviewSect
 
 
 const Home: React.FC = () => {
-  return (
-    <>
-      <NavbarLayout>
-        <HeroSection/>
-        <FeatureSection/>
-        <WhyChooseUsSection/>
-        <BestSellerSection/>
-        <ContactSection/>
-        <CustomerReviewSection/>
+    return (
+      <>
+      
+        <NavbarLayout>
+          <HeroSection/>
+          <FeatureSection/>
+          <WhyChooseUsSection/>
+          <BestSellerSection/>
+          <ContactSection/>
+          <CustomerReviewSection/>
 
-      </NavbarLayout>
+        </NavbarLayout>
 
-      <Footer />
-    </>
-  );
+        <Footer />
+      </>
+    );
 };
 
 export default Home;

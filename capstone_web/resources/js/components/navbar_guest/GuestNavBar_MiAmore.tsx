@@ -61,6 +61,7 @@ const GuestNavBar_MiAmore: React.FC = () => {
                             Join Now
                             </Link>
 
+
                     </div>
                 </div>
             </div>

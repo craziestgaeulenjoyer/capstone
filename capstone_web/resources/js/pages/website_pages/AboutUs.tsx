@@ -29,6 +29,7 @@ function AboutUs() {
             const newOpenFaqs = [...prev];
             newOpenFaqs[index] = !newOpenFaqs[index];
             return newOpenFaqs;
+            
         });
     };
 

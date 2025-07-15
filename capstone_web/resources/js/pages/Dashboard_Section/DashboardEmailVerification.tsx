@@ -28,6 +28,7 @@ function DashboardEmailVerification() {
           <br />
           Please verify the email address by clicking button below
         </p>
+        
 
        
        <Link

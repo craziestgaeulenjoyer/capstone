@@ -9,6 +9,7 @@ function WelcomeSection() {
     };
 
     return (
+        
         <section className="py-12 px-4 md:px-8 lg:px-16 text-center bg-white">
             <motion.h2
                 initial="hidden"

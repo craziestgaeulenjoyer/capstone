@@ -6,4 +6,5 @@ const faqData1 = [
     { question: "Do you have non-coffee options?", answer: "Absolutely! We offer a wide range of teas, hot chocolates, smoothies, and fresh juices, along with various food items." },
 ];
 
+
 export default faqData1;

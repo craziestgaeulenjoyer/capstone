@@ -102,6 +102,7 @@ function GeneralFaqs({ faqData1, openFaqs1, toggleFaq1 }: GeneralFaqsProps) {
                 </motion.div>
             ))}
         </motion.div>
+        
     );
 }
 

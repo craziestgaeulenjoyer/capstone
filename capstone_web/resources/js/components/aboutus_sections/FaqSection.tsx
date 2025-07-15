@@ -1,8 +1,7 @@
 
-
 import React from 'react';
 import { motion } from 'framer-motion';
-import GeneralFaqs from './Generalfaqs';
+import GeneralFaqs from './GeneralFaqs';
 import InfoFaqs from './InfoFaqs';
 
 interface FaqItem {
