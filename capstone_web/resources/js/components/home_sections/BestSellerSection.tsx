@@ -56,10 +56,77 @@ const productData: Record<Category, Product[]> = {
       image: '/images/charcoal.jpg',
     },
   ],
-  'Milk Tea': [],
-  'Snacks': [],
-  'Coffee': [],
-  'Platters': [],
+  'Milk Tea': [
+      {
+      title: 'Okinawa',
+      description:
+        'A creamy brown sugar milk tea blend with rich roasted caramel notes and soft pearls.',
+      price: '₱80/90',
+      image: '/images/milktea-okinawa.jpg',
+    },
+    {
+      title: 'Wintermelon',
+      description:
+        'Delicately sweet with a mellow finish—this milk tea classic is both calming and satisfying.',
+      price: '₱80/90',
+      image: '/images/milktea-wintermelon.jpg',
+    },
+    {
+      title: 'Oreo',
+      description:
+        'Crushed Oreo cookies blended into smooth milk tea—crunchy, creamy, and crave-worthy.',
+      price: '₱80/90',
+      image: '/images/milktea-oreo.jpg',
+    },
+    {
+      title: 'Bobbatella',
+      description:
+        'Nutella meets bobba in this indulgent fusion of chocolatey richness and chewy delight.',
+      price: '₱110',
+      image: '/images/milktea-bobbatella.jpg',
+    },
+  ],
+  'Snacks': [
+     {
+    title: 'Fries',
+    description:
+      'Golden, crispy, and lightly salted—our fries are the perfect companion to any drink.',
+    price: '₱45',
+    image: '/images/snack-fries.jpg',
+  },
+  {
+    title: 'Cheese Sticks',
+    description:
+      'Crunchy on the outside, melty cheese on the inside—served with a savory dip for extra delight.',
+    price: '₱50',
+    image: '/images/snack-cheesesticks.jpg',
+  },
+  ],
+  'Coffee': [
+    {
+    title: 'Ice Snow Coffee',
+    description:
+      'A chill twist on your classic brew—smooth iced coffee topped with a snowy layer of cream.',
+    price: '₱85',
+    image: '/images/ice-snow-coffee.jpg',
+  },
+  ],
+  'Platters': [
+     {
+    title: 'Platter #2',
+    description:
+      'A savory combo of Fries, 10 pcs Cheese Sticks, and 2 pcs Hash Browns—perfect for sharing or solo cravings.',
+    price: '₱140',
+    image: '/images/platter-2.jpg',
+  },
+  {
+    title: 'Platter #3',
+    description:
+      'Enjoy Fries, 10 pcs Cheese Sticks, 2 pcs Hash Browns, and 3 pcs Chicken Nuggets—a hearty and tasty mix!',
+    price: '₱170',
+    image: '/images/platter-3.jpg',
+  },
+  ],
 };
 
 const BestSellerSection: React.FC = () => {
@@ -144,7 +211,7 @@ const BestSellerSection: React.FC = () => {
                   {Array(5)
                     .fill(0)
                     .map((_, i) => (
-                      <FaStar key={i} className="text-yellow-400 text-xs mr-1" />
+                      <FaStar key={i} {...({ className: "text-yellow-400 text-xs mr-1" } as React.ComponentProps<'svg'>)} />
                     ))}
                 </div>
                 <p className="text-sm text-gray-800 italic mb-3 leading-snug text-justify">
