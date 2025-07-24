@@ -108,7 +108,7 @@ function SignUpForm() {
                 href={route('AccountVerification')}
                 className="w-full block bg-[#8CB662] hover:bg-[#7aa44f] text-white font-bold py-2 rounded-md text-center transition duration-200"
               >
-                SIGN UP
+                Sign up
               </Link>
             </form>
 

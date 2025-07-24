@@ -82,7 +82,7 @@ const SignInCard = () => {
               type="button"
               className="w-full bg-[#8CB662] text-white font-bold py-2 rounded-full hover:opacity-90 transition-all duration-300 ease-in-out transform hover:scale-[1.02]"
             >
-              SIGN IN
+              Log in
             </button>
 
             <div className="text-center text-sm text-gray-500 my-5">OR</div>
