@@ -1,6 +1,6 @@
 // resources/js/components/menu_sections/CoffeeItems.tsx
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search,  X  } from 'lucide-react';
 
 interface CoffeeItem {
   id: number;
@@ -121,12 +121,23 @@ const coffeeList: CoffeeItem[] = [
 const CoffeeItems: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'All' | 'Hot' | 'Iced'>('All');
   const [search, setSearch] = useState('');
+  const [selectedItem, setSelectedItem] = useState<CoffeeItem | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const filteredItems = coffeeList.filter((item) => {
     const matchType = activeTab === 'All' || item.type === activeTab;
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
+
+   const handleDecrease = () => {
+    if (quantity > 1) setQuantity(quantity - 1);
+  };
+
+  const handleIncrease = () => {
+    setQuantity(quantity + 1);
+  };
 
   return (
     <div className="px-6 pt-10 pb-16">
@@ -163,7 +174,8 @@ const CoffeeItems: React.FC = () => {
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white"
+            onClick={() => setSelectedItem(item)}
+            className="cursor-pointer rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
               <img
@@ -186,10 +198,98 @@ const CoffeeItems: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {selectedItem && (
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+          <div className="bg-white w-full max-w-4xl rounded p-10 relative">
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-black"
+            >
+              <X size={24} />
+            </button>
+            <div className="flex flex-col md:flex-row gap-8">
+              <img
+                src={selectedItem.image}
+                alt={selectedItem.name}
+                className="w-[300px] h-[300px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
+              />
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+                <div className="text-[#65B741] font-bold text-lg mb-2">{selectedItem.price}/75</div>
+                <p className="text-sm text-gray-700 mb-4">
+                  A smooth and creamy blend with a delicate hint of vanilla, offering a refreshing and satisfying treat that’s perfect for any time of the day
+                </p>
+               <div className="mb-4">
+                  <label className="text-base block font-semibold">Quantity</label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <button
+                      onClick={handleDecrease}
+                      className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
+                    >-</button>
+                    <span>{quantity}</span>
+                    <button
+                      onClick={handleIncrease}
+                      className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
+                    >+</button>
+                  </div>
+                </div>
+               <div className="mb-4">
+                 <label className="text-sm font-semibold mb-1">Size options</label>
+                 <div className="h-[2px] w-full bg-[#8CB662] my-1" />
+                 <div className="flex space-x-2 mt-4">
+                   {['Small', 'Medium', 'Large'].map((size) => (
+                <button
+                  key={size}
+                   onClick={() => setSelectedSize(size)}
+                  className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors
+                  ${selectedSize === size 
+                  ? 'bg-[#8CB662] text-white border-[#8CB662]' 
+                  : 'hover:bg-[#8CB662] hover:text-white'}`}
+                 >
+                 {size}
+               </button>
+              ))}
+              </div>
+                </div>
+                <div className="mb-4">
+                  <label className="text-sm font-semibold mb-1">What’s included</label>
+                  <div className="h-[2px] w-full bg-[#8CB662] my-2" />
+
+                  <label className="text-xs block font-semibold mb-1">Flavors</label>
+                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
+                    <option>No Vanilla Syrup</option>
+                    <option>Vanilla Syrup</option>
+                    <option>Caramel Syrup</option>
+                    <option>Hazelnut Syrup</option>
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="text-xs block font-semibold mb-1">Add-ins</label>
+                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
+                    <option>No Vanilla Sweet Cream</option>
+                    <option>Vanilla Sweet Cream</option>
+                  </select>
+                </div>
+                <div className="mb-8">
+                  <label className="text-xs block font-semibold mb-1">Add-ins</label>
+                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs custom-select">
+                    <option>Ice</option>
+                    <option>Extra Milk</option>
+                  </select>
+                </div>
+                <div className="flex space-x-40">
+                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">Add to Cart</button>
+                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">Order Now</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default CoffeeItems;
-
-
