@@ -8,6 +8,10 @@ function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  function route(arg0: string): string {
+    throw new Error('Function not implemented.');
+  }
+
   return (
     <>
       <style>
@@ -104,7 +108,7 @@ function SignUpForm() {
                 href={route('AccountVerification')}
                 className="w-full block bg-[#8CB662] hover:bg-[#7aa44f] text-white font-bold py-2 rounded-md text-center transition duration-200"
               >
-                SIGN UP
+                Sign up
               </Link>
             </form>
 

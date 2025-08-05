@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
 
 const ForgotPasswordForm = () => {
+    function route(arg0: string): string {
+        throw new Error('Function not implemented.');
+    }
+
   return (
     <div className="flex justify-center items-center h-screen bg-gray-200 px-4">
       <div className="relative bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
