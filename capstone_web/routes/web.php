@@ -17,12 +17,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 /* Website Web Routes */
 
 Route::get('/home', function () {
-    return Inertia::render('website_pages/Home_MiAmore');
+    return Inertia::render('website_pages/Home');
 })->name('home');
 
-Route::get('/aboutus', function () {
-    return Inertia::render('website_pages/AboutUs');
-})->name('AboutUs');
+Route::get('/menu', function () {
+    return Inertia::render('website_pages/Menu');
+})->name('menu');
 
 Route::get('/signin', function () {
     return Inertia::render('getstarted_section/MiAmoreWelcome');
@@ -53,6 +53,13 @@ Route::get('/resetpasswordform', function () {
 })->name('ResetPassWordForm');
 
 /* DASHBOARD ADMIN*/
+Route::get('/dashboardnavbar', function () {
+    return Inertia::render('AdminNavbar/SuperAdminNavbar');
+})->name('adminNavbar');
+
+Route::get('/adminNav', function () {
+    return Inertia::render('AdminNavbar/adminNav');
+})->name('adminNav');
 
 Route::get('/dashboardgetstarted', function () {
     return Inertia::render('Dashboard_Section/DashboardGetStarted');
@@ -70,5 +77,16 @@ Route::get('/dashboardemailverificationresend', function () {
     return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
 })->name('DashboardEmailVerificationResend');
 
+Route::get('/superadmindashboard', function () {
+    return Inertia::render('SuperAdminDashItems/Dashboard');
+})->name('Dashboard');
+
+Route::get('/superadmininventory', function () {
+    return Inertia::render('SuperAdminDashItems/Inventory');
+})->name('Inventory');
+
+Route::get('/superadminsalesorder', function () {
+    return Inertia::render('SuperAdminDashItems/SalesOrder');
+})->name('SalesOrder');
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
