@@ -9,24 +9,24 @@ const LoginPage = () => {
 
   return (
     
-    <div className="h-screen flex items-center justify-center bg-gray-100 p-4 font-inter">
+    <div className="h-screen flex items-center justify-center bg-gray-200 p-4 font-inter">
       
       <div className="flex bg-white rounded-xl shadow-2xl overflow-hidden max-w-4xl w-full">
        
         <div className="w-1/2 p-10 flex flex-col justify-center">
-          <div className="flex justify-between items-center mb-8"> 
+          <div className="flex justify-between items-center mb-5"> 
            
-            <Link href="/" className="text-gray-500 hover:text-gray-700">
+            <Link href="/" className="text-[#8CB662] hover:text-[#5f803f]">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
         
-            <img src="/images/MiAmore2.png" alt="Mi Amore Cafe Logo" className="h-10 w-10" /> 
+            <img src="/images/MiAmore2.png" alt="Mi Amore Cafe Logo" className="h-15 w-15" /> 
           </div>
 
-          <h2 className="text-3xl font-bold text-[#8CB662] mb-3">Login to continue</h2>
-          <p className="text-gray-600 text-lg mb-10 leading-relaxed"> 
+          <h2 className="text-2xl font-bold text-[#8CB662] mb-3">Login to continue</h2>
+          <p className="text-gray-600 text-sm mb-5 leading-relaxed"> 
             Enter your credentials to manage and monitor Mi Amore Café operations.
           </p>
 
@@ -92,7 +92,7 @@ const LoginPage = () => {
                   Remember me?
                 </label>
               </div>
-              <Link href="/forgot-password" className="text-[#8CB662] hover:underline"> {/* Link color updated */}
+              <Link href="/forgot-password" className="text-[#8CB662] hover:underline"> 
                 Forgot password?
               </Link>
             </div>
@@ -101,8 +101,8 @@ const LoginPage = () => {
             <Link href="/dashboard" className="w-full">
              <button
               type="button"
-              className="w-full px-8 py-3 bg-white text-[#4A6030] rounded-full
-                                border border-[#8CB662] shadow-sm font-bold
+              className="w-full px-8 py-3 bg-white text-[#8CB662] rounded-full
+                                border-2 border-[#8CB662] shadow-sm font-extrabold
                                 hover:bg-[#8CB662] hover:text-white hover:shadow-md focus:outline-none focus:ring-2
                                 focus:ring-[#8CB662] focus:ring-opacity-75 transition duration-300 ease-in-out
                                 transform hover:scale-105"
@@ -116,11 +116,11 @@ const LoginPage = () => {
        
         <div className="w-1/2 bg-[#8CB662] p-10 flex flex-col items-center justify-center text-white text-center rounded-r-xl">
           <div className="mb-8">
-            <img src="/images/Computer login-bro.png" alt="Login Illustration" className="max-w-full h-auto drop-shadow-lg" />
+            <img src="/images/Computer login-bro.png" alt="Login Illustration" className="max-w-3xl h-72 drop-shadow-lg" />
           </div>
          
-          <h1 className="text-4xl font-extrabold mb-3 leading-tight">Welcome to Mi Amore Café</h1>
-          <p className="text-2xl font-light opacity-90">Admin Portal</p>
+          <h1 className="text-2xl font-extrabold italic mb-2 leading-tight">Welcome to Mi Amore Café</h1>
+          <p className="text-xl font-light italic opacity-90">Admin Portal</p>
         </div>
       </div>
     </div>
