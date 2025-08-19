@@ -24,10 +24,6 @@ Route::get('/menu', function () {
     return Inertia::render('website_pages/Menu');
 })->name('menu');
 
-Route::get('/about-us', function () {
-    return Inertia::render('website_pages/AboutUs');
-});
-
 Route::get('/signin', function () {
     return Inertia::render('getstarted_section/MiAmoreWelcome');
 })->name('SignIn');

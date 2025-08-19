@@ -6,15 +6,15 @@ const VerificationCode = () => {
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-200 px-4">
+    <div className="flex justify-center items-center h-screen bg-gray-100 px-4">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col items-center"
+        className="relative bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center"
       >
       
-       <Link href="/" className="absolute top-6 left-6 p-2 rounded-full text-[#8CB662] hover:text-[#729153] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#8CB662] transition-colors z-10">
+       <Link href="/" className="absolute top-6 left-6 p-2 rounded-full text-gray-500 hover:text-[#8CB662] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#8CB662] transition-colors z-10">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -24,7 +24,7 @@ const VerificationCode = () => {
           <img
           src="/images/MiAmore2.png" 
           alt="Mi Amore Cafe Logo (Small)"
-          className="absolute top-6 right-6 h-10 w-auto object-contain hover:scale-110 transition-transform duration-300 z-10"
+          className="absolute top-6 right-6 h-8 w-auto object-contain hover:scale-110 transition-transform duration-300 z-10"
         />
 
       
@@ -48,7 +48,7 @@ const VerificationCode = () => {
               type="text"
               maxLength={1}
               ref={inputRefs[i]}
-              className="w-14 h-14 rounded-lg border border-gray-400 text-center text-xl font-mono focus:ring-2 focus:ring-[#8CB662] focus:outline-none transition"
+              className="w-14 h-14 rounded-lg border border-gray-300 text-center text-xl font-mono focus:ring-2 focus:ring-green-500 focus:outline-none transition"
             />
           ))}
         </motion.div>
@@ -58,7 +58,7 @@ const VerificationCode = () => {
           Didn't receive the code?{" "}
           <button
             onClick={() => console.log('Resend clicked')}
-            className="text-[#5ea518] font-medium hover:underline transition"
+            className="text-red-500 font-medium hover:underline transition"
           >
             Resend
           </button>
@@ -73,7 +73,7 @@ const VerificationCode = () => {
         >
          <Link
           href='resetpasswordform' 
-          className="w-full block text-center py-3 bg-white text-[#649628] border-2 border-[#8CB662] font-extrabold rounded-xl shadow-sm
+          className="w-full block text-center py-3 bg-white text-[#4A6030] border border-[#8CB662] font-bold rounded-xl shadow-sm
                     hover:bg-[#8CB662] hover:text-white hover:shadow-md
                     transition transform hover:scale-105"
         >
