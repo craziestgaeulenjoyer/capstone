@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 
@@ -26,7 +25,7 @@ function ProductDisplaySection() {
                         hover: { scale: 1.03, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" },
                     }}
                     whileHover="hover"
-                    className="bg-[#D9B4A0] p-6 rounded-xl shadow-md flex flex-col items-center text-center transform transition-transform duration-300 relative pt-24"
+                    className="bg-[#E0A478] p-6 shadow-md flex flex-col items-center text-center transform transition-transform duration-300 relative pt-24"
                 >
                     <div className="absolute -top-12">
                         <img
@@ -44,7 +43,7 @@ function ProductDisplaySection() {
                         solo or with friends, every bite is a treat to enjoy.
                     </p>
                     <button
-                        className="text-black px-4 py-2 rounded-full flex items-center justify-center transition duration-300 cursor-pointer"
+                        className="text-white px-4 py-2 rounded-full flex items-center justify-center transition duration-300 cursor-pointer"
                     >
                         See more
                         <svg
@@ -71,7 +70,7 @@ function ProductDisplaySection() {
                         hover: { scale: 1.03, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" },
                     }}
                     whileHover="hover"
-                    className="bg-[#8CB874] p-6 rounded-xl shadow-md flex flex-col items-center text-center transform transition-transform duration-300 relative pt-24"
+                    className="bg-[#8CB662] p-6  shadow-md flex flex-col items-center text-center transform transition-transform duration-300 relative pt-24"
                 >
                     <div className="absolute -top-12">
                         <img
@@ -88,7 +87,7 @@ function ProductDisplaySection() {
                         croffles are golden, buttery, and simply irresistible. Enjoy them plain
                         or with your favorite toppings!
                     </p>
-                    <button className="text-black px-4 py-2 rounded-full flex items-center justify-center transition duration-300 cursor-pointer">
+                    <button className="text-white px-4 py-2 rounded-full flex items-center justify-center transition duration-300 cursor-pointer">
                         See more
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -114,7 +113,7 @@ function ProductDisplaySection() {
                         hover: { scale: 1.03, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" },
                     }}
                     whileHover="hover"
-                    className="bg-[#9BBFC5] p-6 rounded-xl shadow-md flex flex-col items-center text-center transform transition-transform duration-300 relative pt-24"
+                    className="bg-[#8CC0BE] p-6 shadow-md flex flex-col items-center text-center transform transition-transform duration-300 relative pt-24"
                 >
                     <div className="absolute -top-12">
                         <img
@@ -131,7 +130,7 @@ function ProductDisplaySection() {
                         combination of crunch and comfort. Enjoy them as a snack, side, or
                         paired with your favorite drink!
                     </p>
-                    <button className="text-black px-4 py-2 rounded-full flex items-center justify-center transition duration-300 cursor-pointer">
+                    <button className="text-white px-4 py-2 rounded-full flex items-center justify-center transition duration-300 cursor-pointer">
                         See more
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

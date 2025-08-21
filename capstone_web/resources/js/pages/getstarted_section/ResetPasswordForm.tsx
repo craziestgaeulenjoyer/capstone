@@ -10,7 +10,7 @@ const ResetPasswordForm = () => {
   const toggleConfirmPasswordVisibility = () => setConfirmPasswordVisible(!confirmPasswordVisible);
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100 px-4">
+    <div className="flex justify-center items-center h-screen bg-gray-200 px-4">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -18,8 +18,8 @@ const ResetPasswordForm = () => {
         className="relative bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col"
       >
       
-        <div className="absolute top-4 left-4">
-          <Link href="/" className="text-gray-500 hover:text-gray-700"> 
+        <div className="absolute top-5 left-4">
+          <Link href="/" className="text-[#8CB662] hover:text-[#b3ee77]"> 
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -27,11 +27,11 @@ const ResetPasswordForm = () => {
         </div>
 
        
-        <div className="absolute top-8 right-8">
+        <div className="absolute top-2 right-8">
           <img
             src="/images/MiAmore2.png" 
             alt="Logo"
-            className="h-8 w-auto object-contain" 
+            className="h-15 w-auto object-contain" 
           />
         </div>
 
@@ -94,7 +94,7 @@ const ResetPasswordForm = () => {
         >
           <Link
             href='NextPage' 
-            className="block text-center bg-white text-[#4A6030] border border-[#8CB662] shadow-sm font-bold py-3 rounded-lg
+            className="block text-center bg-white text-[#8CB662] border border-[#8CB662] shadow-sm font-bold py-3 rounded-lg
                        transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#8CB662]
                        hover:bg-[#8CB662] hover:text-white hover:shadow-md"
           >

@@ -1,4 +1,4 @@
-
+// resources/js/components/aboutus/HeroSection.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 
@@ -37,7 +37,7 @@ function HeroSection() {
                     <img
                         src="/images/Miamore3.png"
                         alt="Stylized m star logo"
-                        className="w-40 h-40 object-contain"
+                        className="w-50 h-50 object-contain"
                     />
                 </motion.div>
             </motion.div>

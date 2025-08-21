@@ -5,19 +5,19 @@ const VerificationCodeInputUI = () => {
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
+    <div className="flex justify-center items-center min-h-screen bg-gray-200 px-4">
       <section className="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center w-full max-w-md relative">
 
         
         <div className="absolute top-4 left-4">
-          <Link href="/" className="text-gray-500 hover:text-gray-700">
+          <Link href="/" className="text-[#8CB662] hover:text-[#baf87b]">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
         </div>
 
-        <div className="w-40 h-28 mb-6 mx-auto">
+        <div className="w-40 h-40 mb-6 mx-auto">
           <img
             src="/images/Two Factor Authentication-bro.png"
             alt="Verification Illustration"
@@ -34,7 +34,7 @@ const VerificationCodeInputUI = () => {
         </div>
 
         <div className="flex space-x-3 mb-6">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <input
               key={i}
               type="text"
@@ -49,7 +49,7 @@ const VerificationCodeInputUI = () => {
         <p className="text-gray-600 text-sm mb-6">
           Didn't receive a code?{' '}
           <button
-            className="text-indigo-600 font-semibold hover:underline focus:outline-none"
+            className="text-red-500 font-semibold hover:underline focus:outline-none"
             type="button"
           >
             Resend
@@ -57,8 +57,8 @@ const VerificationCodeInputUI = () => {
         </p>
 
         <button
-          className="bg-white text-[#4A6030] rounded-lg
-                     border border-[#8CB662] shadow-sm font-bold py-3 px-10
+          className="bg-white text-[#8CB662] rounded-full
+                     border-1 border-[#8CB662] shadow-sm font-bold py-3 px-10
                      hover:bg-[#8CB662] hover:text-white hover:shadow-md
                      focus:outline-none focus:ring-2 focus:ring-[#8CB662] focus:ring-opacity-75
                      transition duration-300 ease-in-out transform hover:scale-105"
