@@ -49,7 +49,7 @@ const MilkteaItems: React.FC = () => {
     return matchType && matchSearch;
   });
 
-     const handleDecrease = () => {
+  const handleDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
 
