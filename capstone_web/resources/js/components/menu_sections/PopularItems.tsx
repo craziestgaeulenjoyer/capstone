@@ -173,7 +173,7 @@ const PopularItems: React.FC = () => {
     return matchCategory && matchSearch;
   });
 
-     const handleDecrease = () => {
+  const handleDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
 
@@ -242,6 +242,7 @@ const PopularItems: React.FC = () => {
           </div>
         )}
       </div>
+      
          {/* Modal */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
