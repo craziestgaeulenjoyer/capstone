@@ -1,6 +1,6 @@
 // resources/js/components/menu_sections/CoffeeItems.tsx
 import React, { useState } from 'react';
-import { Search,  X  } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface CoffeeItem {
   id: number;
@@ -15,7 +15,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 1,
     name: 'Classic Iced Coffee',
-    description: 'Bold, smooth, and refreshing  a timeless favorite served over ice.',
+    description:
+      'Bold, smooth, and refreshing  a timeless favorite served over ice.',
     type: 'Iced',
     image: 'images/ClassicIcedCoffee.png',
     price: '₱55',
@@ -23,7 +24,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 2,
     name: 'Vanilla Iced Coffee',
-    description: 'Smooth and creamy with a hint of vanilla for a refreshing treat.',
+    description:
+      'Smooth and creamy with a hint of vanilla for a refreshing treat.',
     type: 'Iced',
     image: 'images/VanillaIcedCoffee.png',
     price: '₱65',
@@ -31,7 +33,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 3,
     name: 'Caramel Iced Coffee',
-    description: 'A sweet blend of coffee and buttery caramel, perfectly chilled.',
+    description:
+      'A sweet blend of coffee and buttery caramel, perfectly chilled.',
     type: 'Iced',
     image: 'images/CaramelIcedCoffee.png',
     price: '₱75',
@@ -39,7 +42,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 4,
     name: 'Hazelnut Iced Coffee',
-    description: 'Rich coffee with a nutty hazelnut twist for a smooth, flavorful sip.',
+    description:
+      'Rich coffee with a nutty hazelnut twist for a smooth, flavorful sip.',
     type: 'Iced',
     image: 'images/HazelnutIcedCoffee.png',
     price: '₱75',
@@ -47,7 +51,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 5,
     name: 'French Vanilla Iced Coffee',
-    description: 'A smooth and creamy blend of bold coffee and rich French vanilla, served chilled for the perfect pick-me-up.',
+    description:
+      'A smooth and creamy blend of bold coffee and rich French vanilla, served chilled for the perfect pick-me-up.',
     type: 'Iced',
     image: 'images/FrenchVanillaIcedCoffee.png',
     price: '₱75',
@@ -55,7 +60,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 6,
     name: 'Ice Snow Coffee',
-    description: 'A refreshing icy coffee treat with a light, frosty texture—cool, bold, and made to energize.',
+    description:
+      'A refreshing icy coffee treat with a light, frosty texture—cool, bold, and made to energize.',
     type: 'Iced',
     image: 'images/IceSnowCoffee.png',
     price: '₱85',
@@ -63,7 +69,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 7,
     name: 'Macadamia White Chocolate',
-    description: 'A luxurious fusion of nutty macadamia and sweet white chocolate with a bold coffee base—comfort in every sip.',
+    description:
+      'A luxurious fusion of nutty macadamia and sweet white chocolate with a bold coffee base—comfort in every sip.',
     type: 'Iced',
     image: 'images/MacadamiaWhiteChocolate.png',
     price: '₱90',
@@ -71,23 +78,26 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 8,
     name: 'Creme Brule Iced Coffee',
-    description: 'Inspired by the classic dessert, this iced coffee features caramelized sweetness and rich espresso flavor.',
+    description:
+      'Inspired by the classic dessert, this iced coffee features caramelized sweetness and rich espresso flavor.',
     type: 'Iced',
     image: 'images/CremeBruleeIcedCoffee.png',
     price: '₱95',
-  },{
+  },
+  {
     id: 9,
     name: 'Brewed Iced Coffee',
-    description: 'Slow-brewed and chilled to perfection—simple, strong, and refreshingly bold.',
+    description:
+      'Slow-brewed and chilled to perfection—simple, strong, and refreshingly bold.',
     type: 'Iced',
     image: 'images/BrewedIcedCoffee.png',
     price: '₱50',
   },
-
   {
     id: 10,
     name: 'Brewed Hot Coffee',
-    description: 'Freshly brewed for deep, smooth flavor—your classic, no-fuss hot coffee companion.',
+    description:
+      'Freshly brewed for deep, smooth flavor—your classic, no-fuss hot coffee companion.',
     type: 'Hot',
     image: 'images/BrewedHotCoffee.png',
     price: '₱50',
@@ -95,7 +105,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 11,
     name: 'Hot Chocolate with Marshmallows',
-    description: 'Creamy and cozy hot cocoa topped with fluffy marshmallows a hug in a cup.',
+    description:
+      'Creamy and cozy hot cocoa topped with fluffy marshmallows a hug in a cup.',
     type: 'Hot',
     image: 'images/HotChocolateMarshamallows.png',
     price: '₱75',
@@ -103,7 +114,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 12,
     name: 'Pure Matcha Latte',
-    description: 'Authentic Japanese matcha blended with milk—earthy, vibrant, and full of green tea goodness.',
+    description:
+      'Authentic Japanese matcha blended with milk—earthy, vibrant, and full of green tea goodness.',
     type: 'Iced',
     image: 'images/PureMatchaLatte.png',
     price: '₱120',
@@ -111,7 +123,8 @@ const coffeeList: CoffeeItem[] = [
   {
     id: 13,
     name: 'Pure Matcha Oat Latte',
-    description: 'A dairy-free delight featuring pure matcha and oat milk—smooth, creamy, and wellness-packed.',
+    description:
+      'A dairy-free delight featuring pure matcha and oat milk—smooth, creamy, and wellness-packed.',
     type: 'Iced',
     image: 'images/PureMatchaOatLLatte.png',
     price: '₱160',
@@ -125,13 +138,31 @@ const CoffeeItems: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
+  const [selectedFlavor, setSelectedFlavor] = useState('');
+  const [selectedAddOn, setSelectedAddOn] = useState('');
+  const [selectedExtra, setSelectedExtra] = useState('');
+
+  const drinkOptions = {
+    flavors: ['No Syrup', 'Vanilla Syrup', 'Caramel Syrup', 'Hazelnut Syrup'],
+    addOns: [
+      'Pearls',
+      'Nata',
+      'Coffee Jelly',
+      'Crushed Oreo',
+      'Cream Cheese',
+      'Cheesecake',
+      'Strawberry Popping Bobba',
+    ],
+    extras: ['Ice', 'Extra Milk', 'Extra Matcha Shot', 'Extra Coffee Shot'],
+  };
+
   const filteredItems = coffeeList.filter((item) => {
     const matchType = activeTab === 'All' || item.type === activeTab;
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
 
-   const handleDecrease = () => {
+  const handleDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
 
@@ -141,6 +172,7 @@ const CoffeeItems: React.FC = () => {
 
   return (
     <div className="px-6 pt-10 pb-16">
+      {/* Tabs & Search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
         <div className="flex space-x-6">
           {['All', 'Hot', 'Iced'].map((tab) => (
@@ -148,7 +180,9 @@ const CoffeeItems: React.FC = () => {
               key={tab}
               onClick={() => setActiveTab(tab as 'All' | 'Hot' | 'Iced')}
               className={`text-sm font-semibold px-5 py-2 rounded-full border transition-all duration-200 ${
-                activeTab === tab ? 'bg-[#8CB662] text-white border-[#8CB662]' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                activeTab === tab
+                  ? 'bg-[#8CB662] text-white border-[#8CB662]'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
               }`}
             >
               {tab}
@@ -170,6 +204,7 @@ const CoffeeItems: React.FC = () => {
         </div>
       </div>
 
+      {/* Coffee Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredItems.map((item) => (
           <div
@@ -187,7 +222,9 @@ const CoffeeItems: React.FC = () => {
             <div className="p-4">
               <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
               <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-              <div className="text-right text-lg text-[#76B13A] font-bold">{item.price}</div>
+              <div className="text-right text-lg text-[#76B13A] font-bold">
+                {item.price}
+              </div>
             </div>
           </div>
         ))}
@@ -201,7 +238,7 @@ const CoffeeItems: React.FC = () => {
 
       {/* Modal */}
       {selectedItem && (
-       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
           <div className="bg-white w-full max-w-4xl rounded p-10 relative">
             <button
               onClick={() => setSelectedItem(null)}
@@ -209,79 +246,142 @@ const CoffeeItems: React.FC = () => {
             >
               <X size={24} />
             </button>
+
             <div className="flex flex-col md:flex-row gap-8">
+              {/* Left image */}
               <img
                 src={selectedItem.image}
                 alt={selectedItem.name}
                 className="w-[300px] h-[300px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
               />
+
+              {/* Right details */}
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
-                <div className="text-[#65B741] font-bold text-lg mb-2">{selectedItem.price}/75</div>
+                <div className="text-[#65B741] font-bold text-lg mb-2">
+                  {selectedItem.price}
+                </div>
                 <p className="text-sm text-gray-700 mb-4">
-                  A smooth and creamy blend with a delicate hint of vanilla, offering a refreshing and satisfying treat that’s perfect for any time of the day
+                  {selectedItem.description}
                 </p>
-               <div className="mb-4">
-                  <label className="text-base block font-semibold">Quantity</label>
+
+                {/* Quantity */}
+                <div className="mb-4">
+                  <label className="text-base block font-semibold">
+                    Quantity
+                  </label>
                   <div className="flex items-center space-x-2 mt-1">
                     <button
                       onClick={handleDecrease}
                       className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
-                    >-</button>
+                    >
+                      -
+                    </button>
                     <span>{quantity}</span>
                     <button
                       onClick={handleIncrease}
                       className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
-                    >+</button>
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
-               <div className="mb-4">
-                 <label className="text-sm font-semibold mb-1">Size options</label>
-                 <div className="h-[2px] w-full bg-[#8CB662] my-1" />
-                 <div className="flex space-x-2 mt-4">
-                   {['Small', 'Medium', 'Large'].map((size) => (
-                <button
-                  key={size}
-                   onClick={() => setSelectedSize(size)}
-                  className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors
-                  ${selectedSize === size 
-                  ? 'bg-[#8CB662] text-white border-[#8CB662]' 
-                  : 'hover:bg-[#8CB662] hover:text-white'}`}
-                 >
-                 {size}
-               </button>
-              ))}
-              </div>
-                </div>
-                <div className="mb-4">
-                  <label className="text-sm font-semibold mb-1">What’s included</label>
-                  <div className="h-[2px] w-full bg-[#8CB662] my-2" />
 
-                  <label className="text-xs block font-semibold mb-1">Flavors</label>
-                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
-                    <option>No Vanilla Syrup</option>
-                    <option>Vanilla Syrup</option>
-                    <option>Caramel Syrup</option>
-                    <option>Hazelnut Syrup</option>
-                  </select>
-                </div>
+                {/* Size */}
                 <div className="mb-4">
-                  <label className="text-xs block font-semibold mb-1">Add-ins</label>
-                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
-                    <option>No Vanilla Sweet Cream</option>
-                    <option>Vanilla Sweet Cream</option>
+                  <label className="text-sm font-semibold mb-1">
+                    Size options
+                  </label>
+                  <div className="h-[2px] w-full bg-[#8CB662] my-1" />
+                  <div className="flex space-x-2 mt-4">
+                    {['Small', 'Medium', 'Large'].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors
+                          ${
+                            selectedSize === size
+                              ? 'bg-[#8CB662] text-white border-[#8CB662]'
+                              : 'hover:bg-[#8CB662] hover:text-white'
+                          }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Flavors */}
+                <div className="mb-4">
+                  <label className="text-xs block font-semibold mb-1">
+                    Flavors
+                  </label>
+                  <select
+                    value={selectedFlavor}
+                    onChange={(e) => setSelectedFlavor(e.target.value)}
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                  >
+                    <option value="" disabled>
+                      Select a flavor
+                    </option>
+                    {drinkOptions.flavors.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
                   </select>
                 </div>
+
+                {/* Add-ons */}
+                <div className="mb-4">
+                  <label className="text-xs block font-semibold mb-1">
+                    Add-ons
+                  </label>
+                  <select
+                    value={selectedAddOn}
+                    onChange={(e) => setSelectedAddOn(e.target.value)}
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                  >
+                    <option value="" disabled>
+                      Select an add-on
+                    </option>
+                    {drinkOptions.addOns.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Extras */}
                 <div className="mb-8">
-                  <label className="text-xs block font-semibold mb-1">Add-ins</label>
-                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs custom-select">
-                    <option>Ice</option>
-                    <option>Extra Milk</option>
+                  <label className="text-xs block font-semibold mb-1">
+                    Extras
+                  </label>
+                  <select
+                    value={selectedExtra}
+                    onChange={(e) => setSelectedExtra(e.target.value)}
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                  >
+                    <option value="" disabled>
+                      Select an extra
+                    </option>
+                    {drinkOptions.extras.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
+                    ))}
                   </select>
                 </div>
+
+                {/* Buttons */}
                 <div className="flex space-x-40">
-                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">Add to Cart</button>
-                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">Order Now</button>
+                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">
+                    Add to Cart
+                  </button>
+                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">
+                    Order Now
+                  </button>
                 </div>
               </div>
             </div>
