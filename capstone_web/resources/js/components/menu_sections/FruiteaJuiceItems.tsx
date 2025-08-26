@@ -84,13 +84,31 @@ const FruiteaJuiceItems: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
+  const [selectedFlavor, setSelectedFlavor] = useState('');
+  const [selectedAddOn, setSelectedAddOn] = useState('');
+  const [selectedExtra, setSelectedExtra] = useState('');
+
+  const drinkOptions = {
+    flavors: ['No Syrup', 'Vanilla Syrup', 'Caramel Syrup', 'Hazelnut Syrup'],
+    addOns: [
+      'Pearls',
+      'Nata',
+      'Coffee Jelly',
+      'Crushed Oreo',
+      'Cream Cheese',
+      'Cheesecake',
+      'Strawberry Popping Bobba',
+    ],
+    extras: ['Ice', 'Extra Milk', 'Extra Matcha Shot', 'Extra Coffee Shot'],
+  };
+
   const filteredItems = fruiteaList.filter((item) => {
     const matchType = activeTab === 'All' || item.type === activeTab;
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
 
-    const handleDecrease = () => {
+  const handleDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
 
@@ -157,8 +175,8 @@ const FruiteaJuiceItems: React.FC = () => {
           </div>
         )}
       </div>
-      
- {/* Modal */}
+
+      {/* Modal */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
           <div className="bg-white w-full max-w-4xl rounded p-10 relative">
@@ -219,35 +237,66 @@ const FruiteaJuiceItems: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Flavor Options */}
+               {/* Flavors */}
                 <div className="mb-4">
-                  <label className="text-sm font-semibold mb-1">What’s included</label>
-                  <div className="h-[2px] w-full bg-[#8CB662] my-2" />
-
-                  <label className="text-xs block font-semibold mb-1">Flavors</label>
-                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
-                    <option>No Vanilla Syrup</option>
-                    <option>Vanilla Syrup</option>
-                    <option>Caramel Syrup</option>
-                    <option>Hazelnut Syrup</option>
+                  <label className="text-xs block font-semibold mb-1">
+                    Flavors
+                  </label>
+                  <select
+                    value={selectedFlavor}
+                    onChange={(e) => setSelectedFlavor(e.target.value)}
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                  >
+                    <option value="" disabled>
+                      Select a flavor
+                    </option>
+                    {drinkOptions.flavors.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                {/* Add-ins */}
+                {/* Add-ons */}
                 <div className="mb-4">
-                  <label className="text-xs block font-semibold mb-1">Add-ins</label>
-                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
-                    <option>No Vanilla Sweet Cream</option>
-                    <option>Vanilla Sweet Cream</option>
+                  <label className="text-xs block font-semibold mb-1">
+                    Add-ons
+                  </label>
+                  <select
+                    value={selectedAddOn}
+                    onChange={(e) => setSelectedAddOn(e.target.value)}
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                  >
+                    <option value="" disabled>
+                      Select an add-on
+                    </option>
+                    {drinkOptions.addOns.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                {/* Extra Options */}
+                {/* Extras */}
                 <div className="mb-8">
-                  <label className="text-xs block font-semibold mb-1">Extras</label>
-                  <select className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs">
-                    <option>Ice</option>
-                    <option>Extra Milk</option>
+                  <label className="text-xs block font-semibold mb-1">
+                    Extras
+                  </label>
+                  <select
+                    value={selectedExtra}
+                    onChange={(e) => setSelectedExtra(e.target.value)}
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                  >
+                    <option value="" disabled>
+                      Select an extra
+                    </option>
+                    {drinkOptions.extras.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
