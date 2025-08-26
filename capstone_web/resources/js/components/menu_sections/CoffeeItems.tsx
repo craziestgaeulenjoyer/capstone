@@ -1,4 +1,3 @@
-// resources/js/components/menu_sections/CoffeeItems.tsx
 import React, { useState } from 'react';
 import { Search, X } from 'lucide-react';
 
