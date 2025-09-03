@@ -1,3 +1,6 @@
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../routes/navigation';
 import React, { useState, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
 import {
@@ -8,15 +11,27 @@ import {
   StyleSheet,
   Alert,
   Platform,
-  TouchableWithoutFeedback, 
-  Keyboard
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import PhoneInput from 'react-native-phone-number-input';
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
+
 const SignInScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
+
   const [activeTab, setActiveTab] = useState<'signIn' | 'register'>('signIn');
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showSuccessLoginModal, setShowSuccessLoginModal] = useState(false);
+
+  // For login field errors
+  const [loginError, setLoginError] = useState('');
+
+  // For register field errors
+  const [registerGeneralError, setRegisterGeneralError] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -28,7 +43,6 @@ const SignInScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [passwordVisible, setPasswordVisible] = useState(false);
 
   // Register states
   const [regEmail, setRegEmail] = useState('');
@@ -39,36 +53,99 @@ const SignInScreen = () => {
 
   //Fade animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter both email and password.');
+  const handleLogin = async () => {
+    setLoginError(''); // clear old errors
+
+    if (!email.trim() || !password.trim()) {
+      setLoginError('Missing fields detected. Please fill up all fields.');
       return;
     }
-    Alert.alert('Login', `Email: ${email}`);
+
+    try {
+      const response = await fetch('http://10.0.2.2:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowSuccessLoginModal(true);
+      } else {
+        setLoginError('Email and/or password is incorrect. Please try again.');
+      }
+    } catch (error) {
+      console.error(error);
+      setLoginError('An error occurred. Please try again later.');
+    }
   };
 
-  const handleRegister = () => {
-    if (!regEmail || !regPassword || !confirmPassword || !phoneNumber) {
-      Alert.alert('Missing Fields', 'Please fill out all fields.');
+  const clearErrors = () => {
+    setLoginError('');
+    // If you also have register errors, clear them too:
+    setRegisterGeneralError('');
+  };
+
+  const handleRegister = async () => {
+    if (!phoneNumber.trim() || !regEmail.trim() || !regPassword.trim() || !confirmPassword.trim()) {
+      setRegisterGeneralError('Missing fields detected. Please fill up all the fields.');
       return;
     }
 
     if (regPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      setRegisterGeneralError('Passwords do not match.');
       return;
     }
 
-    Alert.alert('Register', `Email: ${regEmail}, Phone: ${phoneNumber}`);
+    try {
+      const response = await fetch('http://10.0.2.2:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: regEmail,
+          password: regPassword,
+          phone: phoneNumber,
+        }),
+      });
+
+      console.log("Register payload:", {
+        email: regEmail,
+        password: regPassword,
+        phone: phoneNumber,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+         setShowSuccessModal(true);
+      } else {
+        setRegisterGeneralError(data.message || 'Registration failed.');
+      }
+    } catch (error) {
+      console.error(error);
+      setRegisterGeneralError('An error occurred.');
+    }
   };
 
   useEffect(() => {
     fadeAnim.setValue(0);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    slideAnim.setValue(activeTab === 'signIn' ? -50 : 50); // you can adjust offset
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [activeTab]);
 
   useEffect(() => {
@@ -80,19 +157,74 @@ const SignInScreen = () => {
       }
     }
   }, []);
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showSuccessLoginModal) {
+      timer = setTimeout(() => {
+        setShowSuccessLoginModal(false);
+        navigation.navigate('VerificationScreen'); 
+      }, 5000); 
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [showSuccessLoginModal]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Let’s get your signed in!</Text>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showSuccessModal}
+          onRequestClose={() => setShowSuccessModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Registration Successful!</Text>
+              <Text style={styles.modalMessage}>You can now log in with your account.</Text>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  setActiveTab("signIn"); 
+                }}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showSuccessLoginModal}
+          onRequestClose={() => setShowSuccessLoginModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Login Successful!</Text>
+              <Text style={styles.modalMessage}>
+                Awaiting for redirect...
+              </Text>
+            </View>
+          </View>
+        </Modal>
+        <Text style={styles.headerText}>Let’s get you signed in!</Text>
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[
               styles.tabButton,
+              
               activeTab === 'signIn' && styles.activeTab,
             ]}
-            onPress={() => setActiveTab('signIn')}
+            onPress={() => {
+              setActiveTab('signIn');
+              clearErrors();
+            }}
           >
             <Text style={activeTab === 'signIn' ? styles.activeTabText : styles.tabText}>
               Sign in
@@ -103,7 +235,10 @@ const SignInScreen = () => {
               styles.tabButton,
               activeTab === 'register' && styles.activeTab,
             ]}
-            onPress={() => setActiveTab('register')}
+            onPress={() => {
+              setActiveTab('register');
+              clearErrors();
+            }}
           >
             <Text style={activeTab === 'register' ? styles.activeTabText : styles.tabText}>
               Register
@@ -112,19 +247,26 @@ const SignInScreen = () => {
         </View>
       </View>
 
-      <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
+      <Animated.View style={[ styles.form, 
+          {
+            opacity: fadeAnim,
+            transform: [{ translateX: slideAnim }],
+          },
+        ]}
+      >
         {activeTab === 'signIn' ? (
           <>
             <TextInput
               placeholder="example@gmail.com"
               style={[
                 styles.input,
-                focusedInput === 'regEmail' && styles.focusedInput,
+                focusedInput === 'email' && styles.focusedInput,
+                loginError ? styles.errorInput : null, 
               ]}
-              value={regEmail}
-              onChangeText={setRegEmail}
+              value={email}
+              onChangeText={setEmail}
               keyboardType="email-address"
-              onFocus={() => setFocusedInput('regEmail')}
+              onFocus={() => setFocusedInput('email')}
               onBlur={() => setFocusedInput(null)}
               autoCapitalize="none"
             />
@@ -132,22 +274,24 @@ const SignInScreen = () => {
             <View
               style={[
                 styles.passwordContainer,
-                focusedInput === 'regPassword' && { borderColor: '#92e3a9', borderWidth: 2 }
+                focusedInput === 'password' && { borderColor: '#92e3a9', borderWidth: 2 },
+                loginError ? { borderColor: 'red', borderWidth: 2 } : {},
               ]}
             >
               <TextInput
                 placeholder="Password"
                 style={styles.passwordInput}
                 secureTextEntry={!showPassword}
-                value={regPassword}
-                onChangeText={setRegPassword}
-                onFocus={() => setFocusedInput('regPassword')}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
+            {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
 
             <View style={styles.row}>
               <TouchableOpacity
@@ -161,7 +305,7 @@ const SignInScreen = () => {
                 <Text style={styles.rememberMeText}>Remember me</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                 <Text style={styles.forgotText}>Forgot your password?</Text>
               </TouchableOpacity>
             </View>
@@ -198,10 +342,12 @@ const SignInScreen = () => {
           </>
         ) : (
           <>
+            {/* Phone Number Register Field */}
             <View
               style={[
                 styles.phoneWrapper,
                 focusedInput === 'phone' && styles.focusedInputWrapper,
+                registerGeneralError && !phoneNumber.trim() ? styles.errorInput : {},
               ]}
             >
               <PhoneInput
@@ -234,20 +380,60 @@ const SignInScreen = () => {
                   textAlignVertical: 'center',
                 }}
                 codeTextStyle={{
-                  fontSize: 16,
-                  marginLeft: -4,
+                  fontSize: 14, 
+                  marginLeft: -2, 
+                  paddingHorizontal: 0, 
+                }}
+                flagButtonStyle={{
+                  width: 50,
+                  justifyContent: 'center',
+                  alignItems: 'center',
                 }}
                 textInputProps={{
                   onFocus: () => setFocusedInput('phone'),
                 }}
+                countryPickerProps={{
+                  withCloseButton: false,
+                  modalProps: {
+                    transparent: true,
+                    animationType: 'slide',
+                  },
+                  renderModalContent: (props) => (
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={props.onClose} 
+                      style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.5)', 
+                        justifyContent: 'flex-start',
+                      }}
+                    >
+                      <TouchableOpacity
+                        activeOpacity={1}
+                        style={{
+                          marginTop: '30%', 
+                          backgroundColor: 'white',
+                          borderTopLeftRadius: 20,
+                          borderTopRightRadius: 20,
+                          maxHeight: '70%',
+                          overflow: 'hidden',
+                          flex: 1,
+                        }}
+                      >
+                        <props.CountryPicker {...props} />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ),
+                }}
               />
             </View>
-
+            {/* Email Register Field */}
             <TextInput
               placeholder="example@gmail.com"
               style={[
                 styles.input,
                 focusedInput === 'regEmail' && styles.focusedInput,
+                registerGeneralError && !regEmail.trim() ? styles.errorInput : null,
               ]}
               value={regEmail}
               onChangeText={setRegEmail}
@@ -256,11 +442,12 @@ const SignInScreen = () => {
               onBlur={() => setFocusedInput(null)}
               autoCapitalize="none"
             />
-
+            {/* Password Register Field */} 
             <View
               style={[
                 styles.passwordContainer,
-                focusedInput === 'regPassword' && { borderColor: '#92e3a9', borderWidth: 2 }
+                focusedInput === 'regPassword' && { borderColor: '#92e3a9', borderWidth: 2 },
+                registerGeneralError && !regPassword.trim() ? { borderColor: 'red', borderWidth: 2 } : {},
               ]}
             >
               <TextInput
@@ -276,11 +463,12 @@ const SignInScreen = () => {
                 <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
-
+            {/* Confirm Password Register Field */} 
             <View
               style={[
                 styles.passwordContainer,
-                focusedInput === 'confirmPassword' && { borderColor: '#92e3a9', borderWidth: 2 }
+                focusedInput === 'confirmPassword' && { borderColor: '#92e3a9', borderWidth: 2 },
+                registerGeneralError && !confirmPassword.trim() ? { borderColor: 'red', borderWidth: 2 } : {},
               ]}
             >
               <TextInput
@@ -296,6 +484,10 @@ const SignInScreen = () => {
                 <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
+            
+            {registerGeneralError ? (
+              <Text style={styles.errorText}>{registerGeneralError}</Text>
+            ) : null}
 
             <TouchableOpacity style={styles.loginButton} onPress={handleRegister}>
               <Text style={styles.loginButtonText}>Register</Text>
@@ -353,9 +545,59 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: 'bold',
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#4CAF50",
+  },
+  modalMessage: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+    color: "#333",
+  },
+  modalButton: {
+    backgroundColor: "#8B5E3C",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  errorInput: {
+    borderColor: 'red',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff', // Make background white like in the image
+    backgroundColor: '#fff', 
     borderRadius: 30,
     width: '80%',
     height: 50,
@@ -389,6 +631,16 @@ const styles = StyleSheet.create({
   focusedInput: {
     borderWidth: 2,
     borderColor: '#92e3a9',
+  },
+  errorInput: {
+    borderColor: 'red',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 12,
+    marginLeft: 4,
   },
 
   phoneWrapper: {
