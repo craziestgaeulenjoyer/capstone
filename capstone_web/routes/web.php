@@ -14,7 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 
-/* Website Web Routes */
+/* ---------------- WEBSITE ROUTES ---------------- */
 
 Route::get('/home', function () {
     return Inertia::render('website_pages/Home_MiAmore');
@@ -27,6 +27,9 @@ Route::get('/menu', function () {
 Route::get('/about-us', function () {
     return Inertia::render('website_pages/AboutUs');
 })->name('aboutus');
+
+
+/* Authentication (Get Started Section) */
 
 Route::get('/signin', function () {
     return Inertia::render('getstarted_section/MiAmoreWelcome');
@@ -56,7 +59,9 @@ Route::get('/resetpasswordform', function () {
     return Inertia::render('getstarted_section/ResetPasswordForm');
 })->name('ResetPassWordForm');
 
-/* DASHBOARD ADMIN*/
+
+/* ---------------- DASHBOARD ROUTES ---------------- */
+
 Route::get('/dashboardnavbar', function () {
     return Inertia::render('AdminNavbar/SuperAdminNavbar');
 })->name('adminNavbar');
@@ -64,6 +69,14 @@ Route::get('/dashboardnavbar', function () {
 Route::get('/adminNav', function () {
     return Inertia::render('AdminNavbar/adminNav');
 })->name('adminNav');
+
+// Super Admin Dashboard
+
+Route::get('/superadmin', function () {
+    return Inertia::render('SuperAdmin_Section/Dashboard');
+})->name('Dashboard');
+
+ // Dashboard Auth Screens
 
 Route::get('/dashboardgetstarted', function () {
     return Inertia::render('Dashboard_Section/DashboardGetStarted');
@@ -92,5 +105,7 @@ Route::get('/superadmininventory', function () {
 Route::get('/superadminsalesorder', function () {
     return Inertia::render('SuperAdminDashItems/SalesOrder');
 })->name('SalesOrder');
+
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
