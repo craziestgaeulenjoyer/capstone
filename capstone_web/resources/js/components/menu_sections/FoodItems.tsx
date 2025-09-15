@@ -1,6 +1,6 @@
 // resources/js/components/menu_sections/FoodItems.tsx
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface FoodItem {
   id: number;
@@ -47,12 +47,50 @@ const foodList: FoodItem[] = [
 const FoodItems: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'All' | 'Snacks' | 'Platters' | 'Croffles' | 'Quesadillas & Corndogs'>('All');
   const [search, setSearch] = useState('');
+  const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  
+  const [selectedFlavor, setSelectedFlavor] = useState('');
+  const [selectedAddOn, setSelectedAddOn] = useState('');
+  const [selectedExtra, setSelectedExtra] = useState('');
+
+   const options = {
+    Snacks: {
+      flavors: ['BBQ', 'Sour Cream', 'Cheese'],
+      addOns: ['Cheese Dip', 'Garlic Mayo', 'Ketchup'],
+      extras: ['Large Upgrade', 'Extra Sauce'],
+    },
+    Platters: {
+      flavors: ['Mixed', 'Cheesy', 'Savory'],
+      addOns: ['Cheese Dip', 'Garlic Mayo', 'Ketchup'],
+      extras: ['No Party Size Upgrade','Party Size Upgrade'],
+    },
+    'Quesadillas & Corndogs': {
+      flavors: ['Cheese', 'Beef', 'Spicy'],
+      addOns: ['Cheese Dip', 'Garlic Mayo', 'Ketchup'],
+      extras: ['Large Upgrade', 'Extra Sauce'],
+    },
+    Croffles: {
+      flavors: ['Chocolate', 'Strawberry', 'Matcha', 'Blueberry', 'Mango'],
+      addOns: ['Add Syrup', 'Add Whipped Cream', 'Add Nutella'],
+      extras: ['Extra Scoop of Ice Cream', 'Extra Toppings'],
+    },
+  };
 
   const filteredItems = foodList.filter((item) => {
     const matchType = activeTab === 'All' || item.type === activeTab;
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
+
+  const handleDecrease = () => {
+    if (quantity > 1) setQuantity(quantity - 1);
+  };
+
+  const handleIncrease = () => {
+    setQuantity(quantity + 1);
+  };
 
   return (
     <div className="px-6 pt-10 pb-16">
@@ -89,6 +127,7 @@ const FoodItems: React.FC = () => {
         {filteredItems.map((item) => (
           <div
             key={item.id}
+            onClick={() => setSelectedItem(item)}
             className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
@@ -111,6 +150,127 @@ const FoodItems: React.FC = () => {
           </div>
         )}
       </div>
+      
+    {/* Modal */}
+         {selectedItem && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+             <div className="bg-white w-full max-w-4xl rounded p-10 relative">
+               <button
+                 onClick={() => setSelectedItem(null)}
+                 className="absolute top-4 right-4 text-gray-500 hover:text-black"
+               >
+                 <X size={24} />
+               </button>
+               <div className="flex flex-col md:flex-row gap-8">
+                 <img
+                   src={selectedItem.image}
+                   alt={selectedItem.name}
+                   className="w-[300px] h-[300px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
+                 />
+                 <div className="flex-1">
+                   <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+                   <div className="text-[#65B741] font-bold text-lg mb-2">{selectedItem.price}</div>
+                   <p className="text-sm text-gray-700 mb-4">{selectedItem.description}</p>
+   
+                   {/* Quantity */}
+                   <div className="mb-4">
+                     <label className="text-base block font-semibold">Quantity</label>
+                     <div className="flex items-center space-x-2 mt-1">
+                       <button
+                         onClick={handleDecrease}
+                         className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
+                       >
+                         -
+                       </button>
+                       <span>{quantity}</span>
+                       <button
+                         onClick={handleIncrease}
+                         className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
+                       >
+                         +
+                       </button>
+                     </div>
+                   </div>
+
+                   {/* Flavors */}
+                       {(() => {
+                  const typeOptions = options[selectedItem.type as keyof typeof options];
+                  if (!typeOptions) return null;
+                  const { flavors, addOns, extras } = typeOptions;
+                  return (
+                    <>
+                      <div className="mb-4">
+                        <label className="text-sm font-semibold mb-1">Flavors</label>
+                        <div className="h-[2px] w-full bg-[#8CB662] my-2" />
+                        <select
+                          value={selectedFlavor}
+                          onChange={(e) => setSelectedFlavor(e.target.value)}
+                          className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                        >
+                          <option value="" disabled>
+                            Select a flavor
+                          </option>
+                          {flavors.map((f) => (
+                            <option key={f} value={f}>
+                              {f}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="text-xs block font-semibold mb-1">Add-ons</label>
+                        <select
+                          value={selectedAddOn}
+                          onChange={(e) => setSelectedAddOn(e.target.value)}
+                          className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                        >
+                          <option value="" disabled>
+                            Select an add-on
+                          </option>
+                          {addOns.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="mb-8">
+                        <label className="text-xs block font-semibold mb-1">Extras</label>
+                        <select
+                          value={selectedExtra}
+                          onChange={(e) => setSelectedExtra(e.target.value)}
+                          className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                        >
+                          <option value="" disabled>
+                            Select an extra
+                          </option>
+                          {extras.map((x) => (
+                            <option key={x} value={x}>
+                              {x}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Buttons */}
+                <div className="flex space-x-40">
+                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">
+                    Add to Cart
+                  </button>
+                  <button className="w-[150px] h-[35px] border border-[#8CB662] text-sm text-[#8CB662] rounded-lg font-semibold hover:bg-[#8CB662] shadow-md hover:text-white transition-colors">
+                    Order Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
