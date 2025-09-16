@@ -16,6 +16,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import PhoneInput from 'react-native-phone-number-input';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
 
@@ -56,7 +57,7 @@ const SignInScreen = () => {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   const handleLogin = async () => {
-    setLoginError(''); // clear old errors
+    setLoginError(''); 
 
     if (!email.trim() || !password.trim()) {
       setLoginError('Missing fields detected. Please fill up all fields.');
@@ -67,15 +68,37 @@ const SignInScreen = () => {
       const response = await fetch('http://10.0.2.2:5000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, }),
+        body: JSON.stringify({ 
+          email, 
+          password, 
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        const otpToken = data.otp_token;
+
+        if (rememberMe) {
+          await AsyncStorage.setItem(
+            'userCredentials',
+            JSON.stringify({ email, password, rememberMe: true })
+          );
+        } else {
+          await AsyncStorage.removeItem('userCredentials');
+        }
+
         setShowSuccessLoginModal(true);
+
+        setTimeout(() => {
+          setShowSuccessLoginModal(false);
+          navigation.navigate('VerificationScreen', {
+            email,      
+            otpToken, 
+          });
+        }, 2000);
       } else {
-        setLoginError('Email and/or password is incorrect. Please try again.');
+        setLoginError(data.message || 'Invalid credentials. Please try again.');
       }
     } catch (error) {
       console.error(error);
@@ -131,8 +154,28 @@ const SignInScreen = () => {
   };
 
   useEffect(() => {
+    const loadCredentials = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('userCredentials');
+        if (stored) {
+          const { email, password, rememberMe } = JSON.parse(stored);
+          if (rememberMe) {
+            setEmail(email);
+            setPassword(password);
+            setRememberMe(true);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load credentials', err);
+      }
+    };
+
+    loadCredentials();
+  }, []);
+
+  useEffect(() => {
     fadeAnim.setValue(0);
-    slideAnim.setValue(activeTab === 'signIn' ? -50 : 50); // you can adjust offset
+    slideAnim.setValue(activeTab === 'signIn' ? -50 : 50); 
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -615,7 +658,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#92e3a9', // Light green as in image
+    backgroundColor: '#76b13a', // Light green as in image
     borderRadius: 25, // Ensure rounded corners
   },
   tabText: {
@@ -632,17 +675,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#92e3a9',
   },
-  errorInput: {
-    borderColor: 'red',
-    borderWidth: 2,
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-
   phoneWrapper: {
     borderRadius: 10,
     marginBottom: 15,
