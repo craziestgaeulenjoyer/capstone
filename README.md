@@ -31,6 +31,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install react-native-vector-icons`
 - `npm install react-native-phone-number-input`
 - `npm install express pg bcrypt jsonwebtoken cors dotenv`
+- `npm install @react-native-async-storage/async-storage`
 
 Commands to Enable (PowerShell Terminal):
 
