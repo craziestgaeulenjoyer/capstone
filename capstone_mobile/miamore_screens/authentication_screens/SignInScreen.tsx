@@ -216,7 +216,7 @@ const SignInScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.headerWrapper}>
         <Modal
           animationType="slide"
           transparent={true}
@@ -299,6 +299,7 @@ const SignInScreen = () => {
       >
         {activeTab === 'signIn' ? (
           <>
+            <Text style={styles.categoriesFirstText}>Email</Text>
             <TextInput
               placeholder="example@gmail.com"
               style={[
@@ -313,7 +314,7 @@ const SignInScreen = () => {
               onBlur={() => setFocusedInput(null)}
               autoCapitalize="none"
             />
-
+            <Text style={styles.categoriesText}>Password</Text>
             <View
               style={[
                 styles.passwordContainer,
@@ -372,20 +373,11 @@ const SignInScreen = () => {
                 <FontAwesome name="facebook" size={20} color="#3b5998" />
               </TouchableOpacity>
             </View>
-
-            <Text style={styles.signupText}>
-              Don’t have an account?{' '}
-              <Text
-                style={styles.signupLink}
-                onPress={() => setActiveTab('register')}
-              >
-                Register here
-              </Text>
-            </Text>
           </>
         ) : (
           <>
             {/* Phone Number Register Field */}
+            <Text style={styles.categoriesFirstText}>Phone Number</Text>
             <View
               style={[
                 styles.phoneWrapper,
@@ -470,6 +462,7 @@ const SignInScreen = () => {
                 }}
               />
             </View>
+            <Text style={styles.categoriesText}>Email</Text>
             {/* Email Register Field */}
             <TextInput
               placeholder="example@gmail.com"
@@ -485,6 +478,7 @@ const SignInScreen = () => {
               onBlur={() => setFocusedInput(null)}
               autoCapitalize="none"
             />
+            <Text style={styles.categoriesText}>Password</Text>
             {/* Password Register Field */} 
             <View
               style={[
@@ -506,6 +500,7 @@ const SignInScreen = () => {
                 <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
+            <Text style={styles.categoriesText}>Confirm Password</Text>
             {/* Confirm Password Register Field */} 
             <View
               style={[
@@ -532,8 +527,8 @@ const SignInScreen = () => {
               <Text style={styles.errorText}>{registerGeneralError}</Text>
             ) : null}
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleRegister}>
-              <Text style={styles.loginButtonText}>Register</Text>
+            <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
+              <Text style={styles.registerButtonText}>Register</Text>
             </TouchableOpacity>
 
             {/* Or register with */}
@@ -551,16 +546,6 @@ const SignInScreen = () => {
                 <FontAwesome name="facebook" size={20} color="#3b5998" />
               </TouchableOpacity>
             </View>
-
-            <Text style={styles.signupText}>
-              Already have an account?{' '}
-              <Text
-                style={styles.signupLink}
-                onPress={() => setActiveTab('signIn')}
-              >
-                Login here
-              </Text>
-            </Text>
           </>
         )}
       </Animated.View>
@@ -573,20 +558,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    backgroundColor: '#8B5E3C',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 30,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    alignItems: 'center',
-  },
   headerText: {
     color: '#fff',
-    fontSize: 20,
-    marginBottom: 20,
+    fontSize: 24,
+    marginTop: 20,
+    marginBottom: 15,
     fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
+    textAlign: 'center',
+  },
+  headerWrapper: {
+    backgroundColor: '#8B5E3C',
+    height: 150,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 40, 
+    paddingBottom: 20,
+  },
+  headerContent: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  categoriesText: {
+    fontSize: 14,
+    marginBottom: 4,
+    fontWeight: "bold",
+    color: "#787777",
+    fontFamily: 'Montserrat-Bold',
+  },
+  categoriesFirstText: {
+    fontSize: 14,
+    marginTop: 35,
+    marginBottom: 4,
+    fontWeight: "bold",
+    color: "#787777",
+    fontFamily: 'Montserrat-Bold',
   },
   modalOverlay: {
     flex: 1,
@@ -637,20 +645,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
+    fontFamily: 'Montserrat',
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff', 
+    marginTop: 10,
     borderRadius: 30,
     width: '80%',
-    height: 50,
+    height: 65,
     alignSelf: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 5,
-    overflow: 'hidden', // Clip children to match pill shape
+    elevation: 18,
+    overflow: 'hidden', 
   },
   tabButton: {
     flex: 1,
@@ -658,18 +668,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#76b13a', // Light green as in image
-    borderRadius: 25, // Ensure rounded corners
+    backgroundColor: '#76b13a', 
+    borderRadius: 25, 
   },
   tabText: {
     color: '#444',
-    fontWeight: '600',
-    fontSize: 16,
+    fontWeight: 'bold',
+    fontSize: 20,
+    fontFamily: 'Montserrat',
   },
   activeTabText: {
     color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
+    fontWeight: 'bold',
+    fontSize: 20,
+    fontFamily: 'Montserrat',
   },
   focusedInput: {
     borderWidth: 2,
@@ -678,9 +690,11 @@ const styles = StyleSheet.create({
   phoneWrapper: {
     borderRadius: 10,
     marginBottom: 15,
+    borderColor: "#a3a2a2",
+    borderWidth: 2,
+    elevation: 5,
     overflow: 'hidden',
   },
-
   focusedInputWrapper: {
     borderWidth: 2,
     borderColor: '#92e3a9',
@@ -695,6 +709,9 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     marginBottom: 15,
+    borderColor: "#a3a2a2",
+    borderWidth: 2,
+    elevation: 5,
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -704,8 +721,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     marginBottom: 15,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "#a3a2a2",
+    borderWidth: 2,
+    elevation: 5,
   },
   passwordInput: {
     flex: 1,
@@ -722,8 +740,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#aaa',
@@ -737,26 +755,44 @@ const styles = StyleSheet.create({
   },
   rememberMeText: {
     marginLeft: 6,
-    fontSize: 14,
+    fontSize: 15,
+    fontFamily: 'Montserrat',
   },
   forgotText: {
     color: '#007AFF',
-    fontSize: 14,
+    fontSize: 15,
   },
   loginButton: {
     backgroundColor: '#8B5E3C',
-    paddingVertical: 15,
+    paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 25,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 5,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  registerButton: {
+    backgroundColor: '#8B5E3C',
+    paddingVertical: 18,
+    marginTop: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 25,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 18,
     fontWeight: '600',
   },
   separator: {
@@ -773,6 +809,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     color: '#888',
     fontSize: 14,
+    marginBottom: 6,
   },
   socialIcons: {
     flexDirection: 'row',
@@ -781,14 +818,14 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     backgroundColor: '#f9f9f9',
-    paddingHorizontal: 20,
+    paddingHorizontal: 28,
     paddingVertical: 14,
     marginHorizontal: 10,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 3,
-    elevation: 2.5,
+    elevation: 7,
   },
   signupText: {
     textAlign: 'center',
