@@ -1,7 +1,7 @@
   export type RootStackParamList = {
     Landing: undefined;
     Choice: undefined;
-    VerificationScreen: undefined;
+    VerificationScreen: { email: string; otpToken: string };
     SignIn: undefined;
     Loading: undefined;
     Home: undefined;

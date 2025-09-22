@@ -1,13 +1,31 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Alert, Platform } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Image, 
+  KeyboardAvoidingView, 
+  Modal, 
+  Platform 
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../../routes/navigation'; 
+
+type VerificationRouteProp = RouteProp<RootStackParamList, 'VerificationScreen'>;
 
 const VerificationScreen = () => {
   const navigation = useNavigation();
-  const route = useRoute<any>();
+  const route = useRoute<VerificationRouteProp>();
 
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [otpToken, setOtpToken] = useState(route.params.otpToken); 
+
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const inputRefs = Array.from({ length: 6 }, () => useRef<TextInput>(null));
 
@@ -17,7 +35,6 @@ const VerificationScreen = () => {
     newCode[index] = value;
     setOtpCode(newCode);
 
-    // Focus next input
     if (value && index < 5) {
       inputRefs[index + 1].current?.focus();
     }
@@ -26,35 +43,79 @@ const VerificationScreen = () => {
   const handleSubmit = async () => {
     const code = otpCode.join('');
     if (code.length !== 6) {
-      Alert.alert('Error', 'Please enter the 6-digit code.');
+      setShowSuccessModal(true);
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/verify-otp', {
+      const response = await fetch('http://10.0.2.2:5000/api/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          otp: code,
-          token: route.params?.otpToken
+          otp: code, 
+          token: otpToken
         })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert('Success', 'OTP verified. Logging in...');
-        navigation.navigate('Home');
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigation.navigate('Home');
+        }, 2000);
       } else {
-        Alert.alert('Error', data.message || 'Verification failed.');
+        setShowResendModal(true);
       }
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Server error. Please try again.');
+      setShowResendModal(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    try {
+      const response = await fetch('http://10.0.2.2:5000/api/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: otpToken })
+      });
+
+      const text = await response.text();
+      console.log("Resend response:", text);
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setShowResendModal(true);
+        return;
+      }
+
+      if (response.ok) {
+        setOtpToken(data.otp_token); 
+        setTimeout(() => {
+          setShowResendModal(true);
+        }, 2000);
+      } else {
+        setShowResendModal(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setShowResendModal(true);
+    }
+  };
+
+  const maskEmail = (email: string) => {
+    const [name, domain] = email.split('@');
+    if (name.length <= 2) return email; 
+    return (
+      name.substring(0, 2) + '*'.repeat(Math.max(0, name.length - 4)) + name.slice(-2) + '@' + domain
+    );
   };
 
   return (
@@ -75,14 +136,14 @@ const VerificationScreen = () => {
       <Text style={styles.title}>Verification Email</Text>
       <Text style={styles.subtitle}>
         Please enter the code we sent to{'\n'}
-        <Text style={{ fontWeight: 'bold' }}>{route.params?.email}</Text>
+        <Text style={{ fontWeight: 'bold' }}>{maskEmail(route.params.email)}</Text>
       </Text>
 
       <View style={styles.otpContainer}>
         {otpCode.map((digit, index) => (
           <TextInput
             key={index}
-            id={`otp-${index}`}
+            ref={inputRefs[index]}
             style={styles.otpInput}
             value={digit}
             keyboardType="number-pad"
@@ -94,7 +155,7 @@ const VerificationScreen = () => {
 
       <Text style={styles.resendText}>
         If you don’t receive a code,{' '}
-        <Text style={styles.resendLink} onPress={() => Alert.alert('Not implemented')}>
+        <Text style={styles.resendLink} onPress={handleResend}>
           Resend
         </Text>
       </Text>
@@ -102,6 +163,43 @@ const VerificationScreen = () => {
       <TouchableOpacity style={styles.continueButton} onPress={handleSubmit} disabled={loading}>
         <Text style={styles.continueText}>{loading ? 'Verifying...' : 'Continue'}</Text>
       </TouchableOpacity>
+      
+      {/* Resend Modal */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showResendModal}
+        onRequestClose={() => setShowResendModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>OTP Update</Text>
+            <Text style={styles.modalMessage}>A new OTP has been sent to your email.</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowResendModal(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Successful OTP Modal */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Success</Text>
+            <Text style={styles.modalMessage}>OTP verified successfully! Redirecting...</Text>
+          </View>
+        </View>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 };
@@ -143,16 +241,20 @@ const styles = StyleSheet.create({
   },
   otpContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20
+    justifyContent: 'center',
+    marginTop: 20,
   },
   otpInput: {
-    borderBottomWidth: 2,
-    borderColor: '#A4C87C',
-    width: 40,
-    fontSize: 20,
+    width: 45,
+    height: 45,
+    marginHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#F8F8F8',
     textAlign: 'center',
-    paddingVertical: 5
+    fontSize: 20,
+    color: '#333',
   },
   resendText: {
     textAlign: 'center',
@@ -164,7 +266,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   continueButton: {
-    backgroundColor: '#92e3a9',
+    backgroundColor: '#76b13a',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -173,6 +275,39 @@ const styles = StyleSheet.create({
   continueText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: 'bold'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalBox: {
+    width: 280,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center'
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10
+  },
+  modalMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20
+  },
+  modalButton: {
+    backgroundColor: '#73C04D',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20
+  },
+  modalButtonText: {
+    color: 'white',
     fontWeight: 'bold'
   }
 });

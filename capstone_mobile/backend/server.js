@@ -129,6 +129,43 @@ app.post('/api/verify-otp', async (req, res) => {
   }
 });
 
+app.post('/api/resend-otp', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    const result = await pool.query('SELECT * FROM customers WHERE id = $1', [userId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
+
+    const user = result.rows[0];
+
+    const newOtpCode = generateOTP();
+    const newOtpToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
+    const newExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE customers 
+       SET otp_code = $1, otp_token = $2, otp_expiry = $3 
+       WHERE id = $4`,
+      [newOtpCode, newOtpToken, newExpiry, user.id]
+    );
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'Your New OTP Code',
+      text: `Your new OTP code is: ${newOtpCode}`
+    });
+
+    res.json({ message: 'New OTP sent.', otp_token: newOtpToken });
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ message: 'Invalid or expired token.' });
+  }
+});
+
 app.get('/api/validate-token', (req, res) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -197,6 +234,44 @@ app.post('/api/verify-password-otp', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(401).json({ message: 'Invalid or expired token.' });
+  }
+});
+
+app.post('/api/resend-password-otp', async (req, res) => {
+  const { token } = req.body;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    const result = await pool.query('SELECT * FROM customers WHERE id = $1', [userId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
+
+    const user = result.rows[0];
+
+    const newOtpCode = generateOTP();
+    const newOtpToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
+    const newExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE customers 
+       SET password_otp_code = $1, password_otp_token = $2, password_otp_expiry = $3 
+       WHERE id = $4`,
+      [newOtpCode, newOtpToken, newExpiry, user.id]
+    );
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'Your New Password Reset OTP Code',
+      text: `Your new password reset OTP code is: ${newOtpCode}`
+    });
+
+    res.json({ message: 'New password reset OTP sent.', password_otp_token: newOtpToken });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired. Please request a new password reset.' });
+    }
+    return res.status(401).json({ message: 'Invalid token.' });
   }
 });
 
