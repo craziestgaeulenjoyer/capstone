@@ -62,10 +62,6 @@ Route::get('/resetpasswordform', function () {
 
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
-Route::get('/dashboardnavbar', function () {
-    return Inertia::render('AdminNavbar/SuperAdminNavbar');
-})->name('adminNavbar');
-
 Route::get('/adminNav', function () {
     return Inertia::render('AdminNavbar/adminNav');
 })->name('adminNav');
@@ -73,8 +69,9 @@ Route::get('/adminNav', function () {
 // Super Admin Dashboard
 
 Route::get('/superadmin', function () {
-    return Inertia::render('SuperAdmin_Section/Dashboard');
-})->name('Dashboard');
+    return Inertia::render('SuperAdmin_Navbar/SuperAdminNavbar');
+})->name('SuperAdmin_Navbar');
+
 
  // Dashboard Auth Screens
 
@@ -93,6 +90,8 @@ Route::get('/dashboardemailverification', function () {
 Route::get('/dashboardemailverificationresend', function () {
     return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
 })->name('DashboardEmailVerificationResend');
+
+// Super Admin Dashboard (Content Items)
 
 Route::get('/superadmindashboard', function () {
     return Inertia::render('SuperAdminDashItems/Dashboard');
