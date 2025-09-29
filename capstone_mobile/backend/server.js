@@ -1,3 +1,15 @@
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.sendStatus(403);
+    req.userId = decoded.userId;
+    next();
+  });
+}
+
 const dotenv = require('dotenv'); 
 dotenv.config({ path: __dirname + '/.env' }); 
 
@@ -296,6 +308,61 @@ app.post('/api/reset-password', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(401).json({ message: 'Invalid or expired token.' });
+  }
+});
+
+// Menu Routes
+
+// Adding Items to Cart
+app.post('/api/cart', authenticateToken, async (req, res) => {
+  const { product_id, product_name, size, quantity, instructions, price, image } = req.body;
+
+  console.log("Backend received Add to Cart:", req.body); // Debug
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO cart_items 
+        (customer_id, product_id, product_name, size, quantity, instructions, price, image) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING *`,
+      [req.userId, product_id, product_name, size, quantity, instructions, Number(price), image]
+    );
+
+    res.json({ message: "Added to cart", item: result.rows[0] });
+  } catch (err) {
+    console.error("Error adding to cart:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Getting Cart Items
+app.get('/api/cart', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, customer_id, product_id, product_name, size, quantity,
+              instructions, price::numeric(10,2) AS price, image
+       FROM cart_items
+       WHERE customer_id = $1`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching cart:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Remove Cart Items
+app.delete('/api/cart/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM cart_items WHERE id = $1 AND customer_id = $2',
+      [req.params.id, req.userId]
+    );
+    res.json({ message: 'Item removed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

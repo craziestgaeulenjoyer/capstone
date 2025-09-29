@@ -9,8 +9,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  Platform,
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -645,7 +643,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
-    fontFamily: 'Montserrat',
+    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -769,6 +768,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 25,
     shadowColor: '#000',
+    fontFamily: 'Montserrat',
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,

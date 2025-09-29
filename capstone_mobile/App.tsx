@@ -10,6 +10,9 @@ import ForgotPasswordScreen from './miamore_screens/authentication_screens/Forgo
 import OtpVerificationScreen from './miamore_screens/authentication_screens/OtpVerificationScreen';
 import ResetPasswordScreen from './miamore_screens/authentication_screens/ResetPasswordScreen';
 import HomeScreen from './miamore_screens/app_screens/HomeScreen';
+import MenuScreen from './miamore_screens/app_screens/MenuScreen';
+import NearbyScreen from './miamore_screens/app_screens/NearbyScreen';
+import CartScreen from './miamore_screens/app_screens/CartScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +29,9 @@ export default function App() {
         <Stack.Screen name="OtpVerificationScreen" component={OtpVerificationScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Menu" component={MenuScreen} />
+        <Stack.Screen name="Nearby" component={NearbyScreen} />
+        <Stack.Screen name="Cart" component={CartScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

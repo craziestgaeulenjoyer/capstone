@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../routes/navigation'; 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type VerificationRouteProp = RouteProp<RootStackParamList, 'VerificationScreen'>;
 
@@ -53,18 +54,25 @@ const VerificationScreen = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          otp: code, 
-          token: otpToken
-        })
+          otp: code,
+          token: otpToken,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        await AsyncStorage.setItem("token", data.token);
+        console.log("Saved session token:", data.token);
+
         setShowSuccessModal(true);
+
         setTimeout(() => {
           setShowSuccessModal(false);
-          navigation.navigate('Home');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" }],
+          });
         }, 2000);
       } else {
         setShowResendModal(true);
@@ -270,7 +278,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 30
+    marginTop: 30,
+    elevation: 7,
   },
   continueText: {
     color: 'white',
