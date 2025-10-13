@@ -33,6 +33,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install express pg bcrypt jsonwebtoken cors dotenv`
 - `npm install @react-native-async-storage/async-storage`
 - `npm install react-native-svg`
+- `npm install react-native-image-picker`
 
 Commands to Enable (PowerShell Terminal):
 
