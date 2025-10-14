@@ -34,8 +34,8 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install @react-native-async-storage/async-storage`
 - `npm install react-native-svg`
 - `npm install react-native-image-picker`
-- `npm install @react-native-picker/picker @react-native-community/datetimepicker`
-- ``
+- `npm install @react-native-picker/picker`
+- `npm install react-native-modal-datetime-picker @react-native-community/datetimepicker`
 
 Commands to Enable (PowerShell Terminal):
 
