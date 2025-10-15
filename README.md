@@ -36,6 +36,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install react-native-image-picker`
 - `npm install @react-native-picker/picker`
 - `npm install react-native-modal-datetime-picker @react-native-community/datetimepicker`
+- `npm install react-native-maps`
 
 Commands to Enable (PowerShell Terminal):
 
