@@ -54,7 +54,7 @@ const products = [
         subcategory: "Iced Coffee",
         description: "Brewed to perfection. Served cold and simple.",
         priceSmall: 50,
-        priceMeduim: 55,
+        priceMedium: 55,
         priceLarge: 60,
         image: require("../../assets/BrewedIcedCoffee.png"),
         imageFile: "BrewedIcedCoffee.png",
@@ -182,11 +182,15 @@ const products = [
 
 const MenuScreen: React.FC = () => {  
     const navigation = useNavigation();
+
+    const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [selectedSub, setSelectedSub] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
     const [modalVisible, setModalVisible] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
+
     const [quantity, setQuantity] = useState(1);
     const [size, setSize] = useState<"small" | "medium" | "large">("small");
     const [notes, setNotes] = useState("");
@@ -200,12 +204,15 @@ const MenuScreen: React.FC = () => {
     const closeModal = () => setSelectedProduct(null);
 
     const filteredProducts = products.filter((p) => {
-        if (selectedCategory === "All") return true;
-        if (selectedCategory === p.category) {
-        if (selectedSub) return p.subcategory === selectedSub;
-        return true;
-        }
-        return false;
+        const matchesCategory =
+            selectedCategory === "All" || p.category === selectedCategory;
+        const matchesSub = !selectedSub || p.subcategory === selectedSub;
+        const matchesSearch =
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.subcategory && p.subcategory.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        return matchesCategory && matchesSub && matchesSearch;
     });
 
     const basePrice = selectedProduct?.prices
@@ -231,9 +238,11 @@ const MenuScreen: React.FC = () => {
             <View style={styles.searchContainer}>
                 <Icon name="search-outline" size={20} color="#888" />
                 <TextInput
-                style={styles.searchInput}
-                placeholder="Search"
-                placeholderTextColor="#121212"
+                    style={styles.searchInput}
+                    placeholder="Search"
+                    placeholderTextColor="#121212"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                 />
             </View>
 
@@ -301,25 +310,39 @@ const MenuScreen: React.FC = () => {
             </ScrollView>
             )}
 
-            <FlatList
-                data={filteredProducts}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                renderItem={({ item }) => (
-                <TouchableOpacity
-                    style={styles.card}
-                    onPress={() => openModal(item)}
-                >
-                    <Image source={item.image} style={styles.cardImage} />
-                    <Text style={styles.cardTitle}>{item.name}</Text>
-                    <Text style={styles.cardDescription} numberOfLines={2}>
-                        {item.description}
-                    </Text>
-                    <Text style={styles.cardPrice}>₱{item.priceSmall}/{item.priceMedium}/{item.priceLarge}</Text>
-                </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+                {filteredProducts.length > 0 ? (
+                    <FlatList
+                        data={filteredProducts}
+                        keyExtractor={(item) => item.id}
+                        numColumns={2}
+                        contentContainerStyle={{ paddingHorizontal: 16 }}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                style={styles.card}
+                                onPress={() => openModal(item)}
+                            >
+                                <Image source={item.image} style={styles.cardImage} />
+                                <Text style={styles.cardTitle}>{item.name}</Text>
+                                <Text style={styles.cardDescription} numberOfLines={2}>
+                                    {item.description}
+                                </Text>
+                                <Text style={styles.cardPrice}>
+                                    ₱{item.priceSmall}/{item.priceMedium}/{item.priceLarge}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    />
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>
+                            {searchQuery
+                            ? `No products found for "${searchQuery}".`
+                            : "No products for this category."}
+                        </Text>
+                    </View>
                 )}
-            />
+            </View>
 
             <Modal visible={!!selectedProduct} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
@@ -459,17 +482,11 @@ const MenuScreen: React.FC = () => {
                     key={i}
                     style={styles.tabItem}
                     onPress={() => {
-                        if (tab === "Menu") {
-                        navigation.navigate("Menu"); 
-                        } else if (tab === "Home") {
-                        navigation.navigate("Home");
-                        } else if (tab === "Nearby") {
-                        navigation.navigate("Nearby"); 
-                        } else if (tab === "Cart") {
-                        navigation.navigate("Cart");   
-                        } else if (tab === "Profile") {
-                        navigation.navigate("Profile"); 
-                        }
+                        if (tab === "Menu") navigation.navigate("Menu" as never);
+                        else if (tab === "Home") navigation.navigate("Home" as never);
+                        else if (tab === "Nearby") navigation.navigate("Nearby" as never);
+                        else if (tab === "Cart") navigation.navigate("Cart" as never);
+                        else if (tab === "Profile") navigation.navigate("Profile" as never);
                     }}
                     >
                     <Icon
@@ -602,6 +619,16 @@ const styles = StyleSheet.create({
         marginRight: 12,
         borderRadius: 16,
     },
+    emptyContainer: {
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: "#999",
+        fontStyle: "italic",
+    },
     subChipActive: { backgroundColor: "#73C04D" },
     subText: { color: "#333", fontSize: 13 },
     subTextActive: { color: "#fff", fontSize: 13, fontWeight: "600" },
@@ -689,6 +716,7 @@ const styles = StyleSheet.create({
         borderColor: "#ccc",
         borderRadius: 20,
         marginHorizontal: 5,
+        backgroundColor: "#fff",
 
         // ios
         shadowColor: "#000",
@@ -697,7 +725,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         
         // android
-        elevation: 0,
+        elevation: 4,
     },
     sizeBtnActive: {
         backgroundColor: "#76B13A",
@@ -706,7 +734,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
-        elevation: 5,
+        elevation: 4,
     },
     sectionTitle: { fontSize: 14, fontWeight: "600", marginTop: 10, paddingBottom: 4, borderBottomWidth: 3, borderColor: "#73C04D" },
     sizeContainer: { flexDirection: "row", marginVertical: 8 },

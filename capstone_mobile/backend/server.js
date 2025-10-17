@@ -1,11 +1,18 @@
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
+
+  console.log("Incoming token:", token ? token.slice(0, 40) + "..." : "None"); 
+
   if (!token) return res.sendStatus(401);
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.sendStatus(403);
+    if (err) {
+      console.log("Token verification failed:", err.message);
+      return res.sendStatus(403);
+    }
     req.userId = decoded.userId;
+    console.log("Token verified for user:", decoded.userId);
     next();
   });
 }
@@ -26,6 +33,7 @@ console.log("Email pass exists:", !!process.env.EMAIL_PASS);
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const JWT_SECRET = 'CFoJy9csauDWon3fhdTcviGLMZt6afHm'; 
 
@@ -41,34 +49,34 @@ const transporter = nodemailer.createTransport({
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-app.post('/api/register', async (req, res) => {
-  const { email, password, phone } = req.body;
+app.post("/api/register", async (req, res) => {
+  console.log("Received register body:", req.body);
+  const { full_name, email, password } = req.body;
 
-  if (!email || !password || !phone) {
-    return res.status(400).json({ message: 'All fields are required.' });
+  if (!full_name || !email || !password) {
+    return res.status(400).json({ message: "All fields are required." });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      `INSERT INTO customers (
-        email, 
-        password_hash, 
-        phone_number, 
-        email_verified
-      ) VALUES ($1, $2, $3, $4) 
-      RETURNING id, email, email_verified`,
-      [email, hashedPassword, phone, true]  
+      `INSERT INTO customers (full_name, email, password_hash, email_verified)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, full_name, email, email_verified`,
+      [full_name, email, hashedPassword, true]
     );
 
-    res.status(201).json({ message: 'User registered', user: result.rows[0] });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: result.rows[0],
+    });
   } catch (error) {
-    console.error(error);
-    if (error.code === '23505') {
-      res.status(400).json({ message: 'Email already exists.' });
+    console.error("Registration error:", error);
+    if (error.code === "23505") {
+      res.status(400).json({ message: "Email already exists." });
     } else {
-      res.status(500).json({ message: 'Server error.' });
+      res.status(500).json({ message: "Server error during registration." });
     }
   }
 });
@@ -134,6 +142,9 @@ app.post('/api/verify-otp', async (req, res) => {
 
     const sessionToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
 
+    console.log("Session token created for user:", user.id);
+    console.log("Token:", sessionToken);
+
     res.json({ message: 'OTP verified. Login complete.', token: sessionToken });
   } catch (err) {
     console.error(err);
@@ -142,13 +153,10 @@ app.post('/api/verify-otp', async (req, res) => {
 });
 
 app.post('/api/resend-otp', async (req, res) => {
-  const { token } = req.body;
+  const { email } = req.body;  
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-
-    const result = await pool.query('SELECT * FROM customers WHERE id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM customers WHERE email = $1', [email]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
 
     const user = result.rows[0];
@@ -174,7 +182,7 @@ app.post('/api/resend-otp', async (req, res) => {
     res.json({ message: 'New OTP sent.', otp_token: newOtpToken });
   } catch (err) {
     console.error(err);
-    res.status(401).json({ message: 'Invalid or expired token.' });
+    res.status(500).json({ message: 'Server error.' });
   }
 });
 
@@ -363,6 +371,125 @@ app.delete('/api/cart/:id', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update Cart Item
+app.put("/api/cart/:id", authenticateToken, async (req, res) => {
+  const { quantity, size, instructions } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE cart_items
+       SET quantity = $1, size = $2, instructions = $3
+       WHERE id = $4 AND customer_id = $5
+       RETURNING *`,
+      [quantity, size, instructions, req.params.id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    res.json({
+      message: "Cart item updated",
+      item: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Error updating cart:", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Checkout route
+app.post("/api/checkout", authenticateToken, async (req, res) => {
+  try {
+    const { cartItems, paymentMethod, totalAmount } = req.body;
+    const userId = req.user.id;
+
+    if (!cartItems || cartItems.length === 0)
+      return res.status(400).json({ message: "Cart is empty" });
+
+    const client = await pool.connect();
+
+    // Save order to "orders" table
+    const orderRes = await client.query(
+      `INSERT INTO orders (user_id, payment_method, total_amount, status, created_at)
+       VALUES ($1, $2, $3, $4, NOW()) RETURNING id`,
+      [userId, paymentMethod, totalAmount, "pending"]
+    );
+    const orderId = orderRes.rows[0].id;
+
+    // Save ordered items
+    for (const item of cartItems) {
+      await client.query(
+        `INSERT INTO order_items (order_id, product_id, quantity, price, instructions)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [orderId, item.product_id, item.quantity, item.price, item.instructions || ""]
+      );
+    }
+
+    // 🪙 If payment is GCash
+    if (paymentMethod === "GCash") {
+      // Mock GCash integration (replace this with real GCash API)
+      const transactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
+      await client.query(
+        `UPDATE orders SET status=$1, transaction_id=$2 WHERE id=$3`,
+        ["paid", transactionId, orderId]
+      );
+
+      res.json({
+        message: "Payment successful via GCash",
+        transaction_id: transactionId,
+        estimated_time: "25–30 minutes",
+      });
+    } else {
+      res.json({
+        message: "Order placed successfully (Pay on Pickup)",
+        transaction_id: "TXN-" + Math.floor(100000 + Math.random() * 900000),
+        estimated_time: "25–30 minutes",
+      });
+    }
+
+    client.release();
+  } catch (err) {
+    console.error("Checkout error:", err);
+    res.status(500).json({ message: "Server error during checkout" });
+  }
+});
+
+// Get customer profile
+app.get('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, full_name, email, gender, birthday, phone_number 
+       FROM customers 
+       WHERE id = $1`,
+      [req.userId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: "User not found." });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error." });
+  }
+});
+
+// Update customer profile
+app.put('/api/profile', authenticateToken, async (req, res) => {
+  const { full_name, email, gender, birthday, phone_number } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE customers 
+       SET full_name = $1, email = $2, gender = $3, birthday = $4, phone_number = $5
+       WHERE id = $6
+       RETURNING id, full_name, email, gender, birthday, phone_number`,
+      [full_name, email, gender, birthday, phone_number, req.userId]
+    );
+    res.json({ message: "Profile updated successfully", user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error." });
   }
 });
 

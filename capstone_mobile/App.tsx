@@ -13,6 +13,7 @@ import HomeScreen from './miamore_screens/app_screens/HomeScreen';
 import MenuScreen from './miamore_screens/app_screens/MenuScreen';
 import NearbyScreen from './miamore_screens/app_screens/NearbyScreen';
 import CartScreen from './miamore_screens/app_screens/CartScreen';
+import ProfileScreen from './miamore_screens/app_screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,7 @@ export default function App() {
         <Stack.Screen name="Menu" component={MenuScreen} />
         <Stack.Screen name="Nearby" component={NearbyScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

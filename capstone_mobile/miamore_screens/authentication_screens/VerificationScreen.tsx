@@ -90,7 +90,7 @@ const VerificationScreen = () => {
       const response = await fetch('http://10.0.2.2:5000/api/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: otpToken })
+        body: JSON.stringify({ email: route.params.email }) 
       });
 
       const text = await response.text();

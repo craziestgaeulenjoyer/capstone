@@ -219,17 +219,11 @@ const HomeScreen: React.FC = () => {
             key={i}
             style={styles.tabItem}
             onPress={() => {
-              if (tab === "Menu") {
-                navigation.navigate("Menu"); 
-              } else if (tab === "Home") {
-                navigation.navigate("Home");
-              } else if (tab === "Nearby") {
-                navigation.navigate("Nearby"); 
-              } else if (tab === "Cart") {
-                navigation.navigate("Cart");   
-              } else if (tab === "Profile") {
-                navigation.navigate("Profile"); 
-              }
+              if (tab === "Menu") navigation.navigate("Menu" as never);
+              else if (tab === "Home") navigation.navigate("Home" as never);
+              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
+              else if (tab === "Cart") navigation.navigate("Cart" as never);
+              else if (tab === "Profile") navigation.navigate("Profile" as never);
             }}
           >
             <Icon
