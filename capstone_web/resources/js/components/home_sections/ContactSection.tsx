@@ -8,7 +8,7 @@ const ContactSection: React.FC = () => {
   return (
     <motion.section
       id="contact"
-      className="bg-white px-4 py-16"
+      className="bg-[#daffb3] shadow px-4 py-16"
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
@@ -73,8 +73,8 @@ const ContactSection: React.FC = () => {
 
         {/* Right */}
         <div className="md:w-1/2 pr-12">
-          <div className="bg-white p-8 rounded-xl shadow-xl border border-gray-300 h-full">
-            <p className="text-[#41E2DA] uppercase text-sm font-semibold mb-2">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl border-1 border-[#e0fac7] h-full">
+            <p className="text-[#41E2DA] uppercase text-sm font-bold shadow-2xs mb-2">
               Contact Us
             </p>
             <motion.h2
@@ -84,7 +84,7 @@ const ContactSection: React.FC = () => {
               viewport={{ once: true, amount: 0.5 }}
               className="text-3xl font-bold text-[#9D7353] leading-snug mb-6"
             >
-              <span className="text-[#76B13A]">Reach</span> & Get in Touch With Us!
+              <span className="text-[#76B13A] shadow-2xs ">Reach</span> & Get in Touch With Us!
             </motion.h2>
 
             {/* Form */}
@@ -111,7 +111,7 @@ const ContactSection: React.FC = () => {
                     id={field.id}
                     type={field.type}
                     required
-                    className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
                   />
                 </div>
               ))}
@@ -127,7 +127,7 @@ const ContactSection: React.FC = () => {
                   id="message"
                   rows={4}
                   required
-                  className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
                 ></textarea>
               </div>
 

@@ -32,7 +32,7 @@ const GeneralFaqs: React.FC<GeneralFaqsProps> = ({ faqData1, openFaqs1, toggleFa
           </p>
           <Link
             href="/contact"
-            className="inline-flex items-center px-4 py-2 border-2 border-white text-white text-md font-extrabold hover:bg-white hover:text-[#7ba642] transition"
+            className="inline-flex items-center px-4 py-2 border-2 border-white text-white text-md font-extrabold hover:border-[#7ba642] hover:bg-white hover:text-[#7ba642] transition"
           >
             Contact Us <BsArrowUpRight className="ml-2" />
           </Link>

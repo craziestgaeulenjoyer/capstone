@@ -19,7 +19,7 @@ const WhyChooseUsSection: React.FC = () => {
       >
         <div className="relative w-full h-full md:w-[420px] md:h-[420px] rounded-full overflow-hidden shadow-lg">
           <img
-            src="/images/coffee-cup.png"
+            src="/images/coffee-cup.jpg"
             alt="Coffee Cup"
             className="w-full h-full object-cover rounded-full"
           />
@@ -53,7 +53,7 @@ const WhyChooseUsSection: React.FC = () => {
           a cozy ambiance, we provide the perfect place to relax, connect, and enjoy every sip.
         </p>
 
-        <a href="/about" className="inline-block mt-2">
+        <a href="/about-us" className="inline-block mt-2">
           <button className="flex items-center gap-2 border-2 border-[#76B13A] text-[#76B13A] font-semibold px-6 py-2 shadow-md hover:bg-[#76B13A] hover:text-white transition duration-300">
             Learn more <FiArrowUpRight className="text-xl" />
           </button>

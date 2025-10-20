@@ -70,7 +70,7 @@ const AboutFaqs: React.FC = () => {
             Here are answers to the most common questions we receive about ordering, delivery, rewards, and more.
             We want your experience with Mi Amore Café to be smooth and sweet.
           </p>
-          <button className="mt-6 px-5 py-2 border-2 border-white text-white font-extrabold text-md flex items-center gap-2 hover:bg-white hover:text-[#90CAF9] transition duration-300">
+          <button className="mt-6 px-5 py-2 border-2 border-white text-white font-extrabold text-md flex items-center gap-2 hover:border-[#8bc4f3] hover:bg-white hover:text-[#90CAF9] transition duration-300">
             Contact Us <BsArrowUpRight className="text-base" />
           </button>
         </div>

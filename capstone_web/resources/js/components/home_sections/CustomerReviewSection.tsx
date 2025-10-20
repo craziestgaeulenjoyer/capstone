@@ -87,6 +87,7 @@ const CustomerReviewSection: React.FC = () => {
             transition={{ duration: 0.8, ease: "easeOut" }}
             viewport={{ once: false, amount: 0.5 }}
             className="text-3xl md:text-4xl font-extrabold flex items-center justify-center gap-2"
+            style={{ fontFamily: "'Kalam', cursive" }}
           >
             <span className="text-[#41E2DA]">What</span>
             <span className="text-black">our</span>
@@ -98,21 +99,6 @@ const CustomerReviewSection: React.FC = () => {
               className="inline-block w-15 h-15 ml-2 absolute top-[-20px] right-[350px]"
             />
           </motion.h2>
-
-          <div className="flex justify-center items-center gap-4 mt-2">
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: "20%" }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="h-1 bg-[#76B13A] rounded"
-            ></motion.div>
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: "5%" }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="h-1 bg-[#41E2DA] rounded"
-            ></motion.div>
-          </div>
         </div>
 
         <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full justify-center transition-transform duration-700 ease-in-out">
@@ -155,7 +141,7 @@ const CustomerReviewSection: React.FC = () => {
               key={index}
               onClick={() => handleDotClick(index)}
               className={`w-4 h-4 rounded-full cursor-pointer ${
-                index === currentSlide ? "bg-[#6D9C40]" : "bg-gray-300"
+                index === currentSlide ? "bg-[#6D9C40]" : "bg-gray-400"
               }`}
             ></span>
           ))}

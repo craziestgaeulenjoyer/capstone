@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { FaStar } from 'react-icons/fa';
 import { X } from 'lucide-react';
@@ -33,28 +33,28 @@ const productData: Record<Category, Product[]> = {
       description:
         'Cool, crisp, and refreshing—a zesty blend of lemon and fresh cucumber for the ultimate chill.',
       price: '₱60',
-      image: '/images/cucumber.jpg',
+      image: '/images/CucumberLemonade.png',
     },
     {
       title: 'Watermelon with Strawberry Popping Bobba',
       description:
         'Juicy watermelon meets a burst of strawberry bobba—sweet, fun, and flavor-packed in every sip!',
       price: '₱70',
-      image: '/images/watermelon-bobba.jpg',
+      image: '/images/WatermelonStrawberryBoba.png',
     },
     {
       title: 'Classic Lemonade',
       description:
         'Timelessly tangy and perfectly sweet—the all-time favorite that never goes out of style.',
       price: '₱55',
-      image: '/images/classic-lemonade.jpg',
+      image: '/images/ClassicLemonade.png',
     },
     {
       title: 'Charcoal Lemonade',
       description:
         'Bold and detoxifying with a citrus twist—lemonade with a striking black finish and a clean, refreshing taste.',
       price: '₱50',
-      image: '/images/charcoal.jpg',
+      image: '/images/CharcoalLemonade.png',
     },
   ],
   'Milk Tea': [
@@ -63,28 +63,28 @@ const productData: Record<Category, Product[]> = {
       description:
         'A creamy brown sugar milk tea blend with rich roasted caramel notes and soft pearls.',
       price: '₱80/90',
-      image: '/images/milktea-okinawa.jpg',
+      image: '/images/Okinawa.png',
     },
     {
       title: 'Wintermelon',
       description:
         'Delicately sweet with a mellow finish—this milk tea classic is both calming and satisfying.',
       price: '₱80/90',
-      image: '/images/milktea-wintermelon.jpg',
+      image: '/images/Wintermelon.png',
     },
     {
       title: 'Oreo',
       description:
         'Crushed Oreo cookies blended into smooth milk tea—crunchy, creamy, and crave-worthy.',
       price: '₱80/90',
-      image: '/images/milktea-oreo.jpg',
+      image: '/images/Oreo.png',
     },
     {
       title: 'Bobbatella',
       description:
         'Nutella meets bobba in this indulgent fusion of chocolatey richness and chewy delight.',
       price: '₱110',
-      image: '/images/milktea-bobbatella.jpg',
+      image: '/images/Bobbatella.png',
     },
   ],
   'Snacks': [
@@ -93,14 +93,14 @@ const productData: Record<Category, Product[]> = {
     description:
       'Golden, crispy, and lightly salted—our fries are the perfect companion to any drink.',
     price: '₱45',
-    image: '/images/snack-fries.jpg',
+    image: '/images/Fries.png',
   },
   {
     title: 'Cheese Sticks',
     description:
       'Crunchy on the outside, melty cheese on the inside—served with a savory dip for extra delight.',
     price: '₱50',
-    image: '/images/snack-cheesesticks.jpg',
+    image: '/images/CheeseSticks.png',
   },
   ],
   'Coffee': [
@@ -109,7 +109,7 @@ const productData: Record<Category, Product[]> = {
     description:
       'A chill twist on your classic brew—smooth iced coffee topped with a snowy layer of cream.',
     price: '₱85',
-    image: '/images/ice-snow-coffee.jpg',
+    image: '/images/IceSnowCoffee.png',
   },
   ],
   'Platters': [
@@ -118,14 +118,14 @@ const productData: Record<Category, Product[]> = {
     description:
       'A savory combo of Fries, 10 pcs Cheese Sticks, and 2 pcs Hash Browns—perfect for sharing or solo cravings.',
     price: '₱140',
-    image: '/images/platter-2.jpg',
+    image: '/images/Platter2.png',
   },
   {
     title: 'Platter #3',
     description:
       'Enjoy Fries, 10 pcs Cheese Sticks, 2 pcs Hash Browns, and 3 pcs Chicken Nuggets—a hearty and tasty mix!',
     price: '₱170',
-    image: '/images/platter-3.jpg',
+    image: '/images/Platter3.png',
   },
   ],
 };
@@ -175,15 +175,29 @@ const BestSellerSection: React.FC = () => {
     if (cat === 'Snacks') return snackOptions;
     if (cat === 'Platters') return platterOptions;
     return drinkOptions;
-  };
+  };  
 
-  // Animations
-  const containerVariants = { hidden: {}, visible: { transition: { staggerChildren: 0.2 } } };
-  const cardVariants = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeInOut' } },
-    exit: { opacity: 0, y: 20, transition: { duration: 0.3, ease: 'easeInOut' } },
-  };
+// Animations
+const containerVariants: Variants = { 
+  hidden: {}, 
+  visible: { 
+    transition: { staggerChildren: 0.2 } 
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { duration: 0.5, ease: ['easeInOut'] } 
+  },
+  exit: { 
+    opacity: 0, 
+    y: 20, 
+    transition: { duration: 0.3, ease: ['easeInOut'] } 
+  },
+};
 
   const openModal = (item: Product, cat: Category) => {
     setSelectedItem(item);
@@ -204,8 +218,8 @@ const BestSellerSection: React.FC = () => {
         transition={{ duration: 0.6 }}
         className="text-center mb-6"
       >
-        <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="mx-auto w-20 md:w-24 mb-1" />
-        <h2 className="text-xl text-[#9D7353] italic font-semibold">Our Most-Loved Sips & Bites</h2>
+        <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="mx-auto w-20 md:w-30 mb-1" />
+        <h2 className="text-2xl text-[#9D7353] italic font-semibold">Our Most-Loved Sips & Bites</h2>
         <div className="flex flex-wrap justify-center mt-4 gap-2">
           {categories.map((cat) => (
             <motion.button
@@ -244,7 +258,13 @@ const BestSellerSection: React.FC = () => {
               onClick={() => openModal(item, activeCategory)}
               className="bg-white rounded-md shadow-md overflow-hidden flex flex-col justify-between border border-gray-200 hover:shadow-xl transition-all duration-300 cursor-pointer"
             >
-              <img src={item.image} alt={item.title} className="w-full h-56 object-cover" />
+              <div className="bg-[#E1E1E1] p-4 flex justify-center">
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-48 object-contain rounded-md"
+                />
+              </div>
               <div className="p-4">
                 <h3 className="font-bold text-[15px] text-[#4F4F4F] mb-1">{item.title}</h3>
                 <div className="flex mb-2">
