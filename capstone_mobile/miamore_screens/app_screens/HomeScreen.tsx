@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,52 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   Image,
   ImageBackground,
+  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const HomeScreen: React.FC = () => {
+const HomeScreen: React.FC = () => {  
+  const navigation = useNavigation();
+  const { width } = Dimensions.get("window");
+
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const validateToken = async () => {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        console.log("⚠️ No token found, redirecting to SignIn");
+        navigation.navigate("SignIn" as never);
+        return;
+      }
+
+      try {
+        const res = await fetch("http://10.0.2.2:5000/api/validate-token", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          console.log("⚠️ Token not valid, redirecting to SignIn");
+          navigation.navigate("SignIn" as never);
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Token valid:", data);
+      } catch (err) {
+        console.error("Error validating token:", err);
+        navigation.navigate("SignIn" as never);
+      }
+    };
+
+    validateToken();
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -31,7 +71,7 @@ const HomeScreen: React.FC = () => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
-            placeholderTextColor="#8c8c8c"
+            placeholderTextColor="#121212"
           />
         </View>
 
@@ -102,55 +142,90 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.linkText}>View all  {'>'}</Text>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 27, paddingRight: 0 }}>
-          {[
-            {
-              name: "Biscoff Croffle",
-              desc: "Crispy, buttery & topped with rich Biscoff goodness.",
-              price: "₱150",
-              image: require('../../assets/croffles.jpg'),
-            },
-            {
-              name: "Classic Iced Coffee",
-              desc: "Bold, smooth & refreshing timeless favorite.",
-              price: "₱55/65",
-              image: require('../../assets/ClassicIcedCoffee.png'),
-            },
-            {
-              name: "Platters #3",
-              desc: "Crispy fries, cheesy sticks & nuggets perfect for sharing.",
-              price: "₱170",
-              image: require('../../assets/Platter3.png'),
-            },
-          ].map((item, i, arr) => (
-            <View
-              style={[
-                styles.card,
-                i === arr.length - 1 ? { marginRight: 27 } : {},
-              ]}
-              key={i}
-            >
-              <Image source={item.image} style={styles.cardImage} />
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardDesc}>{item.desc}</Text>
+        <View style={styles.cardContainer}>
+          <FlatList
+            data={[
+              {
+                name: "Biscoff Croffle",
+                desc: "Crispy, buttery & topped with rich Biscoff goodness.",
+                price: "₱150",
+                image: require('../../assets/croffles.jpg'),
+              },
+              {
+                name: "Classic Iced Coffee",
+                desc: "Bold, smooth & refreshing timeless favorite.",
+                price: "₱55/65",
+                image: require('../../assets/ClassicIcedCoffee.png'),
+              },
+              {
+                name: "Platters #3",
+                desc: "Crispy fries, cheesy sticks & nuggets perfect for sharing.",
+                price: "₱170",
+                image: require('../../assets/Platter3.png'),
+              },
+            ]}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={200} 
+            decelerationRate="fast"
+            renderItem={({ item }) => (
+              <View style={[styles.card, { width: width * 0.45 }]}>
+                <Image source={item.image} style={styles.cardImage} />
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  <Text style={styles.cardDesc}>{item.desc}</Text>
 
-                <View style={{ flex: 1 }} />
+                  <View style={{ flex: 1 }} />
 
-                <Text style={styles.cardPrice}>{item.price}</Text>
-                <TouchableOpacity style={styles.addBtn}>
-                  <Text style={styles.addBtnText}>Add to Cart</Text>
-                </TouchableOpacity>
+                  <Text style={styles.cardPrice}>{item.price}</Text>
+                  <TouchableOpacity style={styles.addBtn}>
+                    <Text style={styles.addBtnText}>Add to Cart</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))}
-        </ScrollView>
+            )}
+            keyExtractor={(_, i) => i.toString()}
+            onScroll={(e) => {
+              const index = Math.round(
+                e.nativeEvent.contentOffset.x / (width * 0.75)
+              );
+              setActiveIndex(index);
+            }}
+          />
+
+          {/* Dots indicator */}
+          <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 4, marginRight: 14, }}>
+            {[0, 1, 2].map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  width: 12,
+                  height: 8,
+                  borderRadius: 4,
+                  marginHorizontal: 4,
+                  backgroundColor: i === activeIndex ? "#73C04D" : "#ccc",
+                }}
+              />
+            ))}
+          </View>
+        </View>
       </ScrollView>
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
         {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
-          <TouchableOpacity key={i} style={styles.tabItem}>
+          <TouchableOpacity
+            key={i}
+            style={styles.tabItem}
+            onPress={() => {
+              if (tab === "Menu") navigation.navigate("Menu" as never);
+              else if (tab === "Home") navigation.navigate("Home" as never);
+              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
+              else if (tab === "Cart") navigation.navigate("Cart" as never);
+              else if (tab === "Profile") navigation.navigate("Profile" as never);
+            }}
+          >
             <Icon
               name={
                 tab === "Home"
@@ -197,7 +272,7 @@ const styles = StyleSheet.create({
     height: 65,
     resizeMode: 'contain',
   },
-  headerTitle: { fontSize: 24, fontWeight: "800" },
+  headerTitle: { fontSize: 24, fontWeight: "bold", fontFamily: 'Montserrat-Bold', },
   headerIcons: { flexDirection: "row" },
   icon: { marginRight: 24 },
 
@@ -213,9 +288,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     elevation: 10, 
-
+    fontFamily: 'Montserrat',
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: "#000" },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: "#000", fontFamily: 'Montserrat', },
 
   deliveryCard: {
     backgroundColor: '#8BC34A', 
@@ -238,11 +313,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 4,
+    fontFamily: 'Montserrat',
   },
   deliverySubtitle: {
     fontSize: 14,
     color: '#fff',
     marginBottom: 12,
+    fontFamily: 'Montserrat',
   },
   deliveryButton: {
     backgroundColor: '#E0E0E0',
@@ -254,6 +331,7 @@ const styles = StyleSheet.create({
   deliveryButtonText: {
     fontWeight: 'bold',
     color: '#4CAF50',
+    fontFamily: 'Montserrat-Bold',
   },
 
   skewedBanner: {
@@ -325,19 +403,24 @@ const styles = StyleSheet.create({
   categoryText: { fontSize: 12, fontWeight: 700, marginBottom: 10, },
 
   card: {
-    width: 180,
+    width: 200,
     height: 260, 
     backgroundColor: "#fff",
     borderRadius: 12,
     marginTop: 10,
     marginBottom: 22,
-    marginRight: 12,
+    marginRight: 14,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 3,
     overflow: "hidden",
+  },
+  cardContainer: {
+    marginTop: 10,
+    marginBottom: 20,
+    marginLeft: 27,
   },
   cardImage: {
     width: "100%",
@@ -377,10 +460,17 @@ const styles = StyleSheet.create({
   bottomTabs: {
     flexDirection: "row",
     justifyContent: "space-around",
-    borderTopWidth: 1,
-    borderColor: "#eee",
-    paddingVertical: 10,
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 30,
+    paddingVertical: 12,
     backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 6,
   },
   tabItem: { alignItems: "center" },
   tabText: { fontSize: 12, marginTop: 2 },

@@ -5,6 +5,10 @@
     SignIn: undefined;
     Loading: undefined;
     Home: undefined;
+    Menu: undefined;
+    Nearby: undefined;
+    Cart: undefined;
+    Profile: undefined;
     ForgotPassword: undefined; 
     OtpVerificationScreen: { email: string; token: string }; 
     ResetPassword: { email: string; token: string }; 

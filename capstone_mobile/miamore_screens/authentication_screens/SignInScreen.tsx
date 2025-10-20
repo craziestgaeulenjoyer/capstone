@@ -9,13 +9,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  Platform,
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import PhoneInput from 'react-native-phone-number-input';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
@@ -49,8 +46,7 @@ const SignInScreen = () => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const phoneInput = useRef<PhoneInput>(null);
+  const [fullName, setFullName] = useState('');
 
   //Fade animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -113,8 +109,8 @@ const SignInScreen = () => {
   };
 
   const handleRegister = async () => {
-    if (!phoneNumber.trim() || !regEmail.trim() || !regPassword.trim() || !confirmPassword.trim()) {
-      setRegisterGeneralError('Missing fields detected. Please fill up all the fields.');
+    if (!fullName.trim() || !regEmail.trim() || !regPassword.trim() || !confirmPassword.trim()) {
+      setRegisterGeneralError("Missing fields detected. Please fill up all the fields.");
       return;
     }
 
@@ -128,16 +124,16 @@ const SignInScreen = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          full_name: fullName,
           email: regEmail,
           password: regPassword,
-          phone: phoneNumber,
         }),
       });
 
       console.log("Register payload:", {
+        full_name: fullName,
         email: regEmail,
         password: regPassword,
-        phone: phoneNumber,
       });
 
       const data = await response.json();
@@ -190,16 +186,6 @@ const SignInScreen = () => {
       }),
     ]).start();
   }, [activeTab]);
-
-  useEffect(() => {
-    if (phoneInput.current) {
-      const input = phoneInput.current?.getTextInput();
-      if (input) {
-        input.addEventListener?.('focus', () => setFocusedInput('phone'));
-        input.addEventListener?.('blur', () => setFocusedInput(null));
-      }
-    }
-  }, []);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -368,102 +354,36 @@ const SignInScreen = () => {
             <View style={styles.socialIcons}>
               <TouchableOpacity style={styles.socialButton}>
                 <FontAwesome name="google" size={20} color="#DB4437" />
+                <Text style={styles.iconText}>Sign In using Google</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialButton}>
                 <FontAwesome name="facebook" size={20} color="#3b5998" />
+                <Text style={styles.iconText}>Sign In using Facebook</Text>
               </TouchableOpacity>
             </View>
           </>
         ) : (
           <>
-            {/* Phone Number Register Field */}
-            <Text style={styles.categoriesFirstText}>Phone Number</Text>
-            <View
+            {/* Full Name Register Field */}
+            <Text style={styles.categoriesFirstText}>Full Name</Text>
+            <TextInput
+              placeholder="John Doe"
               style={[
-                styles.phoneWrapper,
-                focusedInput === 'phone' && styles.focusedInputWrapper,
-                registerGeneralError && !phoneNumber.trim() ? styles.errorInput : {},
+                styles.input,
+                focusedInput === "fullName" && styles.focusedInput,
+                registerGeneralError && !fullName.trim() ? styles.errorInput : {},
               ]}
-            >
-              <PhoneInput
-                ref={phoneInput}
-                defaultValue={phoneNumber}
-                defaultCode="PH"
-                layout="first"
-                onChangeFormattedText={setPhoneNumber}
-                onChangeText={() => setFocusedInput('phone')} // fallback
-                onBlur={() => setFocusedInput(null)}
-                containerStyle={{
-                  backgroundColor: '#f1f1f1',
-                  borderRadius: 10,
-                  height: 52,
-                  width: '100%',
-                }}
-                textContainerStyle={{
-                  backgroundColor: '#f1f1f1',
-                  borderTopRightRadius: 10,
-                  borderBottomRightRadius: 10,
-                  height: 52,
-                  paddingVertical: 0,
-                  paddingHorizontal: 10,
-                }}
-                textInputStyle={{
-                  fontSize: 16,
-                  paddingVertical: 0,
-                  paddingHorizontal: 0,
-                  margin: 0,
-                  textAlignVertical: 'center',
-                }}
-                codeTextStyle={{
-                  fontSize: 14, 
-                  marginLeft: -2, 
-                  paddingHorizontal: 0, 
-                }}
-                flagButtonStyle={{
-                  width: 50,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-                textInputProps={{
-                  onFocus: () => setFocusedInput('phone'),
-                }}
-                countryPickerProps={{
-                  withCloseButton: false,
-                  modalProps: {
-                    transparent: true,
-                    animationType: 'slide',
-                  },
-                  renderModalContent: (props) => (
-                    <TouchableOpacity
-                      activeOpacity={1}
-                      onPress={props.onClose} 
-                      style={{
-                        flex: 1,
-                        backgroundColor: 'rgba(0,0,0,0.5)', 
-                        justifyContent: 'flex-start',
-                      }}
-                    >
-                      <TouchableOpacity
-                        activeOpacity={1}
-                        style={{
-                          marginTop: '30%', 
-                          backgroundColor: 'white',
-                          borderTopLeftRadius: 20,
-                          borderTopRightRadius: 20,
-                          maxHeight: '70%',
-                          overflow: 'hidden',
-                          flex: 1,
-                        }}
-                      >
-                        <props.CountryPicker {...props} />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  ),
-                }}
-              />
-            </View>
-            <Text style={styles.categoriesText}>Email</Text>
+              value={fullName}
+              onChangeText={setFullName}
+              onFocus={() => setFocusedInput("fullName")}
+              onBlur={() => setFocusedInput(null)}
+              autoCapitalize="words"
+              autoCorrect={false}
+              keyboardType="default"
+              inputMode="text"
+            />
             {/* Email Register Field */}
+            <Text style={styles.categoriesText}>Email</Text>
             <TextInput
               placeholder="example@gmail.com"
               style={[
@@ -541,9 +461,11 @@ const SignInScreen = () => {
             <View style={styles.socialIcons}>
               <TouchableOpacity style={styles.socialButton}>
                 <FontAwesome name="google" size={20} color="#DB4437" />
+                <Text style={styles.iconText}>Register using Google</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialButton}>
                 <FontAwesome name="facebook" size={20} color="#3b5998" />
+                <Text style={styles.iconText}>Register using Facebook</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -645,7 +567,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
-    fontFamily: 'Montserrat',
+    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -769,6 +692,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 25,
     shadowColor: '#000',
+    fontFamily: 'Montserrat',
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
@@ -812,20 +736,28 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   socialIcons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'center',
     marginBottom: 20,
   },
   socialButton: {
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 28,
+    flexDirection: "row",
+    alignItems: "center",         
+    justifyContent: "center",      
+    backgroundColor: "#f9f9f9",
     paddingVertical: 14,
     marginHorizontal: 10,
+    marginVertical: 8,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 7,
+  },
+  iconText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#444',
   },
   signupText: {
     textAlign: 'center',
