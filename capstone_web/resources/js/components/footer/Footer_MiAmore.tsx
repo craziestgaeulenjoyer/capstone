@@ -9,8 +9,13 @@ const Footer_MiAmore: React.FC = () => {
                 {/* Logo & Description */}
                 <div className="pr-10"> 
                     <div className="flex items-center space-x-2 mb-4">
-                        <img src="/images/MiAmore2.png" alt="Logo" className="h-12 w-12 rounded-full bg-white p-1" />
-                        <h1 className="text-xl font-bold text-[#a6d37c]">Mi Amore.</h1>
+                        <img src="/images/MiAmore2.png" alt="Logo" className="h-15 w-15 rounded-full bg-white p-1" />
+                        <h1 
+                        className="text-xl font-bold text-[#a6d37c] "
+                        style={{ fontFamily: "'Kalam', cursive" }}
+                         > 
+                         Mi Amore
+                        </h1>
                     </div>
                     <p className="text-sm">
                         Welcome to Mi Amore Café, a cozy spot where love meets coffee.
