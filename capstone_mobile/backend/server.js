@@ -403,55 +403,53 @@ app.put("/api/cart/:id", authenticateToken, async (req, res) => {
 
 // Checkout route
 app.post("/api/checkout", authenticateToken, async (req, res) => {
+  const userId = req.userId;
+  const { cartItems, paymentMethod, totalAmount, address } = req.body;
+
   try {
-    const { cartItems, paymentMethod, totalAmount } = req.body;
-    const userId = req.user.id;
-
-    if (!cartItems || cartItems.length === 0)
-      return res.status(400).json({ message: "Cart is empty" });
-
-    const client = await pool.connect();
-
-    // Save order to "orders" table
-    const orderRes = await client.query(
-      `INSERT INTO orders (user_id, payment_method, total_amount, status, created_at)
-       VALUES ($1, $2, $3, $4, NOW()) RETURNING id`,
-      [userId, paymentMethod, totalAmount, "pending"]
+    const userResult = await pool.query(
+      "SELECT full_name, email FROM customers WHERE id = $1",
+      [userId]
     );
-    const orderId = orderRes.rows[0].id;
 
-    // Save ordered items
-    for (const item of cartItems) {
-      await client.query(
-        `INSERT INTO order_items (order_id, product_id, quantity, price, instructions)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [orderId, item.product_id, item.quantity, item.price, item.instructions || ""]
-      );
-    }
+    const user = userResult.rows[0];
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // 🪙 If payment is GCash
-    if (paymentMethod === "GCash") {
-      // Mock GCash integration (replace this with real GCash API)
-      const transactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
-      await client.query(
-        `UPDATE orders SET status=$1, transaction_id=$2 WHERE id=$3`,
-        ["paid", transactionId, orderId]
-      );
+    // Generate the unique IDs
+    const orderCode = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+    const transactionId =
+      paymentMethod === "GCash"
+        ? "TXN-" + Math.floor(100000 + Math.random() * 900000)
+        : null;
 
-      res.json({
-        message: "Payment successful via GCash",
-        transaction_id: transactionId,
-        estimated_time: "25–30 minutes",
-      });
-    } else {
-      res.json({
-        message: "Order placed successfully (Pay on Pickup)",
-        transaction_id: "TXN-" + Math.floor(100000 + Math.random() * 900000),
-        estimated_time: "25–30 minutes",
-      });
-    }
+    // Inserts order into DB
+    const insertOrder = `
+      INSERT INTO orders (
+        user_id, payment_method, total_amount, status, transaction_id,
+        order_code, customer_name, customer_email, customer_address, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      RETURNING *;
+    `;
 
-    client.release();
+    const orderResult = await pool.query(insertOrder, [
+      userId,
+      paymentMethod,
+      totalAmount,
+      paymentMethod === "GCash" ? "paid" : "pending",
+      transactionId,
+      orderCode,
+      user.full_name,
+      user.email,
+      address || null,
+    ]);
+
+    res.status(200).json({
+      message: "Order placed successfully",
+      order_code: orderCode,
+      transaction_id: transactionId,
+      full_name: user.full_name,
+      email: user.email,
+    });
   } catch (err) {
     console.error("Checkout error:", err);
     res.status(500).json({ message: "Server error during checkout" });
@@ -490,6 +488,22 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error." });
+  }
+});
+
+// Submit feedback
+app.post('/api/feedback', authenticateToken, async (req, res) => {
+  const { rating, description } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO feedback (user_id, rating, description, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [req.userId, rating, description]
+    );
+    res.json({ message: "Feedback submitted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
