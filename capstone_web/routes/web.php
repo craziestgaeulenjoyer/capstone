@@ -62,9 +62,11 @@ Route::get('/resetpasswordform', function () {
 
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
-Route::get('/adminNav', function () {
-    return Inertia::render('AdminNavbar/adminNav');
-})->name('adminNav');
+// Admin Dashboard
+
+Route::get('/admin', function () {
+    return Inertia::render('Admin_Dashboard/Admin_Navbar');
+})->name('Admin_Navbar');
 
 // Super Admin Dashboard
 
@@ -90,20 +92,6 @@ Route::get('/dashboardemailverification', function () {
 Route::get('/dashboardemailverificationresend', function () {
     return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
 })->name('DashboardEmailVerificationResend');
-
-// Super Admin Dashboard (Content Items)
-
-Route::get('/superadmindashboard', function () {
-    return Inertia::render('SuperAdminDashItems/Dashboard');
-})->name('Dashboard');
-
-Route::get('/superadmininventory', function () {
-    return Inertia::render('SuperAdminDashItems/Inventory');
-})->name('Inventory');
-
-Route::get('/superadminsalesorder', function () {
-    return Inertia::render('SuperAdminDashItems/SalesOrder');
-})->name('SalesOrder');
 
 
 require __DIR__.'/settings.php';

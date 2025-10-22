@@ -34,7 +34,7 @@ function DashboardGetStarted() {
           {/* BUTTONS */}
           <div className="flex justify-center space-x-6">
             {/* Admin */}
-            <Link href="/admin-login" className="block w-full max-w-[140px]">
+            <Link href="/admin" className="block w-full max-w-[140px]">
               <button
                 type="button"
                 className="w-full px-4 py-2 bg-white text-[#8CB662] rounded-full
@@ -49,7 +49,7 @@ function DashboardGetStarted() {
             </Link>
 
             {/* Super Admin */}
-            <Link href="/super-admin-login" className="block w-full max-w-[140px]">
+            <Link href="/superadmin" className="block w-full max-w-[140px]">
               <button
                 type="button"
                 className="w-full px-4 py-2 bg-white text-[#8CB662] rounded-full
@@ -70,8 +70,9 @@ function DashboardGetStarted() {
           <div className="mb-8">
             <img src="/images/admin-amico.png" alt="Admin Portal Illustration" className="max-w-65 h-auto drop-shadow-lg" />
           </div>
-          <h1 className="text-3xl font-bold mb-3 leading-tight">Welcome to Mi Amore Café</h1>
-          <p className="text-2xl font-light italic opacity-90">Admin Portal</p>
+          <h1 className="text-2xl font-bold mb-3 leading-tight"
+              style={{ fontFamily: "'Kalam', cursive" }} >Welcome to Mi Amore Café</h1>
+          <p className="text-xl font-light italic opacity-90" >Admin Portal</p>
         </div>
       </div>
     </div>
