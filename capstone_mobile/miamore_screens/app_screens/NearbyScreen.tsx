@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+{/* import MapView, { Marker, Polyline } from "react-native-maps"; */}
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 
@@ -69,7 +69,7 @@ const NearbyScreen: React.FC = () => {
       </View>
 
       {/* Map Section */}
-      <View style={styles.mapContainer}>
+      {/* <View style={styles.mapContainer}>
         <MapView
           style={styles.map}
           initialRegion={region}
@@ -86,7 +86,7 @@ const NearbyScreen: React.FC = () => {
           ))}
           <Polyline coordinates={routeCoords} strokeColor="#73C04D" strokeWidth={4} />
         </MapView>
-      </View>
+      </View> */}
 
       {/* Scrollable Content */}
       <ScrollView style={styles.scrollContent}>

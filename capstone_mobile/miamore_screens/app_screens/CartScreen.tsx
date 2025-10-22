@@ -193,16 +193,33 @@ const CartScreen: React.FC = () => {
       });
 
       const data = await response.json();
+
       if (response.ok) {
+        // Remove selected items from the backend cart
+        for (const id of selectedItems) {
+          await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+
+        // Update UI by filtering out removed items
+        setCartItems((prev) => prev.filter((item) => !selectedItems.includes(item.id)));
+
+        // Reset selection
+        setSelectedItems([]);
+
+        // Show success modal
         setTransactionId(data.transaction_id);
         setOrderCode(data.order_code);
         setUserData({ full_name: data.full_name, email: data.email });
         setShowOrderModal(true);
       } else {
-        Alert.alert("Error", data.message);
+        Alert.alert("Error", data.message || "Checkout failed. Try again.");
       }
     } catch (err) {
       console.error("Checkout error:", err);
+      Alert.alert("Error", "Something went wrong during checkout.");
     }
   };
 
