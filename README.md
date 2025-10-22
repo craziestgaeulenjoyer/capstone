@@ -8,6 +8,7 @@ Official Repository for Capstone 1
 
 ✅ Website Repository
 ✅ Mobile Repository 
+🔜 Kiosk Repository
 
 ------
 
@@ -37,6 +38,8 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install @react-native-picker/picker`
 - `npm install react-native-modal-datetime-picker @react-native-community/datetimepicker`
 - `npm install react-native-maps`
+- `npm install @react-native-google-signin/google-signin`
+- `npm install react-native-fbsdk-next`
 
 Commands to Enable (PowerShell Terminal):
 
@@ -47,5 +50,5 @@ Commands to Enable (PowerShell Terminal):
 Optional Commands (PowerShell Terminal): 
 
 - `npx react-native log-android` (To enable logs and show it)
-
+- `npx pod-install` (To link native dependencies)
 
