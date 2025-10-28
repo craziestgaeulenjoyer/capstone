@@ -10,5 +10,8 @@ Route::get('/bubble-welcome', function () {
     return Inertia::render('kiosk_pages/Welcome');
 });
 
+Route::get('/productfeature', function () {
+    return Inertia::render('kiosk_pages/Featured');
+});
 
 require __DIR__.'/auth.php';
