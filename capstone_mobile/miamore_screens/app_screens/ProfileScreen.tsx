@@ -33,6 +33,9 @@ const ProfileScreen: React.FC = () => {
   const [viewExpanded, setViewExpanded] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [description, setDescription] = useState("");
 
   const fetchProfile = async () => {
     try {
@@ -234,7 +237,10 @@ const ProfileScreen: React.FC = () => {
               <TouchableOpacity
                 key={index}
                 style={styles.otherItem}
-                onPress={() => item === "Logout" && handleLogout()}
+                onPress={() => {
+                  if (item === "Logout") handleLogout();
+                  else if (item === "Share your feedback") setShowFeedbackModal(true);
+                }}
               >
                 <Text style={styles.otherText}>{item}</Text>
                 <Icon name="chevron-forward" size={18} color="#ccc" />
@@ -420,6 +426,77 @@ const ProfileScreen: React.FC = () => {
       </ScrollView>
     )}
 
+    {/* Feedback Modal */}
+    <Modal
+      visible={showFeedbackModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowFeedbackModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={[styles.modalContent, { width: "85%" }]}>
+          <Text style={styles.modalTitle}>Share Your Feedback</Text>
+          <TouchableOpacity
+            onPress={() => setShowFeedbackModal(false)}
+            style={styles.closeButton}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+
+          <View style={styles.starRow}>
+            {[1, 2, 3, 4, 5].map((num) => (
+              <TouchableOpacity key={num} onPress={() => setRating(num)}>
+                <Icon
+                  name={num <= rating ? "star" : "star-outline"}
+                  size={30}
+                  color="#FFD700"
+                  style={{ marginHorizontal: 4 }}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TextInput
+            placeholder="Tell us about your experience..."
+            style={[styles.input, { height: 100, textAlignVertical: "top" }]}
+            multiline
+            value={description}
+            onChangeText={setDescription}
+          />
+
+          <TouchableOpacity
+            style={[styles.button, styles.saveBtn, { alignSelf: "center", marginTop: 10 }]}
+            onPress={async () => {
+              try {
+                const token = await AsyncStorage.getItem("token");
+                const response = await fetch("http://10.0.2.2:5000/api/feedback", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ rating, description }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                  Alert.alert("Thank you!", "Your feedback has been submitted.");
+                  setShowFeedbackModal(false);
+                  setRating(0);
+                  setDescription("");
+                } else {
+                  Alert.alert("Error", data.message || "Submission failed.");
+                }
+              } catch (err) {
+                console.error("Error submitting feedback:", err);
+              }
+            }}
+          >
+            <Text style={styles.submitText}>Submit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
         {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
@@ -533,6 +610,28 @@ const styles = StyleSheet.create({
     color: "#555",
     marginVertical: 2,
     textAlign: "left",
+  },
+  starRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  submitText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  closeButton: {
+    position: "absolute",
+    right: 10,
+    top: 5,
+    padding: 5,
+    zIndex: 10,
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: "#555",
+    fontWeight: "bold",
   },
   avatarSmall: {
     width: 70,

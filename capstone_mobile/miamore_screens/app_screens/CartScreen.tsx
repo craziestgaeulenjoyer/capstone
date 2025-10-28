@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -27,20 +28,53 @@ const IMAGE_MAP: { [key: string]: any } = {
 
 const CartScreen: React.FC = () => {
   const navigation = useNavigation();
-  const [showLoyalty, setShowLoyalty] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
-  const [usePoints, setUsePoints] = useState(true);
-  const [cartItems, setCartItems] = useState<any[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
+
+  interface UserData {
+    id?: number;
+    full_name: string;
+    email: string;
+    phone_number?: string;
+  }
+
+  interface CartItem {
+    id: number;
+    customer_id?: number;
+    product_id: number;
+    product_name: string;
+    phone_number?: string;
+    size?: string;
+    quantity: number;
+    instructions?: string;
+    price: number;
+    image?: string;
+  }
+
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [toggledTrashItems, setToggledTrashItems] = useState<number[]>([]);
   const [editItem, setEditItem] = useState<any>(null);
+  
+  const [modalMessage, setModalMessage] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [selectedPayment, setSelectedPayment] = useState("");
+  const [orderCode, setOrderCode] = useState<string>("");
+  const [transactionId, setTransactionId] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+
+  const [showLoyalty, setShowLoyalty] = useState(false);
+  const [usePoints, setUsePoints] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [showRemoveBtn, setShowRemoveBtn] = useState(false);
   const [confirmRemoveVisible, setConfirmRemoveVisible] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [showOrderConfirm, setShowOrderConfirm] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState("");
+  const [showOrderConfirmTab, setShowOrderConfirmTab] = useState(false);
+  const [showCheckoutTab, setShowCheckoutTab] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+
+  const [subtotal, setSubtotal] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const points = 120;
   const discount = 12;
@@ -85,17 +119,129 @@ const CartScreen: React.FC = () => {
     loadCart();
   }, []);
 
-  const toggleSelect = (id: number) => {
-    setSelectedItems((prev) => {
-      const newSelection = prev.includes(id)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await fetch("http://10.0.2.2:5000/api/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setUserData(data);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await fetch("http://10.0.2.2:5000/api/cart", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          setCartItems(data);
+
+          const subtotalCalc = data.reduce(
+            (sum, item) => sum + Number(item.price) * item.quantity,
+            0
+          );
+          setSubtotal(subtotalCalc);
+
+          const deliveryFee = 0; 
+          setTotalAmount(subtotalCalc + deliveryFee);
+        }
+      } catch (err) {
+        console.error("Error fetching cart:", err);
+      }
+    };
+
+    fetchCart();
+  }, []);
+
+  const handleCheckout = async () => {
+    if (selectedItems.length === 0) {
+      Alert.alert("No Items Selected", "Please select at least one item to proceed to checkout.");
+      return;
+    }
+
+    const selectedCartItems = cartItems.filter((item) =>
+      selectedItems.includes(item.id)
+    );
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch("http://10.0.2.2:5000/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          cartItems: selectedCartItems,
+          paymentMethod: selectedPayment,
+          totalAmount,
+          address,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove selected items from the backend cart
+        for (const id of selectedItems) {
+          await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+
+        // Update UI by filtering out removed items
+        setCartItems((prev) => prev.filter((item) => !selectedItems.includes(item.id)));
+
+        // Reset selection
+        setSelectedItems([]);
+
+        // Show success modal
+        setTransactionId(data.transaction_id);
+        setOrderCode(data.order_code);
+        setUserData({ full_name: data.full_name, email: data.email });
+        setShowOrderModal(true);
+      } else {
+        Alert.alert("Error", data.message || "Checkout failed. Try again.");
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      Alert.alert("Error", "Something went wrong during checkout.");
+    }
+  };
+
+  const toggleSelectItem = (id: number) => {
+    setSelectedItems((prev) =>
+      prev.includes(id)
         ? prev.filter((itemId) => itemId !== id)
-        : [...prev, id];
-      setShowRemoveBtn(newSelection.length > 0);
-      return newSelection;
+        : [...prev, id]
+    );
+  };
+
+  const toggleTrashItem = (id: number) => {
+    setToggledTrashItems((prev) => {
+      const updated = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
+
+      setShowRemoveBtn(updated.length > 0);
+
+      return updated;
     });
   };
 
-  const updateQuantity = async (item: any, newQty: number) => {
+  const updateQuantity = async (item: CartItem, newQty: number) => {
     const token = await AsyncStorage.getItem("token");
 
     if (newQty <= 0) {
@@ -121,27 +267,7 @@ const CartScreen: React.FC = () => {
     }
   };
 
-  const fetchCart = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const res = await fetch("http://10.0.2.2:5000/api/cart", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const normalized = data.map((it: any) => ({
-          ...it,
-          price: it.price != null ? Number(it.price) : 0,
-          quantity: it.quantity != null ? Number(it.quantity) : 0,
-        }));
-        setCartItems(normalized);
-      }
-    } catch (err) {
-      console.error("Failed to fetch cart:", err);
-    }
-  };
-
-  const openEditModal = (item) => {
+  const openEditModal = (item: CartItem) => {
     setEditItem(item);
     setEditModalVisible(true);
   };
@@ -196,11 +322,6 @@ const CartScreen: React.FC = () => {
     }
   };
 
-  const totalAmount = cartItems.reduce(
-    (sum, item) => sum + item.quantity * (item.price || 0),
-    0
-  );
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -229,7 +350,7 @@ const CartScreen: React.FC = () => {
       </View>
 
       {/* Main Content */}
-      {!showLoyalty ? (
+      {!showLoyalty && !showCheckoutTab && !showOrderConfirmTab ? (
         <View style={{ flex: 1, }}>
           <ScrollView style={{ padding: 16 }}>
             {cartItems.length > 0 ? (
@@ -240,30 +361,56 @@ const CartScreen: React.FC = () => {
                     typeof item.image === "string" &&
                     (item.image.startsWith("http://") || item.image.startsWith("https://"))
                   ) {
-                    imageSource = { uri: item.image }; 
+                    imageSource = { uri: item.image };
                   } else if (IMAGE_MAP[item.image]) {
-                    imageSource = IMAGE_MAP[item.image]; 
+                    imageSource = IMAGE_MAP[item.image];
                   }
                 }
 
+                const isSelected = selectedItems.includes(item.id);
+
                 return (
-                  <View key={item.id} style={styles.cartItem}>
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.cartItem,
+                      isSelected && { borderColor: "#76B13A", borderWidth: 2 },
+                    ]}
+                  >
+                    {/* Selection checkbox */}
                     <TouchableOpacity
-                      style={[styles.checkbox, selectedItems.includes(item.id) && styles.checkboxChecked,]}
-                      onPress={() => toggleSelect(item.id)}
+                      style={[
+                        styles.checkbox,
+                        isSelected && styles.checkboxChecked,
+                      ]}
+                      onPress={() => toggleSelectItem(item.id)} 
                     >
-                      {selectedItems.includes(item.id) && (
-                          <Icon name="checkmark" size={14} color="#fff" />
-                        )}
+                      {isSelected && <Icon name="checkmark" size={14} color="#fff" />}
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.editIconContainer}
-                      onPress={() => openEditModal(item)}
-                    >
-                      <Icon name="create-outline" size={20} color="#000" />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: "row", alignItems: "center", position: "absolute", right: 10, top: 10 }}>
+                      {/* Edit Icon */}
+                      <TouchableOpacity
+                        style={[styles.editIconContainer, { marginRight: 10 }]}
+                        onPress={() => openEditModal(item)}
+                      >
+                        <Icon name="create-outline" size={20} color="#000" />
+                      </TouchableOpacity>
 
+                      {/* Trash Icon */}
+                      <TouchableOpacity
+                        style={styles.trashIconContainer}
+                        onPress={() => toggleTrashItem(item.id)}
+                      >
+                        <Icon
+                          name="trash-outline"
+                          size={20}
+                          color={toggledTrashItems.includes(item.id) ? "red" : "#000"} 
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* item info */}
                     <View style={styles.row}>
                       <Image source={imageSource} style={styles.itemImage} />
 
@@ -278,11 +425,15 @@ const CartScreen: React.FC = () => {
                       </View>
 
                       <View style={styles.editCardQtyControls}>
-                        <TouchableOpacity onPress={() => updateQuantity(item, item.quantity - 1)}>
+                        <TouchableOpacity
+                          onPress={() => updateQuantity(item, item.quantity - 1)}
+                        >
                           <Text style={styles.qtyCardBtn}>-</Text>
                         </TouchableOpacity>
                         <Text style={styles.qtyCardValue}>{item.quantity}</Text>
-                        <TouchableOpacity onPress={() => updateQuantity(item, item.quantity + 1)}>
+                        <TouchableOpacity
+                          onPress={() => updateQuantity(item, item.quantity + 1)}
+                        >
                           <Text style={styles.qtyCardBtn}>+</Text>
                         </TouchableOpacity>
                       </View>
@@ -325,61 +476,40 @@ const CartScreen: React.FC = () => {
             {/* Summary Row */}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLeft}>
-                {selectedItems.length} Selected Food Items
+                {selectedItems.length} Selected Food Item
+                {selectedItems.length !== 1 ? "s" : ""}
               </Text>
-              <Text style={styles.summaryRight}>₱{totalAmount.toFixed(2)}</Text>
+              <Text style={styles.summaryRight}>
+                ₱{cartItems
+                  .filter((item) => selectedItems.includes(item.id))
+                  .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+                  .toFixed(2)}
+              </Text>
             </View>
 
             {/* Checkout Button */}
             <TouchableOpacity
-              style={styles.checkoutBtn}
-              onPress={async () => {
-                try {
-                  setModalMessage("Proceeding to checkout...");
-                  setModalVisible(true);
-
-                  const token = await AsyncStorage.getItem("token");
-                  const response = await fetch("http://10.0.2.2:5000/api/checkout", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      cartItems,
-                      totalAmount,
-                      paymentMethod: "Pay on Pickup", // or "GCash"
-                    }),
-                  });
-
-                  let data;
-                  try {
-                    data = await response.json();
-                  } catch (err) {
-                    const text = await response.text();
-                    throw new Error(`Server did not return valid JSON. Response: ${text}`);
-                  }
-
-                  if (!response.ok) {
-                    throw new Error(data.message || "Checkout failed");
-                  }
-
-                  console.log("✅ Checkout success:", data);
-                  setModalMessage("Order Confirmed!");
-                  setTimeout(() => setModalVisible(false), 3000);
-
-                } catch (err) {
-                  console.error("Checkout error:", err);
-                  setModalMessage(err.message || "Error processing checkout");
-                  setTimeout(() => setModalVisible(false), 3000);
+              style={[
+                styles.checkoutBtn,
+                selectedItems.length === 0 && { opacity: 0.5 },
+              ]}
+              onPress={() => {
+                if (selectedItems.length === 0) {
+                  Alert.alert(
+                    "No Items Selected",
+                    "Please select at least one item to proceed to checkout."
+                  );
+                  return;
                 }
+
+                setShowCheckoutTab(true);
               }}
             >
               <Text style={styles.checkoutText}>Checkout</Text>
             </TouchableOpacity>
           </View>
         </View>
-      ) : (
+      ) : showLoyalty ? (
         // Loyalty Points Page
         <ScrollView style={{ padding: 16 }}>
           <View style={styles.loyaltyContainer}>
@@ -447,7 +577,113 @@ const CartScreen: React.FC = () => {
             </View>
           </View>
         </ScrollView>
-      )}
+      ) : showCheckoutTab && !showOrderConfirmTab ? (
+        <ScrollView style={styles.checkoutContainer}>
+          <Text style={styles.checkoutTitle}>Order Will Be Delivered To</Text>
+
+          <View style={styles.checkoutSection}>
+            <View style={styles.checkoutCard}>
+              <View style={styles.cardHeader}>
+                <Icon name="person-circle-outline" size={20} color="#76B13A" />
+                <Text style={styles.cardHeaderText}>Your Information</Text>
+              </View>
+              <Text style={styles.cardText}>{userData?.full_name || "Loading..."}</Text>
+              <Text style={styles.cardSubText}>{userData?.email || ""}</Text>
+            </View>
+
+            <View style={styles.checkoutCard}>
+              <View style={styles.cardHeaderRow}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Icon name="home-outline" size={20} color="#76B13A" />
+                  <Text style={styles.cardHeaderText}>Delivery Address</Text>
+                </View>
+
+                <TouchableOpacity onPress={() => setShowAddressModal(true)}>
+                  <Icon name="pencil-outline" size={18} color="#555" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.cardText}>(+63) {userData?.phone_number || "No phone number."}</Text>
+              <Text style={styles.cardSubText}>
+                {address || "No address entered yet. Tap the pencil to add one."}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.paymentLabel}>Payment Method</Text>
+
+          <TouchableOpacity
+            style={[styles.paymentOptionRow, selectedPayment === "GCash" && styles.paymentOptionSelected]}
+            onPress={() => setSelectedPayment("GCash")}
+          >
+            <View style={styles.paymentLeftRow}>
+              <Image source={require("../../assets/gcash.png")} style={styles.paymentIcon} />
+              <View>
+                <Text style={styles.paymentName}>GCash</Text>
+                <Text style={styles.paymentDescOne}>
+                  Securely pay by entering your GCash number online.
+                </Text>
+              </View>
+            </View>
+            <Icon
+              name={
+                selectedPayment === "GCash"
+                  ? "radio-button-on-outline"
+                  : "radio-button-off-outline"
+              }
+              size={22}
+              color={selectedPayment === "GCash" ? "#76B13A" : "#999"}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.paymentOptionRow, selectedPayment === "Pay on Pickup" && styles.paymentOptionSelected]}
+            onPress={() => setSelectedPayment("Pay on Pickup")}
+          >
+            <View style={styles.paymentLeftRow}>
+              <Image source={require("../../assets/deliveryicon.png")} style={styles.paymentIcon} />
+              <View>
+                <Text style={styles.paymentName}>Pay on Pickup</Text>
+                <Text style={styles.paymentDescTwo}>
+                  Pay the delivery rider upon receiving your order (Cash or GCash accepted).
+                </Text>
+              </View>
+            </View>
+            <Icon
+              name={
+                selectedPayment === "Pay on Pickup"
+                  ? "radio-button-on-outline"
+                  : "radio-button-off-outline"
+              }
+              size={22}
+              color={selectedPayment === "Pay on Pickup" ? "#76B13A" : "#999"}
+            />
+          </TouchableOpacity>
+
+          <View style={styles.amountBox}>
+            <View style={styles.amountRow}>
+              <Text style={styles.amountText}>Delivery Charge</Text>
+              <Text style={styles.amountValue}>₱0.00</Text>
+            </View>
+
+            <View style={styles.amountRow}>
+              <Text style={styles.amountText}>Subtotal</Text>
+              <Text style={styles.amountValue}>₱{subtotal.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.amountRow}>
+              <Text style={styles.amountTotal}>Total Amount</Text>
+              <Text style={styles.amountTotalValue}>₱{totalAmount.toFixed(2)}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.confirmCheckoutBtn}
+            onPress={handleCheckout}
+          >
+            <Text style={styles.checkoutText}>Checkout</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      ) : null}
 
       {/* General Modal */}
       <Modal
@@ -461,6 +697,75 @@ const CartScreen: React.FC = () => {
             <Text style={{ fontSize: 16, fontWeight: "600" }}>
               {modalMessage}
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Order Confirmation Modal */}
+      <Modal visible={showOrderModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Icon name="checkmark-circle" size={80} color="#76B13A" />
+            <Text style={styles.confirmTitle}>Order Confirmed</Text>
+
+            <View style={styles.confirmBox}>
+              <Text style={styles.confirmText}>
+                <Text style={styles.confirmLabel}>Order ID: </Text>{orderCode || "ORD-XXXXXX"}
+              </Text>
+              <Text style={styles.confirmText}>
+                <Text style={styles.confirmLabel}>Transaction ID: </Text>{transactionId || "TXN-XXXXXX"}
+              </Text>
+              <Text style={styles.confirmText}>
+                <Text style={styles.confirmLabel}>Name: </Text>{userData?.full_name || "Loading..."}
+              </Text>
+              <Text style={styles.confirmText}>
+                <Text style={styles.confirmLabel}>Email: </Text>{userData?.email || ""}
+              </Text>
+              <Text style={styles.confirmText}>
+                <Text style={styles.confirmLabel}>Estimated Time: </Text>
+                <Text style={styles.confirmLink}>25–30 minutes</Text>
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={() => {
+                setShowOrderModal(false);
+                navigation.navigate("Home");
+              }}
+            >
+              <Text style={styles.confirmBtnText}>Back to Home</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Address Modal */}
+      <Modal visible={showAddressModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.addressModal}>
+            <Text style={styles.modalTitle}>Edit Delivery Address</Text>
+            <TextInput
+              style={styles.addressInput}
+              placeholder="Enter your address..."
+              value={address}
+              onChangeText={setAddress}
+              multiline
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: "#ccc" }]}
+                onPress={() => setShowAddressModal(false)}
+              >
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: "#76B13A" }]}
+                onPress={() => setShowAddressModal(false)}
+              >
+                <Text style={styles.modalBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -490,16 +795,17 @@ const CartScreen: React.FC = () => {
                 style={[styles.modalBtn, { backgroundColor: "#E53935" }]}
                 onPress={async () => {
                   const token = await AsyncStorage.getItem("token");
-                  for (const id of selectedItems) {
+                  for (const id of toggledTrashItems) {
                     await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
                       method: "DELETE",
                       headers: { Authorization: `Bearer ${token}` },
                     });
                   }
+
                   setCartItems((prev) =>
-                    prev.filter((item) => !selectedItems.includes(item.id))
+                    prev.filter((item) => !toggledTrashItems.includes(item.id))
                   );
-                  setSelectedItems([]);
+                  setToggledTrashItems([]);
                   setShowRemoveBtn(false);
                   setConfirmRemoveVisible(false);
                   setModalMessage("Item(s) removed from cart!");
@@ -606,160 +912,6 @@ const CartScreen: React.FC = () => {
         </View>
       </Modal>
 
-      {/* Checkout Modal */}
-      <Modal
-        visible={showCheckout}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCheckout(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.checkoutBox}>
-            <View style={styles.checkoutHeader}>
-              <TouchableOpacity onPress={() => setShowCheckout(false)}>
-                <Icon name="arrow-back" size={24} color="#333" />
-              </TouchableOpacity>
-              <Text style={styles.checkoutTitle}>Checkout</Text>
-            </View>
-
-            <ScrollView style={{ marginTop: 10 }}>
-              <Text style={styles.checkoutSectionTitle}>Order Will Be Delivered To</Text>
-
-              {/* Information Card */}
-              <View style={styles.infoCard}>
-                <Icon name="person-outline" size={18} color="#76B13A" />
-                <View style={{ marginLeft: 8 }}>
-                  <Text style={styles.infoLabel}>Your Information</Text>
-                  <Text style={styles.infoValue}>John Doe</Text>
-                  <Text style={styles.infoSub}>johndoe@email.com</Text>
-                </View>
-              </View>
-
-              {/* Address Card */}
-              <View style={styles.infoCard}>
-                <Icon name="home-outline" size={18} color="#76B13A" />
-                <View style={{ marginLeft: 8 }}>
-                  <Text style={styles.infoLabel}>Home</Text>
-                  <Text style={styles.infoValue}>+63 987-654-3210</Text>
-                  <Text style={styles.infoSub}>
-                    Unit 5, Sleepy Panda Street, Laughington
-                  </Text>
-                </View>
-              </View>
-
-              {/* Payment Methods */}
-              <Text style={styles.paymentTitle}>Payment Method</Text>
-
-              <TouchableOpacity
-                style={[
-                  styles.paymentOption,
-                  selectedPayment === "GCash" && styles.paymentSelected,
-                ]}
-                onPress={() => setSelectedPayment("GCash")}
-              >
-                <Icon name="wallet-outline" size={20} color="#76B13A" />
-                <Text style={styles.paymentLabel}>GCash</Text>
-                <Text style={styles.paymentDesc}>
-                  Securely pay by entering your GCash number online.
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.paymentOption,
-                  selectedPayment === "Pickup" && styles.paymentSelected,
-                ]}
-                onPress={() => setSelectedPayment("Pickup")}
-              >
-                <Icon name="cash-outline" size={20} color="#76B13A" />
-                <Text style={styles.paymentLabel}>Pay on Pickup</Text>
-                <Text style={styles.paymentDesc}>
-                  Pay the delivery rider upon receiving your order (Cash or GCash accepted)
-                </Text>
-              </TouchableOpacity>
-
-              {/* Totals */}
-              <View style={styles.totalBox}>
-                <Text style={styles.totalRow}>
-                  Delivery Charge <Text style={styles.totalValue}>₱0.00</Text>
-                </Text>
-                <Text style={styles.totalRow}>
-                  Subtotal <Text style={styles.totalValue}>₱{totalAmount.toFixed(2)}</Text>
-                </Text>
-                <Text style={styles.totalRowBold}>
-                  Total Amount <Text style={styles.totalValue}>₱{totalAmount.toFixed(2)}</Text>
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.confirmCheckoutBtn}
-                onPress={async () => {
-                  try {
-                    const token = await AsyncStorage.getItem("token");
-                    const response = await fetch("http://10.0.2.2:5000/api/checkout", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: JSON.stringify({
-                        cartItems,
-                        paymentMethod: selectedPayment,
-                        totalAmount,
-                      }),
-                    });
-
-                    const data = await response.json();
-                    if (response.ok) {
-                      setShowCheckout(false);
-                      setShowOrderConfirm(true);
-                      console.log("Checkout successful:", data);
-                    } else {
-                      console.error("Checkout failed:", data);
-                      setModalMessage(data.message || "Error placing order");
-                      setModalVisible(true);
-                    }
-                  } catch (err) {
-                    console.error("Checkout error:", err);
-                    setModalMessage("Network or server error");
-                    setModalVisible(true);
-                  }
-                }}
-              >
-                <Text style={styles.checkoutText}>Checkout</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Order Confirmed Modal */}
-      <Modal
-        visible={showOrderConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowOrderConfirm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.orderConfirmBox}>
-            <Icon name="checkmark-circle" size={70} color="#76B13A" />
-            <Text style={styles.orderConfirmTitle}>Order Confirmed</Text>
-            <Text style={styles.orderConfirmDetail}>
-              User ID: <Text style={{ fontWeight: "bold" }}>#USR-001293</Text>
-            </Text>
-            <Text style={styles.orderConfirmDetail}>
-              Transaction ID: <Text style={{ fontWeight: "bold" }}>TXN-405321</Text>
-            </Text>
-            <Text style={styles.orderConfirmTime}>
-              Estimated Time: <Text style={{ color: "#3182ce" }}>25–30 minutes</Text>
-            </Text>
-            <Text style={styles.orderConfirmNote}>
-              A receipt has been sent to your email. You can view your order in order history.
-            </Text>
-          </View>
-        </View>
-      </Modal>
-
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
         {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
@@ -807,12 +959,15 @@ const CartScreen: React.FC = () => {
 export default CartScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 25,
+    marginTop: 40,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,        
@@ -928,6 +1083,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginHorizontal: 6,
   },
+  trashIconContainer: {
+    padding: 6,
+    marginTop: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   editBtn: {
     color: "#555",
     fontSize: 14,
@@ -1015,6 +1176,272 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     elevation: 4,
   },
+
+  addressModal: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: "90%",
+    elevation: 6,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  addressInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    height: 100,
+    textAlignVertical: "top",
+    fontSize: 14,
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    marginHorizontal: 5,
+  },
+  modalBtnText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  checkoutContainer: {
+    padding: 20,
+    backgroundColor: "#fff",
+  },
+  checkoutTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: "#000",
+  },
+  checkoutSection: {
+    marginBottom: 20,
+  },
+  checkoutCard: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  cardHeaderText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#000",
+    marginLeft: 6,
+  },
+  cardText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  cardSubText: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  paymentLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 8,
+    color: "#000",
+  },
+  paymentOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    elevation: 2,
+    backgroundColor: "#fff",
+  },
+  paymentLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  paymentIcon: {
+    width: 35,
+    height: 35,
+    resizeMode: "contain",
+    marginRight: 10,
+  },
+  paymentName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000",
+  },
+  paymentDescTwo: {
+    fontSize: 12,
+    color: "#777",
+    position: "relative",
+    width: "70%",
+  },
+  paymentDescOne: {
+    fontSize: 12,
+    color: "#777",
+    position: "relative",
+    width: "90%",
+  },
+  amountBox: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderColor: "#eee",
+    paddingTop: 10,
+  },
+  amountText: {
+    fontSize: 13,
+    color: "#444",
+  },
+  amountRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  amountValue: {
+    fontSize: 13,
+    color: "#444",
+    textAlign: "right",
+  },
+  amountTotal: {
+    fontWeight: "700",
+    fontSize: 15,
+    marginTop: 6,
+  },
+  amountTotalValue: {
+    fontWeight: "700",
+    fontSize: 15,
+    color: "#000",
+    textAlign: "right",
+  },
+  confirmCheckoutBtn: {
+    backgroundColor: "#73C04D",
+    borderRadius: 25,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  confirmContainer: {
+    padding: 20,
+    backgroundColor: "#fff",
+  },
+  confirmContent: {
+    alignItems: "center",
+    marginTop: 50,
+  },
+  confirmTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginTop: 20,
+    color: "#000",
+  },
+  confirmBox: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    marginTop: 20,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  confirmText: {
+    fontSize: 16,
+    marginBottom: 6,
+    color: "#333",
+  },
+  confirmLabel: {
+    fontWeight: "700",
+    color: "#000",
+  },
+  confirmLink: {
+    color: "#3182ce",
+    fontWeight: "600",
+  },
+  confirmNote: {
+    fontSize: 13,
+    color: "#777",
+    marginTop: 10,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  confirmBtn: {
+    backgroundColor: "#76B13A",
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 30,
+    marginTop: 30,
+    elevation: 4,
+  },
+  confirmBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  paymentOptionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#fff",
+    marginBottom: 10,
+    elevation: 2,
+  },
+  paymentLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  paymentOptionSelected: {
+    borderColor: "#76B13A",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 25,
+    width: "85%",
+    alignItems: "center",
+    elevation: 6,
+  },
+  
   sectionLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -1069,12 +1496,6 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: "top",
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   modalBox: {
     backgroundColor: "#fff",
     padding: 20,
@@ -1086,17 +1507,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 20,
-  },
-  modalBtn: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
-    marginHorizontal: 10,
-    alignItems: "center",
-  },
-  modalBtnText: {
-    color: "#fff",
-    fontWeight: "600",
   },
   removeCartBtn: {
     backgroundColor: "#E53935",
@@ -1311,99 +1721,6 @@ const styles = StyleSheet.create({
   },
 
   // Checkout Modal Styles
-  checkoutBox: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
-    height: "90%",
-  },
-  checkoutHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  checkoutTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginLeft: 10,
-  },
-  checkoutSectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginVertical: 10,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 10,
-    marginVertical: 6,
-  },
-  infoLabel: {
-    fontWeight: "700",
-    color: "#000",
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#222",
-  },
-  infoSub: {
-    fontSize: 12,
-    color: "#777",
-  },
-  paymentTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginVertical: 10,
-  },
-  paymentOption: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  paymentSelected: {
-    borderColor: "#76B13A",
-    backgroundColor: "#f4faef",
-  },
-  paymentLabel: {
-    fontWeight: "700",
-    fontSize: 14,
-    color: "#000",
-  },
-  paymentDesc: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 4,
-  },
-  totalBox: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderColor: "#eee",
-    paddingTop: 10,
-  },
-  totalRow: {
-    fontSize: 13,
-    color: "#444",
-    marginBottom: 5,
-  },
-  totalRowBold: {
-    fontWeight: "700",
-    fontSize: 14,
-    color: "#000",
-  },
-  totalValue: {
-    float: "right",
-  },
-  confirmCheckoutBtn: {
-    backgroundColor: "#73C04D",
-    borderRadius: 25,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 20,
-  },
   orderConfirmBox: {
     backgroundColor: "#fff",
     padding: 25,
@@ -1454,6 +1771,13 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  tabItem: { alignItems: "center" },
-  tabText: { fontSize: 12, marginTop: 2 },
+  tabItem: { 
+    alignItems: "center" 
+  },
+  tabText: { 
+    fontSize: 12, 
+    marginTop: 2 
+  },
 });
+
+

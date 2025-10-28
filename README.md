@@ -40,6 +40,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install react-native-maps`
 - `npm install @react-native-google-signin/google-signin`
 - `npm install react-native-fbsdk-next`
+- `npm install google-auth-library node-fetch`
 
 Commands to Enable (PowerShell Terminal):
 

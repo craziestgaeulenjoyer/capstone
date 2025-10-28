@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,23 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  PermissionsAndroid,
+  Platform,
+  ScrollView,
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+{/* import MapView, { Marker, Polyline } from "react-native-maps"; */}
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 
 const NearbyScreen: React.FC = () => {
   const navigation = useNavigation();
+
+  const [region, setRegion] = useState({
+    latitude: 14.6500,
+    longitude: 121.0000,
+    latitudeDelta: 0.5,
+    longitudeDelta: 0.5,
+  });
 
   const [routeCoords] = useState([
     { latitude: 14.9500, longitude: 120.9000 }, // Baliwag
@@ -27,6 +37,25 @@ const NearbyScreen: React.FC = () => {
     { id: "3", time: "10 Apr 09:25", event: "Delivery driver has been assigned" },
   ]);
 
+  // Request location permission (Android only)
+  useEffect(() => {
+    const requestPermission = async () => {
+      if (Platform.OS === "android") {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.warn("Location permission denied");
+          }
+        } catch (err) {
+          console.error("Permission error:", err);
+        }
+      }
+    };
+    requestPermission();
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -40,81 +69,80 @@ const NearbyScreen: React.FC = () => {
       </View>
 
       {/* Map Section */}
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: 14.6500,
-          longitude: 121.0000,
-          latitudeDelta: 0.5,
-          longitudeDelta: 0.5,
-        }}
-      >
-        {routeCoords.map((coord, index) => (
-          <Marker
-            key={index}
-            coordinate={coord}
-            pinColor={index === routeCoords.length - 1 ? "#73C04D" : "red"}
-          />
-        ))}
-        <Polyline
-          coordinates={routeCoords}
-          strokeColor="#73C04D"
-          strokeWidth={4}
-        />
-      </MapView>
+      {/* <View style={styles.mapContainer}>
+        <MapView
+          style={styles.map}
+          initialRegion={region}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          provider="google"
+        >
+          {routeCoords.map((coord, index) => (
+            <Marker
+              key={index}
+              coordinate={coord}
+              pinColor={index === routeCoords.length - 1 ? "#73C04D" : "red"}
+            />
+          ))}
+          <Polyline coordinates={routeCoords} strokeColor="#73C04D" strokeWidth={4} />
+        </MapView>
+      </View> */}
 
-      {/* Status Card */}
-      <View style={styles.statusCard}>
-        <Text style={styles.deliveredText}>Delivered on 10 Apr</Text>
-        <View style={styles.progressContainer}>
-          <View style={styles.step}>
-            <View style={[styles.dot, { backgroundColor: "#73C04D" }]} />
-            <Text style={styles.stepLabel}>Shipped</Text>
-          </View>
-          <View style={styles.line} />
-          <View style={styles.step}>
-            <View style={[styles.dot, { backgroundColor: "#73C04D" }]} />
-            <Text style={styles.stepLabel}>Out for Delivery</Text>
-          </View>
-          <View style={styles.line} />
-          <View style={styles.step}>
-            <View style={[styles.dot, { backgroundColor: "#73C04D" }]} />
-            <Text style={[styles.stepLabel, { fontWeight: "700" }]}>
-              Delivered
-            </Text>
+      {/* Scrollable Content */}
+      <ScrollView style={styles.scrollContent}>
+        {/* Status Card */}
+        <View style={styles.statusCard}>
+          <Text style={styles.deliveredText}>Delivered on 10 Apr</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.step}>
+              <View style={[styles.dot, { backgroundColor: "#73C04D" }]} />
+              <Text style={styles.stepLabel}>Shipped</Text>
+            </View>
+            <View style={styles.line} />
+            <View style={styles.step}>
+              <View style={[styles.dot, { backgroundColor: "#73C04D" }]} />
+              <Text style={styles.stepLabel}>Out for Delivery</Text>
+            </View>
+            <View style={styles.line} />
+            <View style={styles.step}>
+              <View style={[styles.dot, { backgroundColor: "#73C04D" }]} />
+              <Text style={[styles.stepLabel, { fontWeight: "700" }]}>
+                Delivered
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* History */}
-      <View style={styles.historyCard}>
-        <Text style={styles.historyHeader}>SPX Express</Text>
-        <Text style={styles.trackingNumber}>PH255729584855H</Text>
-        <TouchableOpacity style={styles.detailsBtn}>
-          <Text style={styles.detailsBtnText}>Order Details</Text>
-        </TouchableOpacity>
+        {/* History */}
+        <View style={styles.historyCard}>
+          <Text style={styles.historyHeader}>SPX Express</Text>
+          <Text style={styles.trackingNumber}>PH255729584855H</Text>
+          <TouchableOpacity style={styles.detailsBtn}>
+            <Text style={styles.detailsBtnText}>Order Details</Text>
+          </TouchableOpacity>
 
-        <FlatList
-          data={history}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.historyItem}>
-              <Text style={styles.historyTime}>{item.time}</Text>
-              <Text
-                style={[
-                  styles.historyEvent,
-                  { color: item.proof ? "#73C04D" : "#555" },
-                ]}
-              >
-                {item.event}
-              </Text>
-              {item.proof && (
-                <Text style={styles.proofLink}>View Proof of Delivery</Text>
-              )}
-            </View>
-          )}
-        />
-      </View>
+          <FlatList
+            data={history}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.historyItem}>
+                <Text style={styles.historyTime}>{item.time}</Text>
+                <Text
+                  style={[
+                    styles.historyEvent,
+                    { color: item.proof ? "#73C04D" : "#555" },
+                  ]}
+                >
+                  {item.event}
+                </Text>
+                {item.proof && (
+                  <Text style={styles.proofLink}>View Proof of Delivery</Text>
+                )}
+              </View>
+            )}
+          />
+        </View>
+      </ScrollView>
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
@@ -176,17 +204,23 @@ const styles = StyleSheet.create({
   headerIcons: { flexDirection: "row" },
   icon: { marginRight: 24 },
 
-  map: {
-    flex: 1,
-    marginHorizontal: 10,
+  mapContainer: {
+    height: 250,
+    marginHorizontal: 16,
     borderRadius: 15,
     overflow: "hidden",
+    elevation: 3,
+  },
+  map: { flex: 1 },
+
+  scrollContent: {
+    flex: 1,
   },
 
   statusCard: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
-    marginTop: -20,
+    marginTop: 16,
     borderRadius: 10,
     padding: 15,
     elevation: 4,
