@@ -31,7 +31,7 @@
         "@fullcalendar/interaction": "^6.1.19",
         "@fullcalendar/react": "^6.1.19",
         "@headlessui/react": "^2.2.0",
-        "@inertiajs/progress": "^0.2.7",
+        "@inertiajs/progress": "^0.1.2",
         "@inertiajs/react": "^2.1.2",
         "@inertiajs/vue3": "^2.1.2",
         "@radix-ui/react-avatar": "^1.1.3",
