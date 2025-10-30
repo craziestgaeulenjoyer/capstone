@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { router } from "@inertiajs/react";
 
 export default function ProductFeature() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -21,6 +22,16 @@ export default function ProductFeature() {
   ];
 
   const currentDrink = drinks[activeSlide];
+
+   useEffect(() => {
+    if (currentDrink.title === "Peach Iced Tea") {
+      const timer = setTimeout(() => {
+        router.visit("/pickorder"); // <-- redirect to your route
+      }, 3000);
+
+      return () => clearTimeout(timer); // cleanup on unmount
+    }
+  }, [currentDrink]);
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-white overflow-hidden transition-all duration-700">
