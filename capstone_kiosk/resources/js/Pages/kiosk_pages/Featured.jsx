@@ -1,4 +1,4 @@
-// resources/js/Pages/kiosk_pages/Welcome.jsx
+// resources/js/Pages/kiosk_pages/Featured.jsx
 import React from 'react';
 import ProductFeature from '@/Components/welcomeState/ProductFeature';
 

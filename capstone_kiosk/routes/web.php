@@ -16,10 +16,5 @@ Route::get('/productfeature', function () {
     return Inertia::render('kiosk_pages/Featured');
 });
 
-/* ---------- Home Pages ---------- */
-
-Route::get('/kioskhome', function () {
-    return Inertia::render('kiosk_pages/Home');
-});
 
 require __DIR__.'/auth.php';
