@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { router } from "@inertiajs/react";
 
 export default function BubbleWelcome() {
   const [showWelcome, setShowWelcome] = useState(false);
@@ -11,6 +12,8 @@ export default function BubbleWelcome() {
   const IMAGE_DELAY_MS = 800;
   const IMAGE_MOVE_DELAY_MS = 2200;
   const TAGLINE_DELAY_MS = 2500;
+  const REDIRECT_DELAY_MS = 5500; // total duration before going to next page (ProductFeature.jsx)
+
 
   // Circles configuration
   const baseCircles = [
@@ -82,6 +85,11 @@ export default function BubbleWelcome() {
       () => setShowTagline(true),
       CIRCLE_FADE_MS + BUFFER_MS + TAGLINE_DELAY_MS
     );
+
+     //Auto-redirect to ProductFeature page
+    const redirectTimer = setTimeout(() => {
+      router.visit("/productfeature");
+    }, REDIRECT_DELAY_MS);
 
     return () => {
       clearTimeout(welcomeTimer);
@@ -164,7 +172,7 @@ export default function BubbleWelcome() {
           }}
         />
       )}
-      
+
     </div>
 
   );
