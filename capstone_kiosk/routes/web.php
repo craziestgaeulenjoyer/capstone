@@ -14,4 +14,8 @@ Route::get('/productfeature', function () {
     return Inertia::render('kiosk_pages/Featured');
 });
 
+Route::get('/pickorder', function () {
+    return Inertia::render('kiosk_pages/PickDineOrTake');
+});
+
 require __DIR__.'/auth.php';
