@@ -16,5 +16,13 @@ Route::get('/productfeature', function () {
     return Inertia::render('kiosk_pages/Featured');
 });
 
+/* ---------- Home Pages ---------- */
+
+Route::get('/kioskhome', function () {
+    return Inertia::render('kiosk_pages/Home');
+});
+Route::get('/pickorder', function () {
+    return Inertia::render('kiosk_pages/PickDineOrTake');
+});
 
 require __DIR__.'/auth.php';
