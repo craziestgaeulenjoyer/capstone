@@ -8,7 +8,7 @@ Official Repository for Capstone 1
 
 ✅ Website Repository
 ✅ Mobile Repository 
-🔜 Kiosk Repository
+✅ Kiosk Repository
 
 ------
 
@@ -41,6 +41,8 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install @react-native-google-signin/google-signin`
 - `npm install react-native-fbsdk-next`
 - `npm install google-auth-library node-fetch`
+- `npm install @react-native-voice/voice`
+- `npm install openai`
 
 Commands to Enable (PowerShell Terminal):
 
