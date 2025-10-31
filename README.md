@@ -42,6 +42,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install react-native-fbsdk-next`
 - `npm install google-auth-library node-fetch`
 - `npm install @react-native-voice/voice`
+- `npm install openai`
 
 Commands to Enable (PowerShell Terminal):
 
