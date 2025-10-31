@@ -34,7 +34,7 @@ export default function KioskHome() {
     { id: 10, name: "Oreo Cheesecake Overload", image: "/images/OreoCheesecakeOverload.png" },
     { id: 11, name: "Classic Lemonade", image: "/images/ClassicLemonade.png" },
     { id: 12, name: "Strawberry Lemonade", image: "/images/StrawberryLemonade.png" },
-    { id: 13, name: "Popping Bobba", image: "/images/PoppingBobba.png" },
+    { id: 13, name: "Watermelon with Strawberry Popping Bobba", image: "/images/PoppingBobba.png" },
     { id: 14, name: "Peach Iced Tea", image: "/images/PeachIcedTea.png" },
     { id: 15, name: "Fries", image: "/images/Fries.png" },
     { id: 16, name: "Cheese Sticks", image: "/images/CheeseSticks.png" },
@@ -145,7 +145,7 @@ export default function KioskHome() {
               <img
                 src={item.image}
                 alt={item.name}
-                className="w-[110px] sm:w-[200px] h-[110px] sm:h-[200px] object-contain"
+                className="w-[250px] sm:w-[250px] h-[250px] sm:h-[250px] object-contain"
               />
               <p className="mt-3 text-lg sm:text-base font-semibold text-gray-800 text-center">
                 {item.name}

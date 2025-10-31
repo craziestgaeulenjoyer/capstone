@@ -20,10 +20,14 @@ Route::get('/pickorder', function () {
     return Inertia::render('kiosk_pages/PickDineOrTake');
 });
 
-/* ---------- Home Pages ---------- */
+/* ---------- Home & Menu Pages ---------- */
 
 Route::get('/kioskhome', function () {
     return Inertia::render('kiosk_pages/Home');
+});
+
+Route::get('/kioskmenu', function () {
+    return Inertia::render('kiosk_pages/Menu');
 });
 
 require __DIR__.'/auth.php';
