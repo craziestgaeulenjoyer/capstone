@@ -43,6 +43,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install google-auth-library node-fetch`
 - `npm install @react-native-voice/voice`
 - `npm install openai`
+- `npm install multer` (install this in the ./backend folder)
 
 Commands to Enable (PowerShell Terminal):
 
