@@ -41,7 +41,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install @react-native-google-signin/google-signin`
 - `npm install react-native-fbsdk-next`
 - `npm install google-auth-library node-fetch`
-- `npm install @react-native-voice/voice`
+- `npm install react-native-voice-recognition`
 - `npm install openai`
 - `npm install multer` (install this in the ./backend folder)
 
