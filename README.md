@@ -44,6 +44,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install react-native-voice-recognition`
 - `npm install openai`
 - `npm install multer` (install this in the ./backend folder)
+- `npm install -g localtunnel` (for webhooking in testing apis)
 
 Commands to Enable (PowerShell Terminal):
 
@@ -56,8 +57,4 @@ Optional Commands (PowerShell Terminal):
 - `npx react-native log-android` (To enable logs and show it)
 - `npx pod-install` (To link native dependencies)
 
-Applications or Things to Install
-
-- `ngrok` (for webhooks in development in apis)
-  Link: ```https://ngrok.com/download/windows```
 
