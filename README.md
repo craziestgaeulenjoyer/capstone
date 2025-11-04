@@ -56,3 +56,8 @@ Optional Commands (PowerShell Terminal):
 - `npx react-native log-android` (To enable logs and show it)
 - `npx pod-install` (To link native dependencies)
 
+Applications or Things to Install
+
+- `ngrok` (for webhooks in development in apis)
+  Link: ```https://ngrok.com/download/windows```
+
