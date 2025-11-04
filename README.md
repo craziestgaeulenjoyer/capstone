@@ -51,6 +51,7 @@ Commands to Enable (PowerShell Terminal):
 - `npx react-native start`
 - `npx react-native run-android`
 - `node backend/server.js`
+- `lt --port 5000` (for webhooks)
 
 Optional Commands (PowerShell Terminal): 
 
