@@ -30,4 +30,21 @@ Route::get('/kioskmenu', function () {
     return Inertia::render('kiosk_pages/Menu');
 });
 
+
+/* ---------- Payment Selection ---------- */
+
+Route::get('/paymentselect', function () {
+    return Inertia::render('kiosk_pages/PaymentSelect');
+});
+
+Route::get('/qrcode', function () {
+    return Inertia::render('kiosk_pages/QR');
+});
+
+Route::get('/ordernumber', function () {
+    return Inertia::render('kiosk_pages/OrderNum');
+});
+
+
+
 require __DIR__.'/auth.php';
