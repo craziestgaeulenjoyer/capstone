@@ -73,39 +73,43 @@ function SignUpForm() {
               </div>
 
               {/* Password */}
-              <div className="mb-4 relative">
-                <label className="block text-sm text-gray-700 mb-1">Password</label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  required
-                  className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
-                />
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </span>
-              </div>
+              <div className="mb-6 relative">
+              <label className="block text-sm text-gray-700 mb-1"> Password </label>
+                  <div className="relative">
+                    <input
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="Confirm password"
+                    required
+                    className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
+                    />
+                    <span
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                    >
+                    {showConfirm ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </div>
+                </div>
 
               {/* Confirm Password */}
               <div className="mb-6 relative">
-                <label className="block text-sm text-gray-700 mb-1">Confirm Password</label>
-                <input
-                  type={showConfirm ? "text" : "password"}
-                  placeholder="Confirm password"
-                  required
-                  className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
-                />
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                >
-                  {showConfirm ? <FaEyeSlash /> : <FaEye />}
-                </span>
-              </div>
-
+              <label className="block text-sm text-gray-700 mb-1">Confirm Password</label>
+                  <div className="relative">
+                    <input
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="Confirm password"
+                    required
+                    className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
+                    />
+                    <span
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                    >
+                    {showConfirm ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </div>
+                </div>
+                
               {/* Sign Up Button */}
               <Link
                 href={route('AccountVerification')}
