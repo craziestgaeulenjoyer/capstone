@@ -120,3 +120,9 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+project.ext.react = [
+    enableHermes: true,
+    codegenDirIgnore: ["react-native-vector-icons"]
+]
+

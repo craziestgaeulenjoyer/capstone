@@ -3,6 +3,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../routes/navigation';
 import React, { useState, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
+// @ts-ignore: react-native-fbsdk-next may not have type declarations in this project
+import { Settings } from 'react-native-fbsdk-next';
 import {
   View,
   Text,
@@ -14,6 +16,8 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
 
@@ -104,7 +108,6 @@ const SignInScreen = () => {
 
   const clearErrors = () => {
     setLoginError('');
-    // If you also have register errors, clear them too:
     setRegisterGeneralError('');
   };
 
@@ -144,10 +147,75 @@ const SignInScreen = () => {
         setRegisterGeneralError(data.message || 'Registration failed.');
       }
     } catch (error) {
-      console.error(error);
-      setRegisterGeneralError('An error occurred.');
+       setRegisterGeneralError('An error occurred.');
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      // signIn() completes the interactive sign-in; getTokens() reliably returns idToken
+      await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+      const idToken = tokens.idToken;
+
+      // Send the ID token to backend for verification
+      const response = await fetch('http://10.0.2.2:5000/api/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        // Store the JWT token or navigate
+        await AsyncStorage.setItem('session_token', data.sessionToken);
+        navigation.navigate('Home'); 
+      } else {
+        console.log('Google login failed:', data.message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    try {
+      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+      if (result.isCancelled) return;
+
+      const data = await AccessToken.getCurrentAccessToken();
+      if (!data) throw new Error('Something went wrong obtaining access token');
+
+      const response = await fetch('http://10.0.2.2:5000/api/facebook-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: data.accessToken.toString() }),
+      });
+
+      const resData = await response.json();
+      if (response.ok) {
+        await AsyncStorage.setItem('session_token', resData.sessionToken);
+        navigation.navigate('Home');
+      } else {
+        console.log('Facebook login failed:', resData.message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }; 
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '1018371869413-p1alpi2lc93rtbem9fdr80bidbebl3bh.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    Settings.setAppID('766638476405115');
+    Settings.initializeSDK();
+  }, []); 
 
   useEffect(() => {
     const loadCredentials = async () => {
@@ -352,11 +420,11 @@ const SignInScreen = () => {
             </View>
 
             <View style={styles.socialIcons}>
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn}>
                 <FontAwesome name="google" size={20} color="#DB4437" />
                 <Text style={styles.iconText}>Sign In using Google</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin}>
                 <FontAwesome name="facebook" size={20} color="#3b5998" />
                 <Text style={styles.iconText}>Sign In using Facebook</Text>
               </TouchableOpacity>

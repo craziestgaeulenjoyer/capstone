@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../routes/navigation';
+import { RootStackParamList } from '../../routes/navigation';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Choice'>;
 
@@ -21,19 +21,19 @@ const { width, height } = Dimensions.get('window');
 const slides = [
   {
     key: '1',
-    image: require('../assets/MiAmore2.png'),
+    image: require('../../assets/MiAmore2.png'),
     title: 'All Your Favorite Flavors',
     description: 'From comforting brews to delicious bites, Mi Amore Cafe brings you the flavors you love, made fresh every day!',
   },
   {
     key: '2',
-    image: require('../assets/MiAmore2.png'),
+    image: require('../../assets/MiAmore2.png'),
     title: 'Crafted With Care',
     description: 'Every cup is crafted with passion and care, using the finest ingredients.',
   },
   {
     key: '3',
-    image: require('../assets/MiAmore2.png'),
+    image: require('../../assets/MiAmore2.png'),
     title: 'A Place to Unwind',
     description: 'Whether you’re working or relaxing, Mi Amore is your cozy go-to spot.',
   },
@@ -53,7 +53,7 @@ const SelectionScreen = () => {
     <View style={styles.container}>
       {/* Top-right logo */}
       <Image
-        source={require('../assets/MiAmore2.png')}
+        source={require('../../assets/MiAmore2.png')}
         style={styles.logo}
       />
 
