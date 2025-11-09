@@ -9,10 +9,13 @@ import {
   ScrollView,
   Modal,
   Alert,
+  Linking,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Header from "../components/Header";
+import CheckoutTab from "../components/CheckoutTab";
 
 const IMAGE_MAP: { [key: string]: any } = {
   "BrewedHotCoffee.png": require("../../assets/BrewedHotCoffee.png"),
@@ -27,7 +30,7 @@ const IMAGE_MAP: { [key: string]: any } = {
 };
 
 const CartScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
 
   interface UserData {
     id?: number;
@@ -51,9 +54,12 @@ const CartScreen: React.FC = () => {
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [selectedCartItems, setSelectedCartItems] = useState<CartItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [toggledTrashItems, setToggledTrashItems] = useState<number[]>([]);
   const [editItem, setEditItem] = useState<any>(null);
+  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrderState] = useState<any | null>(null);
   
   const [modalMessage, setModalMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");
@@ -61,6 +67,7 @@ const CartScreen: React.FC = () => {
   const [orderCode, setOrderCode] = useState<string>("");
   const [transactionId, setTransactionId] = useState<string>("");
   const [address, setAddress] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   const [showLoyalty, setShowLoyalty] = useState(false);
   const [usePoints, setUsePoints] = useState(true);
@@ -72,6 +79,9 @@ const CartScreen: React.FC = () => {
   const [showCheckoutTab, setShowCheckoutTab] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showPending, setShowPending] = useState(false);
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+  const [sortDropdownVisible, setSortDropdownVisible] = useState(false);
 
   const [subtotal, setSubtotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -111,6 +121,11 @@ const CartScreen: React.FC = () => {
         }
 
         setCartItems(Array.isArray(data) ? data : []);
+
+        console.log("Cart items fetched from backend:");
+        data.forEach((item: any, i: number) => {
+          console.log(`#${i + 1} created_at:`, item.created_at);
+        });
       } catch (err) {
         console.error("Failed to load cart:", err);
       }
@@ -166,36 +181,159 @@ const CartScreen: React.FC = () => {
     fetchCart();
   }, []);
 
+  useEffect(() => {
+    const fetchPendingOrders = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          console.warn("No token found — user might be logged out");
+          return;
+        }
+
+        const res = await fetch("http://10.0.2.2:5000/api/orders/pending", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text); 
+          if (Array.isArray(data)) {
+            setPendingOrders(data);
+          } else {
+            console.warn("Unexpected data format:", data);
+          }
+        } catch (parseErr) {
+          console.error("JSON parse error:", parseErr, "\nRaw response:", text);
+        }
+      } catch (err) {
+        console.error("Error fetching pending orders:", err);
+      }
+    };
+
+    fetchPendingOrders();
+  }, []);
+
+  useEffect(() => {
+    const filtered = cartItems.filter(item => selectedItems.includes(item.id));
+    setSelectedCartItems(filtered);
+  }, [cartItems, selectedItems]);
+
   const handleCheckout = async () => {
     if (selectedItems.length === 0) {
-      Alert.alert("No Items Selected", "Please select at least one item to proceed to checkout.");
+      Alert.alert(
+        "No Items Selected",
+        "Please select at least one item to proceed to checkout."
+      );
       return;
     }
 
-    const selectedCartItems = cartItems.filter((item) =>
-      selectedItems.includes(item.id)
-    );
+    // 🧩 Build selectedCartItems cleanly with correct fields
+    const selectedCartItems = cartItems
+      .filter((item) => selectedItems.includes(item.id))
+      .map((item) => ({
+        id: item.id,
+        product_id: item.product_id || item.id,
+        product_name: item.product_name,
+        size: item.size,
+        quantity: item.quantity,
+        price: Number(item.price),
+        image: item.image,
+        instructions: item.instructions || "",
+      }));
+
+    // 🧩 Prepare and log payload for debugging
+    const payload = {
+      cartItems: selectedCartItems,
+      paymentMethod: selectedPayment,
+      totalAmount,
+      address,
+    };
+
+    console.log("🛒 Sending checkout payload:", JSON.stringify(payload, null, 2));
 
     try {
       const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Error", "You are not logged in.");
+        return;
+      }
+
+      // 🟦 GCash branch
+      if (selectedPayment === "GCash") {
+        // Step 1: Create pending order first
+        const orderRes = await fetch("http://10.0.2.2:5000/api/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const orderData = await orderRes.json();
+        console.log("✅ Checkout API response:", orderData);
+
+        if (!orderRes.ok) {
+          Alert.alert("Error", orderData.message || "Checkout failed");
+          return;
+        }
+
+        // Step 2: Initialize PayMongo GCash
+        const payRes = await fetch("http://10.0.2.2:5000/api/paymongo/gcash", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount: totalAmount,
+            phone_number: userData?.phone_number,
+            order_code: orderData.order_code,
+          }),
+        });
+
+        const payData = await payRes.json();
+        console.log("CartScreen payRes.status:", payRes.status, "payData:", payData);
+
+        if (payRes.status === 200 || payRes.status === 201) {
+          if (payData.redirect_url) {
+            Linking.openURL(payData.redirect_url);
+          } else {
+            // Clear cart if payment succeeded
+            for (const id of selectedItems) {
+              await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+            }
+            setCartItems((prev) =>
+              prev.filter((item) => !selectedItems.includes(item.id))
+            );
+            setSelectedItems([]);
+            setShowOrderModal(true);
+          }
+        } else {
+          Alert.alert("Error", payData.message || "Unable to initiate GCash.");
+        }
+
+        return;
+      }
+
+      // 🟨 Pay on Pickup (and other methods)
       const response = await fetch("http://10.0.2.2:5000/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          cartItems: selectedCartItems,
-          paymentMethod: selectedPayment,
-          totalAmount,
-          address,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
+      console.log("✅ Checkout response (Pay on Pickup):", data);
 
       if (response.ok) {
-        // Remove selected items from the backend cart
+        // Remove selected items from backend cart
         for (const id of selectedItems) {
           await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
             method: "DELETE",
@@ -203,13 +341,11 @@ const CartScreen: React.FC = () => {
           });
         }
 
-        // Update UI by filtering out removed items
-        setCartItems((prev) => prev.filter((item) => !selectedItems.includes(item.id)));
-
-        // Reset selection
+        // Update UI
+        setCartItems((prev) =>
+          prev.filter((item) => !selectedItems.includes(item.id))
+        );
         setSelectedItems([]);
-
-        // Show success modal
         setTransactionId(data.transaction_id);
         setOrderCode(data.order_code);
         setUserData({ full_name: data.full_name, email: data.email });
@@ -239,6 +375,15 @@ const CartScreen: React.FC = () => {
 
       return updated;
     });
+  };
+
+  const clearCheckedItems = () => {
+    const remaining = cartItems.filter(
+      (item) => !selectedCartItems.some((sel) => sel.product_id === item.product_id)
+    );
+    setCartItems(remaining);
+    setSelectedItems([]); 
+    setSelectedCartItems([]); 
   };
 
   const updateQuantity = async (item: CartItem, newQty: number) => {
@@ -322,193 +467,448 @@ const CartScreen: React.FC = () => {
     }
   };
 
+  function setSelectedOrder(order: any) {
+    setSelectedOrderState(order);
+  }
+
+  function parseBackendTimestamp(val: any): Date | null {
+    if (!val) return null;
+    const s = String(val);
+    // If it already has a T, keep it; otherwise replace first space with T
+    let normalized = s.includes("T") ? s : s.replace(" ", "T");
+    // If there are multiple spaces (rare), replace the first space only:
+    // normalized = s.replace(" ", "T");
+
+    // Try creating a Date
+    const d = new Date(normalized);
+    if (!isNaN(d.getTime())) return d;
+
+    // fallback: trim fractional microseconds (e.g. .733567 -> .733)
+    const dotIndex = normalized.indexOf(".");
+    if (dotIndex !== -1) {
+      const prefix = normalized.slice(0, dotIndex + 4); // keep up to 3ms digits
+      const fallback = new Date(prefix);
+      if (!isNaN(fallback.getTime())) return fallback;
+    }
+
+    // last fallback: manual parse of "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DD HH:mm:ss.ssssss"
+    const parts = s.split(/[- :\.T]/).map(Number);
+    // parts -> [yyyy, mm, dd, hh, mm, ss, ms?]
+    if (parts.length >= 6 && parts.every((p) => !isNaN(p))) {
+      const [year, month, day, hour, minute, second] = parts;
+      const ms = parts.length >= 7 ? parts[6] : 0;
+      const manual = new Date(year, month - 1, day, hour, minute, second, ms);
+      if (!isNaN(manual.getTime())) return manual;
+    }
+
+    return null;
+  }
+
+  const itemsWithDates = cartItems.map((item: any) => {
+    const parsed = parseBackendTimestamp(item.created_at);
+    const ms = parsed && !isNaN(parsed.getTime()) ? parsed.getTime() : 0;
+    const formattedDate = parsed
+      ? parsed.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+      : "Unknown Date";
+
+    return {
+      ...item,
+      _parsedDate: parsed,
+      _parsedMs: ms,
+      _dateKey: formattedDate,
+    };
+  });
+
+  // Debug logging so you can verify what's being used for sorting
+  console.log("itemsWithDates (id, raw created_at, parsedMs):");
+  itemsWithDates.forEach((it: any) =>
+    console.log(`#${it.id}`, it.created_at, "=>", it._parsedDate ? it._parsedDate.toISOString() : null, it._parsedMs)
+  );
+
+  const map = new Map<string, any[]>();
+  itemsWithDates.forEach((it: any) => {
+    const key = it._dateKey || "Unknown Date";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(it);
+  });
+
+  // Convert map to array of groups so we can sort reliably by timestamp
+  let groupedArray = Array.from(map.entries()).map(([dateKey, items]) => {
+    // compute representative timestamp for the group (use max ms so group date sorts by newest item)
+    const dateMs = items.reduce((max: number, it: any) => Math.max(max, it._parsedMs || 0), 0);
+    return { dateKey, items, dateMs };
+  });
+
+  // Sort items inside each group (newest first or oldest first)
+  groupedArray.forEach((g) => {
+    g.items.sort((a: any, b: any) => {
+      const aMs = a._parsedMs || 0;
+      const bMs = b._parsedMs || 0;
+      // when sortOrder === "newest", show newest (larger ms) first inside group
+      return sortOrder === "newest" ? bMs - aMs : aMs - bMs;
+    });
+  });
+
+  // Sort groups by dateMs according to sortOrder
+  groupedArray.sort((a, b) => (sortOrder === "newest" ? b.dateMs - a.dateMs : a.dateMs - b.dateMs));
+
+  // Debug group order
+  console.log("groupedArray order (dateKey => dateMs):", groupedArray.map(g => [g.dateKey, g.dateMs]));
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.headerLeft}
-          onPress={() =>
-            showLoyalty ? setShowLoyalty(false) : navigation.goBack()
-          }
-        >
-          <Icon name="arrow-back" size={24} color="#76B13A" />
-          <Text style={styles.headerTitle}>
-            {showLoyalty ? "Promo & Loyalty Points" : "Cart"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Right Side Icons */}
-        {!showLoyalty && (
-          <View style={styles.headerIcons}>
-            <TouchableOpacity>
-              <Icon name="search-outline" size={22} color="#000" style={styles.icon} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      {showLoyalty ? (
+        // ✅ Loyalty Header
+        <View style={styles.checkoutHeader}>
+          <TouchableOpacity
+            onPress={() => setShowLoyalty(false)}
+            style={styles.backBtn}
+          >
+            <Icon name="arrow-back-outline" size={22} color="#76B13A" />
+          </TouchableOpacity>
+          <Text style={styles.checkoutHeaderTitle}>Loyalty Points</Text>
+        </View> 
+      ) : showCheckoutTab ? (
+        // Checkout Header
+        <View style={styles.checkoutHeader}>
+          <TouchableOpacity
+            onPress={() => setShowCheckoutTab(false)}
+            style={styles.backBtn}
+          >
+            <Icon name="arrow-back-outline" size={22} color="#76B13A" />
+          </TouchableOpacity>
+          <Text style={styles.checkoutHeaderTitle}>Checkout</Text>
+        </View>
+      ) : (
+        // Default (Cart) Header
+        <Header title="Cart" active={!showCheckoutTab && !showLoyalty} />
+      )}
 
       {/* Main Content */}
       {!showLoyalty && !showCheckoutTab && !showOrderConfirmTab ? (
-        <View style={{ flex: 1, }}>
-          <ScrollView style={{ padding: 16 }}>
-            {cartItems.length > 0 ? (
-              cartItems.map((item) => {
-                let imageSource: any = require("../../assets/MiAmore2.png");
-                if (item.image) {
-                  if (
-                    typeof item.image === "string" &&
-                    (item.image.startsWith("http://") || item.image.startsWith("https://"))
-                  ) {
-                    imageSource = { uri: item.image };
-                  } else if (IMAGE_MAP[item.image]) {
-                    imageSource = IMAGE_MAP[item.image];
-                  }
-                }
-
-                const isSelected = selectedItems.includes(item.id);
-
-                return (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.cartItem,
-                      isSelected && { borderColor: "#76B13A", borderWidth: 2 },
-                    ]}
-                  >
-                    {/* Selection checkbox */}
-                    <TouchableOpacity
-                      style={[
-                        styles.checkbox,
-                        isSelected && styles.checkboxChecked,
-                      ]}
-                      onPress={() => toggleSelectItem(item.id)} 
-                    >
-                      {isSelected && <Icon name="checkmark" size={14} color="#fff" />}
-                    </TouchableOpacity>
-
-                    <View style={{ flexDirection: "row", alignItems: "center", position: "absolute", right: 10, top: 10 }}>
-                      {/* Edit Icon */}
-                      <TouchableOpacity
-                        style={[styles.editIconContainer, { marginRight: 10 }]}
-                        onPress={() => openEditModal(item)}
-                      >
-                        <Icon name="create-outline" size={20} color="#000" />
-                      </TouchableOpacity>
-
-                      {/* Trash Icon */}
-                      <TouchableOpacity
-                        style={styles.trashIconContainer}
-                        onPress={() => toggleTrashItem(item.id)}
-                      >
-                        <Icon
-                          name="trash-outline"
-                          size={20}
-                          color={toggledTrashItems.includes(item.id) ? "red" : "#000"} 
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* item info */}
-                    <View style={styles.row}>
-                      <Image source={imageSource} style={styles.itemImage} />
-
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.itemTitle}>{item.product_name}</Text>
-                        <Text style={styles.itemDesc}>
-                          {item.instructions || "No special instructions"}
-                        </Text>
-                        <Text style={styles.itemPrice}>
-                          ₱{(Number(item.price) * Number(item.quantity)).toFixed(2)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.editCardQtyControls}>
-                        <TouchableOpacity
-                          onPress={() => updateQuantity(item, item.quantity - 1)}
-                        >
-                          <Text style={styles.qtyCardBtn}>-</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.qtyCardValue}>{item.quantity}</Text>
-                        <TouchableOpacity
-                          onPress={() => updateQuantity(item, item.quantity + 1)}
-                        >
-                          <Text style={styles.qtyCardBtn}>+</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })
-            ) : (
-              <Text style={{ textAlign: "center", marginTop: 50 }}>
-                Your cart is empty
-              </Text>
-            )}
-          </ScrollView>
-
-          {showRemoveBtn && (
+        <>
+          {/* Toggle bar (Pending Orders / View Cart) */}
+          <View style={styles.toggleContainer}>
             <TouchableOpacity
-              style={styles.removeCartBtn}
-              onPress={() => setConfirmRemoveVisible(true)}
+              style={[styles.toggleBtn, showPending && styles.activeTab]}
+              onPress={() => setShowPending(true)}
             >
-              <Text style={styles.removeCartBtnText}>Remove from Cart</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Loyalty Points Button + Checkout */}
-          <View style={styles.footer}>
-            <View style={styles.loyaltyRow}>
-              <View style={styles.loyaltyLeft}>
-                <Icon name="ticket" size={20} color="#76B13A" />
-                <Text style={styles.loyaltyLabel}>Loyalty Points</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.loyaltyBtnRight}
-                onPress={() => setShowLoyalty(true)}
+              <Text
+                style={[styles.toggleText, showPending && styles.activeText]}
               >
-                <Text style={styles.loyaltyBtnText}>Collect points. Enjoy rewards.</Text>
-              </TouchableOpacity>
-              <Text style={styles.rightCaret}>{`>>`}</Text>
-            </View>
-
-            {/* Summary Row */}
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLeft}>
-                {selectedItems.length} Selected Food Item
-                {selectedItems.length !== 1 ? "s" : ""}
+                Pending Orders
               </Text>
-              <Text style={styles.summaryRight}>
-                ₱{cartItems
-                  .filter((item) => selectedItems.includes(item.id))
-                  .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
-                  .toFixed(2)}
-              </Text>
-            </View>
+            </TouchableOpacity>
 
-            {/* Checkout Button */}
             <TouchableOpacity
-              style={[
-                styles.checkoutBtn,
-                selectedItems.length === 0 && { opacity: 0.5 },
-              ]}
-              onPress={() => {
-                if (selectedItems.length === 0) {
-                  Alert.alert(
-                    "No Items Selected",
-                    "Please select at least one item to proceed to checkout."
-                  );
-                  return;
-                }
-
-                setShowCheckoutTab(true);
-              }}
+              style={[styles.toggleBtn, !showPending && styles.activeTab]}
+              onPress={() => setShowPending(false)}
             >
-              <Text style={styles.checkoutText}>Checkout</Text>
+              <Text
+                style={[styles.toggleText, !showPending && styles.activeText]}
+              >
+                View Cart
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
+
+          {/* Sort By Dropdown (floating) */}
+          {!showPending && (
+            <View style={{ alignItems: "center", marginTop: 10 }}>
+              <TouchableOpacity
+                onPress={() => setSortDropdownVisible(!sortDropdownVisible)}
+                style={styles.sortDropdownButton}
+              >
+                <Text style={styles.sortDropdownText}>
+                  {sortOrder === "newest"
+                    ? "Sort By: Newest"
+                    : sortOrder === "oldest"
+                    ? "Sort By: Oldest"
+                    : "Sort By"}
+                </Text>
+                <Icon
+                  name={sortDropdownVisible ? "chevron-up-outline" : "chevron-down-outline"}
+                  size={18}
+                  color="#333"
+                  style={{ marginLeft: 6 }}
+                />
+              </TouchableOpacity>
+
+              {sortDropdownVisible && (
+                <View style={styles.sortDropdownOverlay}>
+                  <View style={styles.sortDropdownMenu}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSortOrder("newest");
+                        setSortDropdownVisible(false);
+                      }}
+                      style={[
+                        styles.sortDropdownItem,
+                        sortOrder === "newest" && styles.sortDropdownItemActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.sortDropdownItemText,
+                          sortOrder === "newest" && styles.sortDropdownItemTextActive,
+                        ]}
+                      >
+                        Newest
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSortOrder("oldest");
+                        setSortDropdownVisible(false);
+                      }}
+                      style={[
+                        styles.sortDropdownItem,
+                        sortOrder === "oldest" && styles.sortDropdownItemActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.sortDropdownItemText,
+                          sortOrder === "oldest" && styles.sortDropdownItemTextActive,
+                        ]}
+                      >
+                        Oldest
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {!showPending ? (
+            <View style={{ flex: 1, }}>
+              <ScrollView style={{ padding: 16 }}>
+                {groupedArray.length > 0 ? (
+                  groupedArray.map((group) => (
+                    <View key={group.dateKey}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: "700",
+                          marginBottom: 8,
+                          color: "#333",
+                        }}
+                      >
+                        {group.dateKey}
+                      </Text>
+
+                      {group.items.map((item: any) => {
+                        let imageSource: any = require("../../assets/MiAmore2.png");
+                        if (item.image) {
+                          if (
+                            typeof item.image === "string" &&
+                            (item.image.startsWith("http://") ||
+                              item.image.startsWith("https://"))
+                          ) {
+                            imageSource = { uri: item.image };
+                          } else if (IMAGE_MAP[item.image]) {
+                            imageSource = IMAGE_MAP[item.image];
+                          }
+                        }
+
+                        const isSelected = selectedItems.includes(item.id);
+
+                        return (
+                          <View
+                            key={item.id}
+                            style={[
+                              styles.cartItem,
+                              isSelected && { borderColor: "#76B13A", borderWidth: 2 },
+                            ]}
+                          >
+                            {/* Checkbox */}
+                            <TouchableOpacity
+                              style={[styles.checkbox, isSelected && styles.checkboxChecked]}
+                              onPress={() => toggleSelectItem(item.id)}
+                            >
+                              {isSelected && <Icon name="checkmark" size={14} color="#fff" />}
+                            </TouchableOpacity>
+
+                            {/* Edit + Trash */}
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                position: "absolute",
+                                right: 10,
+                                top: 10,
+                              }}
+                            >
+                              <TouchableOpacity
+                                style={[styles.editIconContainer, { marginRight: 10 }]}
+                                onPress={() => openEditModal(item)}
+                              >
+                                <Icon name="create-outline" size={20} color="#000" />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={styles.trashIconContainer}
+                                onPress={() => toggleTrashItem(item.id)}
+                              >
+                                <Icon
+                                  name="trash-outline"
+                                  size={20}
+                                  color={
+                                    toggledTrashItems.includes(item.id) ? "red" : "#000"
+                                  }
+                                />
+                              </TouchableOpacity>
+                            </View>
+
+                            {/* Product info */}
+                            <View style={styles.row}>
+                              <Image source={imageSource} style={styles.itemImage} />
+
+                              <View style={{ flex: 1, marginLeft: 10 }}>
+                                <Text style={styles.itemTitle}>{item.product_name}</Text>
+                                <Text style={styles.itemDesc}>
+                                  {item.instructions || "No special instructions"}
+                                </Text>
+                                <Text style={styles.itemPrice}>
+                                  ₱{(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                                </Text>
+                              </View>
+
+                              <View style={styles.editCardQtyControls}>
+                                <TouchableOpacity
+                                  onPress={() => updateQuantity(item, item.quantity - 1)}
+                                >
+                                  <Text style={styles.qtyCardBtn}>-</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.qtyCardValue}>{item.quantity}</Text>
+                                <TouchableOpacity
+                                  onPress={() => updateQuantity(item, item.quantity + 1)}
+                                >
+                                  <Text style={styles.qtyCardBtn}>+</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      Your cart is currently empty. Want to add something to the mix?
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.goToMenuButton}
+                      onPress={() => navigation.navigate("Menu")}
+                    >
+                      <Text style={styles.goToMenuButtonText}>Go to Menu</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </ScrollView>
+
+              {showRemoveBtn && (
+                <TouchableOpacity
+                  style={styles.removeCartBtn}
+                  onPress={() => setConfirmRemoveVisible(true)}
+                >
+                  <Text style={styles.removeCartBtnText}>Remove from Cart</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Loyalty Points Button + Checkout */}
+              <View style={styles.footer}>
+                <View style={styles.loyaltyRow}>
+                  <View style={styles.loyaltyLeft}>
+                    <Icon name="ticket" size={20} color="#76B13A" />
+                    <Text style={styles.loyaltyLabel}>Loyalty Points</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.loyaltyBtnRight}
+                    onPress={() => setShowLoyalty(true)}
+                  >
+                    <Text style={styles.loyaltyBtnText}>Collect points. Enjoy rewards.</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.rightCaret}>{`>>`}</Text>
+                </View>
+
+                {/* Summary Row */}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLeft}>
+                    {selectedItems.length} Selected Food Item
+                    {selectedItems.length !== 1 ? "s" : ""}
+                  </Text>
+                  <Text style={styles.summaryRight}>
+                    ₱{cartItems
+                      .filter((item) => selectedItems.includes(item.id))
+                      .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+                      .toFixed(2)}
+                  </Text>
+                </View>
+
+                {/* Checkout Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.checkoutBtn,
+                    selectedItems.length === 0 && { opacity: 0.5 },
+                  ]}
+                  onPress={() => {
+                    if (selectedItems.length === 0) {
+                      Alert.alert(
+                        "No Items Selected",
+                        "Please select at least one item to proceed to checkout."
+                      );
+                      return;
+                    }
+
+                    setShowCheckoutTab(true);
+                  }}
+                >
+                  <Text style={styles.checkoutText}>Proceed to Checkout</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <ScrollView style={{ padding: 16 }}>
+                {pendingOrders.length > 0 ? (
+                  pendingOrders.map((order) => (
+                    <TouchableOpacity
+                      key={order.id}
+                      style={styles.pendingCard}
+                      onPress={() => {
+                        setSelectedOrder(order);
+                        setShowOrderDetailsModal(true);
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Text style={styles.orderCode}>{order.order_code}</Text>
+                      </View>
+                      <Text style={styles.orderDetail}>
+                        ₱{Number(order.total_amount).toFixed(2)} •{" "}
+                        {order.payment_method}
+                      </Text>
+                      <Text style={styles.orderDate}>
+                        {new Date(order.created_at).toLocaleString()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={{ textAlign: "center", marginTop: 50 }}>
+                    You have no pending orders
+                  </Text>
+                )}
+              </ScrollView>
+          )}
+        </>
       ) : showLoyalty ? (
         // Loyalty Points Page
         <ScrollView style={{ padding: 16 }}>
@@ -578,111 +978,25 @@ const CartScreen: React.FC = () => {
           </View>
         </ScrollView>
       ) : showCheckoutTab && !showOrderConfirmTab ? (
-        <ScrollView style={styles.checkoutContainer}>
-          <Text style={styles.checkoutTitle}>Order Will Be Delivered To</Text>
-
-          <View style={styles.checkoutSection}>
-            <View style={styles.checkoutCard}>
-              <View style={styles.cardHeader}>
-                <Icon name="person-circle-outline" size={20} color="#76B13A" />
-                <Text style={styles.cardHeaderText}>Your Information</Text>
-              </View>
-              <Text style={styles.cardText}>{userData?.full_name || "Loading..."}</Text>
-              <Text style={styles.cardSubText}>{userData?.email || ""}</Text>
-            </View>
-
-            <View style={styles.checkoutCard}>
-              <View style={styles.cardHeaderRow}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Icon name="home-outline" size={20} color="#76B13A" />
-                  <Text style={styles.cardHeaderText}>Delivery Address</Text>
-                </View>
-
-                <TouchableOpacity onPress={() => setShowAddressModal(true)}>
-                  <Icon name="pencil-outline" size={18} color="#555" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.cardText}>(+63) {userData?.phone_number || "No phone number."}</Text>
-              <Text style={styles.cardSubText}>
-                {address || "No address entered yet. Tap the pencil to add one."}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.paymentLabel}>Payment Method</Text>
-
-          <TouchableOpacity
-            style={[styles.paymentOptionRow, selectedPayment === "GCash" && styles.paymentOptionSelected]}
-            onPress={() => setSelectedPayment("GCash")}
-          >
-            <View style={styles.paymentLeftRow}>
-              <Image source={require("../../assets/gcash.png")} style={styles.paymentIcon} />
-              <View>
-                <Text style={styles.paymentName}>GCash</Text>
-                <Text style={styles.paymentDescOne}>
-                  Securely pay by entering your GCash number online.
-                </Text>
-              </View>
-            </View>
-            <Icon
-              name={
-                selectedPayment === "GCash"
-                  ? "radio-button-on-outline"
-                  : "radio-button-off-outline"
-              }
-              size={22}
-              color={selectedPayment === "GCash" ? "#76B13A" : "#999"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.paymentOptionRow, selectedPayment === "Pay on Pickup" && styles.paymentOptionSelected]}
-            onPress={() => setSelectedPayment("Pay on Pickup")}
-          >
-            <View style={styles.paymentLeftRow}>
-              <Image source={require("../../assets/deliveryicon.png")} style={styles.paymentIcon} />
-              <View>
-                <Text style={styles.paymentName}>Pay on Pickup</Text>
-                <Text style={styles.paymentDescTwo}>
-                  Pay the delivery rider upon receiving your order (Cash or GCash accepted).
-                </Text>
-              </View>
-            </View>
-            <Icon
-              name={
-                selectedPayment === "Pay on Pickup"
-                  ? "radio-button-on-outline"
-                  : "radio-button-off-outline"
-              }
-              size={22}
-              color={selectedPayment === "Pay on Pickup" ? "#76B13A" : "#999"}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.amountBox}>
-            <View style={styles.amountRow}>
-              <Text style={styles.amountText}>Delivery Charge</Text>
-              <Text style={styles.amountValue}>₱0.00</Text>
-            </View>
-
-            <View style={styles.amountRow}>
-              <Text style={styles.amountText}>Subtotal</Text>
-              <Text style={styles.amountValue}>₱{subtotal.toFixed(2)}</Text>
-            </View>
-
-            <View style={styles.amountRow}>
-              <Text style={styles.amountTotal}>Total Amount</Text>
-              <Text style={styles.amountTotalValue}>₱{totalAmount.toFixed(2)}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.confirmCheckoutBtn}
-            onPress={handleCheckout}
-          >
-            <Text style={styles.checkoutText}>Checkout</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        <CheckoutTab
+          userData={userData}
+          address={address}
+          setAddress={setAddress}
+          selectedPayment={selectedPayment}
+          setSelectedPayment={setSelectedPayment}
+          handleCheckout={handleCheckout}
+          subtotal={cartItems
+            .filter((item) => selectedItems.includes(item.id))
+            .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+          }
+          totalAmount={cartItems
+            .filter((item) => selectedItems.includes(item.id))
+            .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+          }
+          onEditAddress={() => setShowAddressModal(true)}
+          clearCheckedItems={clearCheckedItems}
+          cartItems={selectedCartItems}
+        />
       ) : null}
 
       {/* General Modal */}
@@ -736,6 +1050,51 @@ const CartScreen: React.FC = () => {
             >
               <Text style={styles.confirmBtnText}>Back to Home</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Order Details Modal */}
+      <Modal visible={showOrderDetailsModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalBox}>
+            <Text style={styles.editModalTitle}>Order Details</Text>
+
+            {selectedOrder && (
+              <>
+                <Text style={styles.editModalPrice}>
+                  ₱{Number(selectedOrder.total_amount).toFixed(2)}
+                </Text>
+
+                <View style={styles.sectionLabelRow}>
+                  <Text style={styles.sectionLabel}>Order Info</Text>
+                </View>
+
+                <Text style={styles.confirmText}>
+                  <Text style={styles.confirmLabel}>Order Code: </Text>
+                  {selectedOrder.order_code}
+                </Text>
+
+                <Text style={styles.confirmText}>
+                  <Text style={styles.confirmLabel}>Payment Method: </Text>
+                  {selectedOrder.payment_method}
+                </Text>
+
+                <Text style={styles.confirmText}>
+                  <Text style={styles.confirmLabel}>Date Ordered: </Text>
+                  {new Date(selectedOrder.created_at).toLocaleString()}
+                </Text>
+              </>
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: "#76B13A" }]}
+                onPress={() => setShowOrderDetailsModal(false)}
+              >
+                <Text style={styles.modalBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -963,33 +1322,24 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: "#fff" 
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  checkoutHeader: {
     marginTop: 40,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,        
-    borderBottomWidth: 1,     
-    borderColor: "#eee",
-    elevation: 1,
-  },
-  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#fff",
+    elevation: 3,
   },
-  headerTitle: {
+  backBtn: {
+    marginRight: 10,
+  },
+  checkoutHeaderTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginLeft: 8,
-  },
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  icon: {
-    marginRight: 16,
+    color: "#000",
   },
 
   cartItem: {
@@ -1016,6 +1366,98 @@ const styles = StyleSheet.create({
   itemDesc: { marginLeft: 6, fontSize: 12, color: "#777" },
   itemPrice: { marginLeft: 6, marginTop: 5, fontWeight: "700" },
   editIconContainer: { position: "absolute", top: 2, right: 8, marginBottom: 4, padding: 8, },
+  
+  sortDropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#76B13A",
+    borderRadius: 25,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    backgroundColor: "#fff",
+    elevation: 2,
+    zIndex: 10,
+  },
+  sortDropdownText: {
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "600",
+  },
+  sortDropdownMenu: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    overflow: "hidden",
+    width: 160,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  sortDropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+  },
+  sortDropdownItemActive: {
+    backgroundColor: "#E9F7E3",
+  },
+  sortDropdownItemText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  sortDropdownItemTextActive: {
+    color: "#76B13A",
+    fontWeight: "700",
+  },
+  sortDropdownOverlay: {
+    position: "absolute",
+    top: 45, // positions below button
+    zIndex: 999,
+    elevation: 999,
+  },
+
+  toggleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+    paddingVertical: 10,
+  },
+  toggleBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingBottom: 6,
+  },
+  toggleText: {
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
+  },
+  activeTab: {
+    borderBottomWidth: 3,
+    borderBottomColor: "#76B13A",
+  },
+  activeText: {
+    color: "#76B13A",
+    fontWeight: "700",
+  },
+  pendingCard: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  orderCode: { fontWeight: "700", color: "#333" },
+  orderStatus: { color: "#76B13A", fontWeight: "600" },
+  orderDetail: { color: "#666", fontSize: 13, marginTop: 4 },
+  orderDate: { color: "#999", fontSize: 12, marginTop: 2 },
 
   checkbox: {
     position: "absolute",
@@ -1035,30 +1477,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#76B13A", 
     borderColor: "#76B13A",    
   },
-  cartImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-  },
-  cartTitle: {
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  cartDesc: {
-    fontSize: 13,
-    color: "#555",
-  },
-  cartPrice: {
-    fontWeight: "600",
-    fontSize: 15,
-    marginTop: 4,
-  },
-  qtyControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    marginLeft: 50,
-  },
+  
   qtyBtn: {
     fontSize: 18,
     fontWeight: "bold",
@@ -1184,12 +1603,6 @@ const styles = StyleSheet.create({
     width: "90%",
     elevation: 6,
   },
-  cardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -1220,141 +1633,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
-  checkoutContainer: {
-    padding: 20,
-    backgroundColor: "#fff",
-  },
-  checkoutTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#000",
-  },
-  checkoutSection: {
-    marginBottom: 20,
-  },
-  checkoutCard: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  cardHeaderText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#000",
-    marginLeft: 6,
-  },
-  cardText: {
-    fontSize: 14,
-    color: "#333",
-  },
-  cardSubText: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  paymentLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 8,
-    color: "#000",
-  },
-  paymentOption: {
+  sectionLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    elevation: 2,
-    backgroundColor: "#fff",
+    marginTop: 15,
   },
-  paymentLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  paymentIcon: {
-    width: 35,
-    height: 35,
-    resizeMode: "contain",
-    marginRight: 10,
-  },
-  paymentName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#000",
-  },
-  paymentDescTwo: {
-    fontSize: 12,
-    color: "#777",
-    position: "relative",
-    width: "70%",
-  },
-  paymentDescOne: {
-    fontSize: 12,
-    color: "#777",
-    position: "relative",
-    width: "90%",
-  },
-  amountBox: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderColor: "#eee",
-    paddingTop: 10,
-  },
-  amountText: {
-    fontSize: 13,
-    color: "#444",
-  },
-  amountRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  amountValue: {
-    fontSize: 13,
-    color: "#444",
-    textAlign: "right",
-  },
-  amountTotal: {
-    fontWeight: "700",
-    fontSize: 15,
-    marginTop: 6,
-  },
-  amountTotalValue: {
-    fontWeight: "700",
-    fontSize: 15,
-    color: "#000",
-    textAlign: "right",
-  },
-  confirmCheckoutBtn: {
-    backgroundColor: "#73C04D",
-    borderRadius: 25,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  confirmContainer: {
-    padding: 20,
-    backgroundColor: "#fff",
-  },
-  confirmContent: {
-    alignItems: "center",
-    marginTop: 50,
-  },
+  
   confirmTitle: {
     fontSize: 22,
     fontWeight: "700",
@@ -1387,13 +1672,6 @@ const styles = StyleSheet.create({
     color: "#3182ce",
     fontWeight: "600",
   },
-  confirmNote: {
-    fontSize: 13,
-    color: "#777",
-    marginTop: 10,
-    textAlign: "center",
-    lineHeight: 18,
-  },
   confirmBtn: {
     backgroundColor: "#76B13A",
     paddingVertical: 12,
@@ -1407,26 +1685,37 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 16,
   },
-  paymentOptionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    elevation: 2,
-  },
-  paymentLeftRow: {
-    flexDirection: "row",
-    alignItems: "center",
+
+  emptyContainer: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 40,
   },
-  paymentOptionSelected: {
-    borderColor: "#76B13A",
+  emptyText: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#555",
+    marginBottom: 20,
   },
+  goToMenuButton: {
+    backgroundColor: "#8B4513", 
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  goToMenuButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",

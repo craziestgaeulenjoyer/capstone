@@ -9,6 +9,10 @@ export default function KioskMenu() {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const scrollRef = useRef(null);
 
+  const goBack = () => {
+    window.history.back();
+  };
+
   const categories = [
     { id: 1, name: "Specialty Coffee", image: "/images/SpecialtyCoffee.png" },
     { id: 2, name: "Milk Tea", image: "/images/MilkTea.png" },
@@ -123,10 +127,14 @@ export default function KioskMenu() {
     <div className="min-h-screen flex flex-col bg-gray-200 font-quicksand relative">
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4">
-        <button className="flex items-center text-[#76B13A] font-medium text-lg hover:opacity-80 transition">
+        <button
+          onClick={goBack}
+          className="flex items-center text-[#76B13A] font-medium text-lg hover:opacity-80 transition"
+        >
           <IoIosArrowBack className="mr-1 text-xl" /> Back
         </button>
 
+        {/* Language Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowLangDropdown(!showLangDropdown)}
@@ -143,7 +151,7 @@ export default function KioskMenu() {
                 exit={{ opacity: 0, y: -10 }}
                 className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg w-20 z-10"
               >
-                {languages.map((lang) => (
+                {["EN", "JP", "KR", "CN"].map((lang) => (
                   <button
                     key={lang}
                     onClick={() => {
@@ -151,7 +159,9 @@ export default function KioskMenu() {
                       setShowLangDropdown(false);
                     }}
                     className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-[#E9F0DE] ${
-                      lang === language ? "text-[#76B13A] font-semibold" : "text-gray-700"
+                      lang === language
+                        ? "text-[#76B13A] font-semibold"
+                        : "text-gray-700"
                     }`}
                   >
                     {lang}

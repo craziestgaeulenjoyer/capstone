@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,225 +13,74 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const categories = [
-    { id: "1", name: "All" },
-    { id: "2", name: "Featured" },
-    { id: "3", name: "Coffee", sub: ["Iced Coffee", "Hot Coffee"] },
-    { id: "4", name: "Snacks" },
-    { id: "5", name: "Croffle" },
-    { id: "6", name: "Milk" },
-    { id: "7", name: "Platters", sub: ["Big Platters", "Solo Platters"] },
-];
-
-const products = [
-    {
-        id: "1",
-        name: "Brewed Hot Coffee",
-        prices: {
-            small: 45,
-            medium: 50,
-            large: 55,
-        },
-        category: "Coffee",
-        subcategory: "Hot Coffee",
-        description: "Aromatic and simply brewed. A great, warm start to a morning.",
-        priceSmall: 45,
-        priceMedium: 50,
-        priceLarge: 55,
-        image: require("../../assets/BrewedHotCoffee.png"),
-        imageFile: "BrewedHotCoffee.png",
-    },
-    {
-        id: "2",
-        name: "Brewed Iced Coffee",
-        prices: {
-            small: 50,
-            medium: 55,
-            large: 60,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "Brewed to perfection. Served cold and simple.",
-        priceSmall: 50,
-        priceMedium: 55,
-        priceLarge: 60,
-        image: require("../../assets/BrewedIcedCoffee.png"),
-        imageFile: "BrewedIcedCoffee.png",
-    },
-    {
-        id: "3",
-        name: "Cappuccino",
-        prices: {
-            small: 60,
-            medium: 65,
-            large: 70,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "Cappuccino.",
-        priceSmall: 60,
-        priceMedium: 65,
-        priceLarge: 70,
-        image: require("../../assets/Cappuccino.png"),
-        imageFile: "Cappuccino.png",
-    },
-    {
-        id: "4",
-        name: "Caramel Iced Coffee",
-        prices: {
-            small: 50,
-            medium: 55,
-            large: 60,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "Caramel Iced Coffee",
-        priceSmall: 50,
-        priceMedium: 55,
-        priceLarge: 60,
-        image: require("../../assets/CaramelIcedCoffee.png"),
-        imageFile: "CaramelIcedCoffee.png",
-    },
-    {
-        id: "5",
-        name: "Classic Iced Coffee",
-        prices: {
-            small: 55,
-            medium: 60,
-            large: 65,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "Bold, smooth & refreshing. A timeless favorite served over ice.",
-        priceSmall: 55,
-        priceMedium: 60,
-        priceLarge: 65,
-        image: require("../../assets/ClassicIcedCoffee.png"),
-        imageFile: "ClassicIcedCoffee.png",
-    },
-    {
-        id: "6",
-        name: "French Vanilla Iced Coffee",
-        prices: {
-            small: 65,
-            medium: 70,
-            large: 75,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "Smooth and creamy with a hint of vanilla for a refreshing treat.",
-        priceSmall: 65,
-        priceMedium: 70,
-        priceLarge: 75,
-        image: require("../../assets/FrenchVanillaIcedCoffee.png"),
-        imageFile: "FrenchVanillaIcedCoffee.png",
-    },
-    {
-        id: "7",
-        name: "Caramel Iced Coffee",
-        prices: {
-            small: 65,
-            medium: 70,
-            large: 75,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "A sweet blend of coffee and buttery caramel, perfectly chilled.",
-        priceSmall: 65,
-        priceMedium: 70,
-        priceLarge: 75,
-        image: require("../../assets/Caramel.png"),
-        imageFile: "Caramel.png",
-    },
-    {
-        id: "8",
-        name: "Hazelnut Iced Coffee",
-        prices: {
-            small: 65,
-            medium: 70,
-            large: 75,
-        },
-        category: "Coffee",
-        subcategory: "Iced Coffee",
-        description: "Rich coffee with a nutty hazelnut twist for a smooth, flavorful sip.",
-        priceSmall: 65,
-        priceMedium: 70,
-        priceLarge: 75,
-        image: require("../../assets/HazelnutIcedCoffee.png"),
-        imageFile: "HazelnutIcedCoffee.png",
-    },
-    {
-        id: "9",
-        name: "Platter 1",
-        prices: {
-            small: 350,
-            medium: 400,
-            large: 500,
-        },
-        category: "Platters",
-        subcategory: "Solo Platters",
-        description: "A platter for yourself to enjoy. Contains fries, hashbrowns and cheesesticks.",
-        priceSmall: 350,
-        priceMedium: 400,
-        priceLarge: 500,
-        image: require("../../assets/Platter1.png"),
-        imageFile: "Platter1.png",
-    },
-];
+import Header from "../components/Header";
+import { categories } from "../data/categories";
+import { products } from "../data/products";
 
 const MenuScreen: React.FC = () => {  
-    const navigation = useNavigation();
+  const navigation = useNavigation();
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState("All");
-    const [selectedSub, setSelectedSub] = useState<string | null>(null);
-    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSub, setSelectedSub] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-    const [modalVisible, setModalVisible] = useState(false);
-    const [modalMessage, setModalMessage] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
-    const [quantity, setQuantity] = useState(1);
-    const [size, setSize] = useState<"small" | "medium" | "large">("small");
-    const [notes, setNotes] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [size, setSize] = useState<"small" | "medium" | "large">("small");
+  const [notes, setNotes] = useState("");
 
-    const openModal = (product: any) => {
-        setSelectedProduct(product);
-        setQuantity(1);
-        setSize("small");
+  useEffect(() => {
+    const loadFavorites = async () => {
+      const stored = await AsyncStorage.getItem("favorites");
+      if (stored) setFavorites(JSON.parse(stored));
     };
+    loadFavorites();
+  }, []);
 
-    const closeModal = () => setSelectedProduct(null);
+  const openModal = (product: any) => {
+    setSelectedProduct(product);
+    setQuantity(1);
+    setSize("small");
+  };
 
-    const filteredProducts = products.filter((p) => {
-        const matchesCategory =
-            selectedCategory === "All" || p.category === selectedCategory;
-        const matchesSub = !selectedSub || p.subcategory === selectedSub;
-        const matchesSearch =
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (p.subcategory && p.subcategory.toLowerCase().includes(searchQuery.toLowerCase()));
+  const closeModal = () => setSelectedProduct(null);
 
-        return matchesCategory && matchesSub && matchesSearch;
-    });
+  const filteredProducts = products.filter((p) => {
+    const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
+    const matchesSub = !selectedSub || p.subcategory === selectedSub;
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const basePrice = selectedProduct?.prices
+    return matchesCategory && matchesSub && matchesSearch;
+  });
+
+  const basePrice = selectedProduct?.prices
     ? Number(selectedProduct.prices[size]).toFixed(2)  
     : "0.00";
 
-    const totalPrice = (Number(basePrice) * quantity).toFixed(2);
+  const totalPrice = (Number(basePrice) * quantity).toFixed(2);
+
+  const toggleFavorite = async (productId: string) => {
+    let updated;
+    if (favorites.includes(productId)) {
+      updated = favorites.filter((id) => id !== productId);
+    } else {
+      updated = [...favorites, productId];
+    }
+    setFavorites(updated);
+    await AsyncStorage.setItem("favorites", JSON.stringify(updated));
+  };
 
     return (
         <View style={styles.container}>
             {/* Header */}
-            <View style={styles.header}>
-                <Image source={require('../../assets/MiAmore2.png')} style={styles.logo} />
-                <Text style={styles.headerTitle}>Menu</Text>
-                <View style={styles.headerIcons}>
-                    <Icon name="mic-outline" size={24} color="#000" style={styles.icon} />
-                    <Icon name="notifications-outline" size={24} color="#000" />
-                </View>
-            </View>
+            <Header title="Menu" />
             <Text style={styles.headerText}>Our Menu</Text>
             <Text style={styles.subHeaderText}>Special For You</Text>
 
@@ -318,19 +167,34 @@ const MenuScreen: React.FC = () => {
                         numColumns={2}
                         contentContainerStyle={{ paddingHorizontal: 16 }}
                         renderItem={({ item }) => (
+                          <View style={{ position: "relative", flex: 1 }}>
                             <TouchableOpacity
-                                style={styles.card}
-                                onPress={() => openModal(item)}
+                              style={styles.card}
+                              onPress={() => openModal(item)}
                             >
-                                <Image source={item.image} style={styles.cardImage} />
-                                <Text style={styles.cardTitle}>{item.name}</Text>
-                                <Text style={styles.cardDescription} numberOfLines={2}>
-                                    {item.description}
-                                </Text>
-                                <Text style={styles.cardPrice}>
-                                    ₱{item.priceSmall}/{item.priceMedium}/{item.priceLarge}
-                                </Text>
+                              <Image source={item.image} style={styles.cardImage} />
+                              <Text style={styles.cardTitle}>{item.name}</Text>
+                              <Text style={styles.cardDescription} numberOfLines={2}>
+                                {item.description}
+                              </Text>
+                              <Text style={styles.cardPrice}>
+                                ₱{item.priceSmall}/{item.priceMedium}/{item.priceLarge}
+                              </Text>
                             </TouchableOpacity>
+
+                            {/* Favorite Heart Icon */}
+                            <TouchableOpacity
+                              onPress={() => toggleFavorite(item.id)}
+                              style={styles.favoriteIcon}
+                            >
+                              <Icon
+                                name={favorites.includes(item.id) ? "heart" : "heart-outline"}
+                                size={22}
+                                color={favorites.includes(item.id) ? "#ff4d4d" : "#fff"}
+                                style={{ textShadowColor: "rgba(0,0,0,0.3)", textShadowRadius: 3 }}
+                              />
+                            </TouchableOpacity>
+                          </View>                 
                         )}
                     />
                 ) : (
@@ -466,9 +330,6 @@ const MenuScreen: React.FC = () => {
                                     Add to Cart
                                 </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.orderBtn}>
-                                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Order Now</Text>
-                            </TouchableOpacity>
                         </View>
                     </>
                     )}
@@ -543,8 +404,12 @@ const MenuScreen: React.FC = () => {
 export default MenuScreen;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: { 
+        flex: 1, 
+        backgroundColor: "#fff" 
+    },
     header: {
+        marginTop: 30,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
@@ -556,9 +421,17 @@ const styles = StyleSheet.create({
         height: 65,
         resizeMode: 'contain',
     },
-    headerTitle: { fontSize: 24, fontWeight: "bold", fontFamily: 'Montserrat-Bold', },
-    headerIcons: { flexDirection: "row" },
-    icon: { marginRight: 24 },
+    headerTitle: { 
+        fontSize: 24, 
+        fontWeight: "bold", 
+        fontFamily: 'Montserrat-Bold', 
+    },
+    headerIcons: { 
+        flexDirection: "row" 
+    },
+    icon: { 
+        marginRight: 24 
+    },
 
     headerText: {
         marginLeft: 22,
@@ -634,21 +507,32 @@ const styles = StyleSheet.create({
     subTextActive: { color: "#fff", fontSize: 13, fontWeight: "600" },
 
     card: {
-        flex: 1,
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        padding: 10,
-        margin: 8,
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 4,
-        elevation: 3,
+      flex: 1,
+      backgroundColor: "#fff",
+      borderRadius: 12,
+      padding: 10,
+      margin: 8,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 4,
+      elevation: 3,
     },
     cardImage: { backgroundColor: "#E0E0E0", width: "100%", height: 120, borderRadius: 8, marginBottom: 8, resizeMode: "contain" },
     cardTitle: { fontSize: 14, fontWeight: "bold" },
     cardDescription: { fontSize: 12, color: "#666", marginVertical: 4 },
     cardPrice: { fontSize: 13, fontWeight: "600", color: "#76b13a" },
+    favoriteIcon: {
+      position: "absolute",
+      top: 10,
+      right: 10,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      borderRadius: 20,
+      padding: 6,
+      borderWidth: 1,
+      borderColor: "#fff",
+      zIndex: 10,
+    },
 
     modalOverlay: {
         flex: 1,
@@ -736,8 +620,18 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 4,
     },
-    sectionTitle: { fontSize: 14, fontWeight: "600", marginTop: 10, paddingBottom: 4, borderBottomWidth: 3, borderColor: "#73C04D" },
-    sizeContainer: { flexDirection: "row", marginVertical: 8 },
+    sectionTitle: { 
+        fontSize: 14, 
+        fontWeight: "600", 
+        marginTop: 10, 
+        paddingBottom: 4, 
+        borderBottomWidth: 3, 
+        borderColor: "#73C04D" 
+    },
+    sizeContainer: { 
+        flexDirection: "row", 
+        marginVertical: 8 
+    },
     sizeOption: {
         borderWidth: 1,
         borderBottomWidth: 3, 
@@ -747,7 +641,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         marginRight: 8,
     },
-    sizeSelected: { backgroundColor: "#73C04D", borderColor: "#73C04D" },
+    sizeSelected: { 
+        backgroundColor: "#73C04D", 
+        borderColor: "#73C04D" 
+    },
     actions: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -768,14 +665,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#ddfac0",
         borderWidth: 1,
         borderColor: "#76B13A",
-        padding: 10,
-        borderRadius: 10,
-        alignItems: "center",
-        marginHorizontal: 12,
-    },
-    orderBtn: {
-        flex: 1,
-        backgroundColor: "#76B13A",
         padding: 10,
         borderRadius: 10,
         alignItems: "center",

@@ -29,7 +29,7 @@ function ProductDisplaySection() {
                 >
                     <div className="absolute -top-12">
                         <img
-                            src="/images/img8.png"
+                            src="/images/HeartyPlatter.png"
                             alt="Hearty Platters"
                             className="rounded-full w-32 h-32 object-cover border-4 border-white shadow-lg"
                         />
@@ -74,7 +74,7 @@ function ProductDisplaySection() {
                 >
                     <div className="absolute -top-12">
                         <img
-                            src="/images/img5.jpg"
+                            src="/images/IrresistibleCroffles.png"
                             alt="Irresistible Croffles"
                             className="rounded-full w-32 h-32 object-cover border-4 border-white shadow-lg"
                         />
@@ -117,7 +117,7 @@ function ProductDisplaySection() {
                 >
                     <div className="absolute -top-12">
                         <img
-                            src="/images/img9.jpg"
+                            src="/images/CrispyFries.png"
                             alt="Crispy Fries & Freshly Baked Breads"
                             className="rounded-full w-32 h-32 object-cover border-4 border-white shadow-lg"
                         />

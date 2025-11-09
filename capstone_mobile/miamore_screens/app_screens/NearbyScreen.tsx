@@ -13,6 +13,7 @@ import {
 {/* import MapView, { Marker, Polyline } from "react-native-maps"; */}
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
+import Header from "../components/Header";
 
 const NearbyScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -59,14 +60,7 @@ const NearbyScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Image source={require("../../assets/MiAmore2.png")} style={styles.logo} />
-        <Text style={styles.headerTitle}>Nearby</Text>
-        <View style={styles.headerIcons}>
-          <Icon name="mic-outline" size={24} color="#000" style={styles.icon} />
-          <Icon name="notifications-outline" size={24} color="#000" />
-        </View>
-      </View>
+      <Header title="Nearby" />
 
       {/* Map Section */}
       {/* <View style={styles.mapContainer}>
@@ -191,18 +185,10 @@ const NearbyScreen: React.FC = () => {
 export default NearbyScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
   },
-  logo: { width: 65, height: 65, resizeMode: "contain" },
-  headerTitle: { fontSize: 24, fontWeight: "800" },
-  headerIcons: { flexDirection: "row" },
-  icon: { marginRight: 24 },
 
   mapContainer: {
     height: 250,

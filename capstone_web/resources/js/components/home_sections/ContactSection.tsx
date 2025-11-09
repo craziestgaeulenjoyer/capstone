@@ -35,6 +35,7 @@ const ContactSection: React.FC = () => {
             />
             <motion.h2
               className="text-3xl font-extrabold mb-4 leading-tight text-left"
+              style={{ fontFamily: "'Kalam', cursive" }}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
@@ -47,25 +48,27 @@ const ContactSection: React.FC = () => {
               <span className="text-blue-400">From </span>
               <span className="text-blue-400">You!</span>
             </motion.h2>
-            <p className="text-black text-md mb-6 max-w-md text-left">
-              Whether you’re craving a cup, planning a visit, or just want to say hello—Mi Amore is here for you.
+            <p className="text-black text-lg mb-6 max-w-md text-left"
+              style={{ fontFamily: "'Poppins', sans-serif" }}
+            >
+              Whether you’re craving a cup, planning a visit, or just want to say hello Mi Amore is here for you.
             </p>
           </div>
 
           {/* Contact Info */}
           <div className="flex flex-col gap-3">
             <div className="flex items-start gap-3">
-              <MdEmail className="text-[#76B13A] text-xl mt-1" />
+              <MdEmail className="text-[#76B13A] text-2xl mt-1" />
               <div>
-                <p className="text-sm font-semibold text-[#4e4c4c] mb-1">E-mail</p>
-                <p className="text-sm font-bold text-[#1b1b1b]">miamore.cml@gmail.com</p>
+                <p className="text-lg font-bold text-[#9D7353] mb-1">E-mail</p>
+                <p className="text-md font-bold text-[#1b1b1b]">miamore.cml@gmail.com</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <FaPhoneAlt className="text-[#76B13A] text-xl mt-1" />
+              <FaPhoneAlt className="text-[#76B13A] text-2xl mt-1" />
               <div>
-                <p className="text-sm font-semibold text-[#4e4c4c] mb-1">Phone Number</p>
-                <p className="text-sm font-bold text-[#1b1b1b]">+63 917 892 4125</p>
+                <p className="text-lg font-bold text-[#9D7353] mb-1">Phone Number</p>
+                <p className="text-md font-bold text-[#1b1b1b]">+63 917 892 4125</p>
               </div>
             </div>
           </div>
@@ -103,7 +106,7 @@ const ContactSection: React.FC = () => {
                 <div key={field.id}>
                   <label
                     htmlFor={field.id}
-                    className="block text-sm text-black mb-1"
+                    className="block text-md font-medium text-black mb-1"
                   >
                     {field.label}
                   </label>
@@ -111,7 +114,7 @@ const ContactSection: React.FC = () => {
                     id={field.id}
                     type={field.type}
                     required
-                    className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
+                    className="w-full px-4 py-2 bg-white border border-gray-400 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
                   />
                 </div>
               ))}
@@ -119,7 +122,7 @@ const ContactSection: React.FC = () => {
               <div>
                 <label
                   htmlFor="message"
-                  className="block text-sm text-black mb-1"
+                  className="block text-md  font-medium text-black mb-1"
                 >
                   Enter message
                 </label>
@@ -127,7 +130,7 @@ const ContactSection: React.FC = () => {
                   id="message"
                   rows={4}
                   required
-                  className="w-full px-4 py-2 bg-white border border-gray-300 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
+                  className="w-full px-4 py-2 bg-white border border-gray-400 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
                 ></textarea>
               </div>
 
@@ -135,7 +138,7 @@ const ContactSection: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="group bg-[#8CB662] hover:bg-[#7AB44E] text-white font-semibold text-sm rounded-full py-2 px-5 flex items-center transition-all duration-300"
+                  className="group bg-[#8CB662] hover:bg-[#7AB44E] text-white font-semibold text-md rounded-full py-2 px-5 flex items-center transition-all duration-300"
                 >
                   <span>Send Message</span>
                   <span className="ml-3 bg-white text-[#8CB662] p-1 rounded-full transition-transform duration-300 group-hover:translate-x-1">
