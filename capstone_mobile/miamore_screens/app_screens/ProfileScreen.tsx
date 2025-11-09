@@ -15,6 +15,8 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { launchImageLibrary } from "react-native-image-picker";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import Header from "../components/Header";
+import { products } from "../data/products";
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -29,12 +31,13 @@ const ProfileScreen: React.FC = () => {
   });
 
   const [profileImage, setProfileImage] = useState<any>(require("../../assets/default-profile-icon.png"));
-  const [view, setView] = useState<"main" | "viewProfile" | "editProfile">("main");
+  const [view, setView] = useState<"main" | "viewProfile" | "editProfile" | "favorites">("main");
   const [viewExpanded, setViewExpanded] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [rating, setRating] = useState(0);
+  const [favorites, setFavorites] = useState<any[]>([]);
   const [description, setDescription] = useState("");
 
   const fetchProfile = async () => {
@@ -127,17 +130,7 @@ const ProfileScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Image
-          source={require("../../assets/MiAmore2.png")}
-          style={styles.logo}
-        />
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerIcons}>
-          <Icon name="mic-outline" size={24} color="#000" style={styles.icon} />
-          <Icon name="notifications-outline" size={24} color="#000" />
-        </View>
-      </View>
+      <Header title="Profile" />
 
       {/* Main View */}
       {view === "main" && (
@@ -155,7 +148,20 @@ const ProfileScreen: React.FC = () => {
 
           {/* Quick Actions */}
           <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionItem}>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={async () => {
+                const stored = await AsyncStorage.getItem("favorites");
+                if (stored) {
+                  const favoriteIds = JSON.parse(stored);
+                  const favoriteProducts = products.filter((p) =>
+                    favoriteIds.includes(p.id)
+                  );
+                  setFavorites(favoriteProducts);
+                  setView("favorites");
+                }
+              }}
+            >
               <Icon name="heart-outline" size={22} color="#73C04D" />
               <Text style={styles.actionText}>Favorites</Text>
             </TouchableOpacity>
@@ -426,6 +432,37 @@ const ProfileScreen: React.FC = () => {
       </ScrollView>
     )}
 
+    {view === "favorites" && (
+      <ScrollView style={{ flex: 1, padding: 16 }}>
+        <TouchableOpacity onPress={() => setView("main")} style={{ marginBottom: 10 }}>
+          <Icon name="arrow-back" size={24} color="#73C04D" />
+        </TouchableOpacity>
+
+        <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Your Favorites
+        </Text>
+
+        {favorites.length > 0 ? (
+          favorites.map((item) => (
+            <View key={item.id} style={styles.favoriteCard}>
+              <Image source={item.image} style={styles.favoriteImage} />
+              <Text style={styles.favoriteTitle}>{item.name}</Text>
+              <Text style={styles.favoriteDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+              <Text style={styles.favoritePrice}>
+                ₱{item.priceSmall}/{item.priceMedium}/{item.priceLarge}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text style={{ textAlign: "center", color: "#999" }}>
+            No favorite items yet.
+          </Text>
+        )}
+      </ScrollView>
+    )}
+
     {/* Feedback Modal */}
     <Modal
       visible={showFeedbackModal}
@@ -544,30 +581,9 @@ const ProfileScreen: React.FC = () => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: "700" 
-  },
-  headerIcons: { 
-    flexDirection: "row" 
-  },
-  logo: {
-    width: 65,
-    height: 65,
-    resizeMode: 'contain',
-  },
-  icon: { 
-    marginRight: 24 
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
   },
 
   // Profile Card
@@ -662,6 +678,29 @@ const styles = StyleSheet.create({
     color: "#999",
     textAlign: "left",
   },
+
+  favoriteCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  favoriteImage: {
+    width: "100%",
+    height: 140,
+    borderRadius: 8,
+    marginBottom: 8,
+    resizeMode: "contain",
+    backgroundColor: "#f2f2f2",
+  },
+  favoriteTitle: { fontSize: 14, fontWeight: "bold" },
+  favoriteDescription: { fontSize: 12, color: "#666", marginVertical: 4 },
+  favoritePrice: { fontSize: 13, fontWeight: "600", color: "#76b13a" },
 
   userInfo: { 
     flex: 1 

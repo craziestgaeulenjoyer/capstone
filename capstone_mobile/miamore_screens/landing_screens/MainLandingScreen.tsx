@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../routes/navigation';
+import { RootStackParamList } from '../../routes/navigation';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Choice'>;
 
@@ -18,7 +18,7 @@ const MainLandingScreen = () => {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/MiAmore2.png')}
+        source={require('../../assets/MiAmore2.png')}
         style={styles.logo}
         resizeMode="contain"
       />
