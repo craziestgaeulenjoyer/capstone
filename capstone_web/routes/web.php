@@ -2,6 +2,17 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\CustomerSignupController;
+use App\Http\Controllers\CustomerLoginController;
+
+///SIGN UP CUSTOMER ROUTE////
+Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
+//
+//SIGN IN CUSTOMER ROUTE///
+Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
+
+
+
 
 Route::get('/home', function () {
     return Inertia::render('website_pages/Home_MiAmore');
