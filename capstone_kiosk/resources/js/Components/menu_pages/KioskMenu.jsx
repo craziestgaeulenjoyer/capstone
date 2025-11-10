@@ -2,16 +2,29 @@ import React, { useState, useRef } from "react";
 import { IoIosArrowBack, IoIosArrowUp } from "react-icons/io";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 
 export default function KioskMenu() {
   const [selectedCategory, setSelectedCategory] = useState("Premium Matcha");
   const [language, setLanguage] = useState("EN");
   const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedSize, setSelectedSize] = useState("Regular 16oz");
+  const [quantity, setQuantity] = useState(1);
+  
   const scrollRef = useRef(null);
 
-  const goBack = () => {
-    window.history.back();
+   const goBack = () => window.history.back();
+
+  // Define drink size options
+  const drinkOptions = {
+    sizes: ["Regular 16oz", "Large 22oz"],
   };
+
+  const handleIncrease = () => setQuantity((prev) => prev + 1);
+  const handleDecrease = () =>
+    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+
 
   const categories = [
     { id: 1, name: "Specialty Coffee", image: "/images/SpecialtyCoffee.png" },
@@ -249,6 +262,7 @@ export default function KioskMenu() {
           <motion.div
             key={item.id}
             whileHover={{ scale: 1.05 }}
+            onClick={() => setSelectedItem(item)}
             className="bg-[#EAF3E0] rounded-xl p-4 flex flex-col items-center shadow-md hover:shadow-lg transition"
           >
             <img
@@ -263,6 +277,119 @@ export default function KioskMenu() {
           </motion.div>
         ))}
       </motion.div>
+
+                  {/* Modal */}
+        {selectedItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.25 }}
+              className="bg-white w-[90%] max-w-[480px] rounded-[30px] p-5 relative shadow-2xl flex flex-col items-center text-center"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="absolute top-4 left-4 text-[#8CB662] hover:text-[#6CA043] transition"
+              >
+                <X size={20} strokeWidth={2.5} />
+              </button>
+
+              {/* Drink Image */}
+              <img
+                src={selectedItem.image}
+                alt={selectedItem.name}
+                className="w-[110px] h-[110px] object-contain mt-2"
+              />
+
+              {/* Title + Price */}
+              <h2 className="text-base font-semibold mt-2 leading-tight">
+                {selectedItem.name}
+              </h2>
+              <p className="text-[#65B741] font-bold text-sm mt-0.5">
+                ₱ {selectedItem.price.toFixed(2)}
+              </p>
+
+              {/* Quantity */}
+              <div className="mt-2">
+                <p className="font-medium text-gray-700 mb-0.5 text-xs">Quantity</p>
+                <div className="flex items-center justify-center space-x-2">
+                  <button
+                    onClick={handleDecrease}
+                    className="w-6 h-6 flex items-center justify-center border border-gray-400 rounded-md text-sm font-bold hover:bg-[#8CB662] hover:text-white transition"
+                  >
+                    –
+                  </button>
+                  <span className="text-sm font-semibold">{quantity}</span>
+                  <button
+                    onClick={handleIncrease}
+                    className="w-6 h-6 flex items-center justify-center border border-gray-400 rounded-md text-sm font-bold hover:bg-[#8CB662] hover:text-white transition"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Size Options */}
+              <div className="mt-3 w-full flex flex-col items-center">
+              <div className="w-[90%]">
+                <p className="font-medium text-gray-700 mb-1 text-xs text-left">Size options</p>
+                <div className="h-[1px] w-full bg-[#8CB662] mb-2"></div>
+              </div>
+
+
+              {/* Center buttons */}
+              <div className="flex justify-center space-x-2">
+                {["Regular 16oz", "Large 22oz"].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`px-3 py-1 rounded-full border text-xs font-medium transition-all shadow-sm ${
+                      selectedSize === size
+                        ? "bg-[#8CB662] text-white border-[#8CB662]"
+                        : "bg-white text-gray-800 border-gray-300 hover:bg-[#E9F4E1]"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+                </div>
+              </div>
+
+              {/* What's Included */}
+            <div className="mt-3 w-full flex flex-col items-center">
+              <div className="w-[90%]">
+                <p className="font-medium text-gray-700 mb-1 text-xs text-left">What’s included</p>
+                <div className="h-[1px] w-full bg-[#8CB662] mb-2"></div>
+              </div>
+                <div className="flex flex-col items-center space-y-2">
+                  <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+                    <option>No Vanilla Syrup</option>
+                  </select>
+
+                  <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+                    <option>No Vanilla Sweet Cream</option>
+                  </select>
+
+                  <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+                    <option>Ice</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Done Button */}
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="mt-4 bg-[#8CB662] text-white px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-[#7AAF55] transition"
+              >
+                Done
+              </button>
+            </motion.div>
+          </div>
+        )}
+
+
 
       {/* Bottom Controls */}
       <div className="fixed bottom-0 w-full bg-white border-t border-gray-200 py-4 shadow-inner flex flex-col items-center">
@@ -287,4 +414,3 @@ export default function KioskMenu() {
     </div>
   );
 }
-
