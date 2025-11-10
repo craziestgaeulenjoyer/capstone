@@ -19,6 +19,12 @@ export default function KioskMenu() {
   // Define drink size options
   const drinkOptions = {
     sizes: ["Regular 16oz", "Large 22oz"],
+    addOns: [
+      "Pearls",
+      "Nata",
+      "Coffee Jelly",
+      "Strawberry Popping Bobba",
+    ],
   };
 
   const handleIncrease = () => setQuantity((prev) => prev + 1);
@@ -40,24 +46,24 @@ export default function KioskMenu() {
 
   const allMenuItems = {
     "Coffee": [
-      { id: 1, name: "Classic Iced Coffee", price: 80, image: "/images/ClassicIcedCoffee.png" },
+      { id: 1, name: "Classic Iced Coffee", price: 70, image: "/images/ClassicIcedCoffee.png" },
       { id: 2, name: "Caramel Iced Coffee", price: 80, image: "/images/CaramelIcedCoffee.png" },
       { id: 3, name: "Vanilla Iced Coffee", price: 80, image: "/images/VanillaIcedCoffee.png" },
       { id: 4, name: "Hazelnut Iced Coffee", price: 80, image: "/images/HazelnutIcedCoffee.png" },
       { id: 5, name: "French Vanilla Iced Coffe", price: 80, image: "/images/FrenchVanillaIced.png" },
-      { id: 6, name: "Iced Snow Coffee", price: 80, image: "/images/IceSnowCoffee.png" },
-      { id: 7, name: "Brewed Coffee", price: 80, image: "/images/BrewedCoffee.png" },
+      { id: 6, name: "Iced Snow Coffee", price: 120, image: "/images/IceSnowCoffee.png" },
+      { id: 7, name: "Brewed Coffee", price: 60, image: "/images/BrewedCoffee.png" },
     ],
     Snacks: [
       { id: 1, name: "French Fries", price: 70, image: "/images/Fries.png" },
-      { id: 2, name: "Cheese Sticks", price: 90, image: "/images/CheeseSticks.png" },
-      { id: 3, name: "Hash Brown", price: 100, image: "/images/HashBrown.png" }, 
+      { id: 2, name: "Cheese Sticks", price: 60, image: "/images/CheeseSticks.png" },
+      { id: 3, name: "Hash Brown", price: 70, image: "/images/HashBrown.png" }, 
       { id: 4, name: "Chicken Nuggets", price: 135, image: "/images/ChickenNuggets.png" },
       { id: 5, name: "Twister Fries", price: 100, image: "/images/TwisterFries.png" },
       { id: 6, name: "Mojos", price: 100, image: "/images/Mojos.png" },
     ],
     "Lemonade & Fruit Juices": [
-      { id: 1, name: "Classic Lemonade", price: 70, image: "/images/ClassicLemonade.png" },
+      { id: 1, name: "Classic Lemonade", price: 60, image: "/images/ClassicLemonade.png" },
       { id: 2, name: "Strawberry Lemonade", price: 70, image: "/images/StrawberryLemonade.png" },
       { id: 3, name: "Charcoal Lemonade", price: 70, image: "/images/CharcoalLemonade.png" },
       { id: 4, name: "Cucumber Lemonade", price: 90, image: "/images/CucumberLemonade.png" },
@@ -96,7 +102,7 @@ export default function KioskMenu() {
     "Premium Matcha": [
       { id: 1, name: "Pure Matcha Latte", price: 120, image: "/images/PureMatchaLatte.png" },  
       { id: 2, name: "Pure Matcha Oat Latte", price: 160, image: "/images/PureMatchaOatLatte.png" },  
-      { id: 3, name: "Matcha Ichigo", price: 120, image: "/images/MatchaIchigo.png" },
+      { id: 3, name: "Matcha Ichigo", price: 180, image: "/images/MatchaIchigo.png" },
       { id: 4, name: "Specialty Matcha", price: 250, image: "/images/SpecialtyMatcha.png" },  
      ],
     "Quesadillas & Corndogs": [
@@ -111,8 +117,8 @@ export default function KioskMenu() {
       { id: 1, name: "Classic Bubble", price: 90, image: "/images/ClassicBubble.png" },  
       { id: 2, name: "Okinawa", price: 90, image: "/images/Okinawa.png" },  
       { id: 3, name: "Wintermelon", price: 90, image: "/images/Wintermelon.png" },
-      { id: 4, name: "Chocolate", price: 90, image: "/images/Chocolate.png" },
-      { id: 5, name: "Oreo", price: 90, image: "/images/Oreo.png" },
+      { id: 4, name: "Chocolate", price:  90, image: "/images/Chocolate.png" },
+      { id: 5, name: "Oreo", price:  90, image: "/images/Oreo.png" },
       { id: 6, name: "Caramel", price: 90, image: "/images/Caramel.png" }, 
       { id: 7, name: "Java Chip", price: 90, image: "/images/JavaChip.png" }, 
       { id: 8, name: "Matcha", price: 90, image: "/images/Matcha.png" }, 
@@ -331,54 +337,152 @@ export default function KioskMenu() {
                 </div>
               </div>
 
-              {/* Size Options */}
+            {/* Size Options */}
+            {["Specialty Coffee", "Premium Matcha", "Milk Tea", "Lemonade & Fruit Juices", "Coffee"].includes(selectedCategory) && (
               <div className="mt-3 w-full flex flex-col items-center">
-              <div className="w-[90%]">
-                <p className="font-medium text-gray-700 mb-1 text-xs text-left">Size options</p>
-                <div className="h-[1px] w-full bg-[#8CB662] mb-2"></div>
-              </div>
+                <div className="w-[90%]">
+                  <p className="font-medium text-gray-700 mb-1 text-xs text-left">Cup Size</p>
+                  <div className="h-[1px] w-full bg-[#8CB662] mb-2"></div>
+                </div>
 
-
-              {/* Center buttons */}
-              <div className="flex justify-center space-x-2">
-                {["Regular 16oz", "Large 22oz"].map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-3 py-1 rounded-full border text-xs font-medium transition-all shadow-sm ${
-                      selectedSize === size
-                        ? "bg-[#8CB662] text-white border-[#8CB662]"
-                        : "bg-white text-gray-800 border-gray-300 hover:bg-[#E9F4E1]"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+                <div className="flex justify-center space-x-2">
+                  {["Regular 16oz", "Large 22oz"].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-3 py-1 rounded-full border text-xs font-medium transition-all shadow-sm ${
+                        selectedSize === size
+                          ? "bg-[#8CB662] text-white border-[#8CB662]"
+                          : "bg-white text-gray-800 border-gray-300 hover:bg-[#E9F4E1]"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
                 </div>
               </div>
+            )}
+              
+            {/* What's Included */}
+             {/* Modal Options / Add-ons */}
+{["Specialty Coffee","Milk Tea","Lemonade & Fruit Juices","Coffee","Premium Matcha","Snacks","Quesadillas & Corndogs","Platters"].includes(selectedCategory) ? (
+  <div className="mt-3 w-full flex flex-col items-center space-y-3 text-xs">
+    {/* Determine header text dynamically */}
+    <div className="w-[90%] flex flex-col items-start">
+      <p className="font-medium text-gray-700 mb-1 text-xs text-left">
+        {(() => {
+          switch (selectedCategory) {
+            case "Specialty Coffee":
+            case "Premium Matcha":
+              return "Options";
+            case "Milk Tea":
+            case "Lemonade & Fruit Juices":
+            case "Coffee":
+              return "Add-ons";
+            case "Snacks":
+              return "Flavors";
+            case "Quesadillas & Corndogs":
+            case "Platters":
+              return "Extras";
+            default:
+              return "";
+          }
+        })()}
+      </p>
+      <div className="h-[1px] w-full bg-[#8CB662] mb-2"></div>
+    </div>
 
-              {/* What's Included */}
-            <div className="mt-3 w-full flex flex-col items-center">
-              <div className="w-[90%]">
-                <p className="font-medium text-gray-700 mb-1 text-xs text-left">What’s included</p>
-                <div className="h-[1px] w-full bg-[#8CB662] mb-2"></div>
-              </div>
-                <div className="flex flex-col items-center space-y-2">
-                  <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
-                    <option>No Vanilla Syrup</option>
-                  </select>
+    {/* Specialty Coffee */}
+        {selectedCategory === "Specialty Coffee" && (
+          <>
+            <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+              <option>Select option</option>
+              <option>Hot</option>
+              <option>Cold</option>
+            </select>
+            <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+              <option>Select Add-ons</option>
+              <option>Oat Milk</option>
+              <option>Extra Espresso</option>
+            </select>
+          </>
+        )}
 
-                  <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
-                    <option>No Vanilla Sweet Cream</option>
-                  </select>
+        {/* Milk Tea */}
+        {selectedCategory === "Milk Tea" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select an add-on</option>
+            <option>Pearls</option>
+            <option>Nata</option>
+            <option>Coffee Jelly</option>
+            <option>Crushed Oreo</option>
+            <option>Cream Cheese</option>
+            <option>Cheesecake</option>
+            <option>Extra Match Shot</option>
+          </select>
+        )}
 
-                  <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
-                    <option>Ice</option>
-                  </select>
-                </div>
-              </div>
+        {/* Lemonade & Fruit Juices */}
+        {selectedCategory === "Lemonade & Fruit Juices" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select Add-ons</option>
+            <option>Pearls</option>
+            <option>Nata</option>
+            <option>Coffee Jelly</option>
+            <option>Strawberry Popping Bobba</option>
+          </select>
+        )}
 
-              {/* Done Button */}
+        {/* Coffee */}
+        {selectedCategory === "Coffee" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select Add-ons</option>
+            <option>Extra Matcha Shot</option>
+            <option>Extra Coffee Shot</option>
+          </select>
+        )}
+
+        {/* Premium Matcha */}
+        {selectedCategory === "Premium Matcha" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select option</option>
+            <option>Hot</option>
+            <option>Cold</option>
+          </select>
+        )}
+
+        {/* Snacks */}
+        {selectedCategory === "Snacks" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select Flavor</option>
+            <option>Cheese</option>
+            <option>Sour & Cream</option>
+            <option>BBQ</option>
+            <option>Butter Cheese</option>
+            <option>Honey Butter</option>
+          </select>
+        )}
+
+        {/* Quesadillas & Corndogs - Only for Beef Quesadillas */}
+        {selectedCategory === "Quesadillas & Corndogs" && selectedItem?.name === "Beef Quesadillas" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select Extra</option>
+            <option>Extra Garlic Sauce</option>
+          </select>
+        )}
+
+        {/* Platters */}
+        {selectedCategory === "Platters" && (
+          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <option>Select Extra</option>
+            <option>Add Extra Nuggets</option>
+          </select>
+        )}
+
+          </div>
+        ) : null}
+
+       {/* Done Button */}
               <button
                 onClick={() => setSelectedItem(null)}
                 className="mt-4 bg-[#8CB662] text-white px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-[#7AAF55] transition"
@@ -388,8 +492,6 @@ export default function KioskMenu() {
             </motion.div>
           </div>
         )}
-
-
 
       {/* Bottom Controls */}
       <div className="fixed bottom-0 w-full bg-white border-t border-gray-200 py-4 shadow-inner flex flex-col items-center">
