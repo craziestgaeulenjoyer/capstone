@@ -5,23 +5,46 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+
+/* ---------- Kiosk Featured Pages ---------- */
+
+Route::get('/bubble-welcome', function () {
+    return Inertia::render('kiosk_pages/Welcome');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+Route::get('/productfeature', function () {
+    return Inertia::render('kiosk_pages/Featured');
 });
+
+Route::get('/pickorder', function () {
+    return Inertia::render('kiosk_pages/PickDineOrTake');
+});
+
+/* ---------- Home & Menu Pages ---------- */
+
+Route::get('/kioskhome', function () {
+    return Inertia::render('kiosk_pages/Home');
+});
+
+Route::get('/kioskmenu', function () {
+    return Inertia::render('kiosk_pages/Menu');
+});
+
+
+/* ---------- Payment Selection ---------- */
+
+Route::get('/paymentselect', function () {
+    return Inertia::render('kiosk_pages/PaymentSelect');
+});
+
+Route::get('/qrcode', function () {
+    return Inertia::render('kiosk_pages/QR');
+});
+
+Route::get('/ordernumber', function () {
+    return Inertia::render('kiosk_pages/OrderNum');
+});
+
+
 
 require __DIR__.'/auth.php';

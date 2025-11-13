@@ -14,6 +14,7 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Header from "../components/Header";
 
 const HomeScreen: React.FC = () => {  
   const navigation = useNavigation();
@@ -55,14 +56,7 @@ const HomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Image source={require('../../assets/MiAmore2.png')} style={styles.logo} />
-        <Text style={styles.headerTitle}>Home</Text>
-        <View style={styles.headerIcons}>
-          <Icon name="mic-outline" size={24} color="#000" style={styles.icon} />
-          <Icon name="notifications-outline" size={24} color="#000" />
-        </View>
-      </View>
+      <Header title="Home" />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Search */}
@@ -259,22 +253,10 @@ const HomeScreen: React.FC = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
   },
-  logo: {
-    width: 65,
-    height: 65,
-    resizeMode: 'contain',
-  },
-  headerTitle: { fontSize: 24, fontWeight: "bold", fontFamily: 'Montserrat-Bold', },
-  headerIcons: { flexDirection: "row" },
-  icon: { marginRight: 24 },
 
   searchContainer: {
     flexDirection: "row",

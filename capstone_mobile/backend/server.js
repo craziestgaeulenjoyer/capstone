@@ -26,6 +26,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const googleClient = new OAuth2Client('1018371869413-d6k2ancgs59ujstbuu8j6b38lo6foec8.apps.googleusercontent.com');
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+const fs = require("fs");
 
 console.log("Email user:", process.env.EMAIL_USER);
 console.log("Email pass exists:", !!process.env.EMAIL_PASS);
@@ -48,6 +54,19 @@ const transporter = nodemailer.createTransport({
 });
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const OpenAI = require("openai");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY;
+const PAYMONGO_URL = "https://api.paymongo.com/v1";
+const PUBLIC_URL = process.env.PUBLIC_URL;
+
+const otpStore = {};
+
+// Start of Routes
 
 app.post("/api/register", async (req, res) => {
   console.log("Received register body:", req.body);
@@ -96,28 +115,89 @@ app.post('/api/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials.' });
 
     const otpCode = generateOTP();
-    const otpToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
-    const expiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+    const expiry = new Date(Date.now() + 5 * 60 * 1000);
 
     await pool.query(
       `UPDATE customers 
-       SET otp_code = $1, otp_token = $2, otp_expiry = $3 
-       WHERE id = $4`,
-      [otpCode, otpToken, expiry, user.id]
+      SET otp_code = $1, otp_expiry = $2 
+      WHERE id = $3`,
+      [otpCode, expiry, user.id]
     );
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: user.email,
       subject: 'Your Login OTP Code',
-      text: `Your OTP code is: ${otpCode}`
+      text: `Your OTP code is: ${otpCode}`,
     });
 
-    // ✅ no expiry check here
+    const otpToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
+    res.json({ message: 'OTP sent to email.', otp_token: otpToken });
+
+    // no expiry check here
     res.json({ message: 'OTP sent to email.', otp_token: otpToken });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Google sign-in route
+app.post('/api/google-login', async (req, res) => {
+  const { token } = req.body;
+  const googleClient = new OAuth2Client('1018371869413-p1alpi2lc93rtbem9fdr80bidbebl3bh.apps.googleusercontent.com');
+
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: '1018371869413-p1alpi2lc93rtbem9fdr80bidbebl3bh.apps.googleusercontent.com',
+    });
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    // Check if user exists or create new
+    let user = await pool.query('SELECT * FROM customers WHERE email = $1', [email]);
+    if (user.rows.length === 0) {
+      user = await pool.query(
+        `INSERT INTO customers (full_name, email, password_hash, email_verified)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [name, email, '', true]
+      );
+    }
+
+    const sessionToken = jwt.sign({ userId: user.rows[0].id }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ sessionToken });
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ message: 'Invalid Google token.' });
+  }
+});
+
+// Facebook sign-in route
+app.post('/api/facebook-login', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    // Verify token with Facebook Graph API
+    const fbResponse = await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${token}`);
+    const fbUser = await fbResponse.json();
+
+    if (!fbUser.email) return res.status(400).json({ message: 'Email permission required' });
+
+    let user = await pool.query('SELECT * FROM customers WHERE email = $1', [fbUser.email]);
+    if (user.rows.length === 0) {
+      user = await pool.query(
+        `INSERT INTO customers (full_name, email, password_hash, email_verified)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [fbUser.name, fbUser.email, '', true]
+      );
+    }
+
+    const sessionToken = jwt.sign({ userId: user.rows[0].id }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ sessionToken });
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ message: 'Invalid Facebook token.' });
   }
 });
 
@@ -210,13 +290,13 @@ app.post('/api/forgot-password', async (req, res) => {
 
     const passwordOtpCode = generateOTP();
     const passwordOtpToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
-    const passwordExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+    const passwordExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
     await pool.query(
       `UPDATE customers 
-       SET password_otp_code = $1, password_otp_token = $2, password_otp_expiry = $3 
-       WHERE id = $4`,
-      [passwordOtpCode, passwordOtpToken, passwordExpiry, user.id]
+      SET password_otp_code = $1, password_otp_expiry = $2 
+      WHERE id = $3`,
+      [passwordOtpCode, passwordExpiry, user.id]
     );
 
     await transporter.sendMail({
@@ -322,16 +402,15 @@ app.post('/api/reset-password', async (req, res) => {
 // Menu Routes
 
 // Adding Items to Cart
+// Add Item to Cart with created_at timestamp
 app.post('/api/cart', authenticateToken, async (req, res) => {
   const { product_id, product_name, size, quantity, instructions, price, image } = req.body;
-
-  console.log("Backend received Add to Cart:", req.body); // Debug
 
   try {
     const result = await pool.query(
       `INSERT INTO cart_items 
-        (customer_id, product_id, product_name, size, quantity, instructions, price, image) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        (customer_id, product_id, product_name, size, quantity, instructions, price, image, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) 
        RETURNING *`,
       [req.userId, product_id, product_name, size, quantity, instructions, Number(price), image]
     );
@@ -348,11 +427,18 @@ app.get('/api/cart', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, customer_id, product_id, product_name, size, quantity,
-              instructions, price::numeric(10,2) AS price, image
+              instructions, price::numeric(10,2) AS price, image, created_at
        FROM cart_items
-       WHERE customer_id = $1`,
+       WHERE customer_id = $1
+       ORDER BY created_at DESC`,
       [req.userId]
     );
+
+    console.log("Sending cart items:", result.rows.map(r => ({
+      id: r.id,
+      created_at: r.created_at,
+    })));
+
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching cart:", err);
@@ -404,30 +490,66 @@ app.put("/api/cart/:id", authenticateToken, async (req, res) => {
 // Checkout route
 app.post("/api/checkout", authenticateToken, async (req, res) => {
   const userId = req.userId;
-  const { cartItems, paymentMethod, totalAmount, address } = req.body;
+  let { cartItems, paymentMethod, totalAmount, address } = req.body;
+
+  console.log("📦 Raw checkout body:", req.body);
 
   try {
+    // 🧩 Safely handle cartItems (could be JSON string or array)
+    if (typeof cartItems === "string") {
+      try {
+        cartItems = JSON.parse(cartItems);
+      } catch (err) {
+        console.error("❌ Failed to parse cartItems JSON:", err);
+        cartItems = [];
+      }
+    }
+
+    if (!Array.isArray(cartItems)) {
+      console.warn("⚠️ cartItems is not an array, defaulting to empty array");
+      cartItems = [];
+    }
+
+    console.log("✅ Parsed cartItems:", cartItems);
+
+    // 🟩 Fetch user info
     const userResult = await pool.query(
       "SELECT full_name, email FROM customers WHERE id = $1",
       [userId]
     );
-
     const user = userResult.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Generate the unique IDs
+    // 🟦 Create order metadata
     const orderCode = "ORD-" + Math.floor(100000 + Math.random() * 900000);
-    const transactionId =
-      paymentMethod === "GCash"
-        ? "TXN-" + Math.floor(100000 + Math.random() * 900000)
-        : null;
+    let transactionId = null;
+    let orderStatus = "pending";
 
-    // Inserts order into DB
+    if (paymentMethod === "Pay on Pickup") {
+      transactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
+    }
+
+    // 🟧 Build item array
+    const orderItems = cartItems.map((i) => ({
+      id: i.product_id || i.id,
+      name: i.product_name,
+      size: i.size || null,
+      quantity: Number(i.quantity),
+      price: Number(i.price),
+      image: i.image || null,
+      instructions: i.instructions || "",
+    }));
+
+    console.log("🧾 Final orderItems to store:", orderItems);
+
+    // 🟨 Insert into orders (with JSONB)
     const insertOrder = `
       INSERT INTO orders (
-        user_id, payment_method, total_amount, status, transaction_id,
-        order_code, customer_name, customer_email, customer_address, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        user_id, payment_method, total_amount, status,
+        transaction_id, order_code, customer_name, customer_email,
+        customer_address, items, created_at
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
       RETURNING *;
     `;
 
@@ -435,13 +557,16 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
       userId,
       paymentMethod,
       totalAmount,
-      paymentMethod === "GCash" ? "paid" : "pending",
+      orderStatus,
       transactionId,
       orderCode,
       user.full_name,
       user.email,
       address || null,
+      JSON.stringify(orderItems),
     ]);
+
+    console.log("✅ Order saved:", orderResult.rows[0]);
 
     res.status(200).json({
       message: "Order placed successfully",
@@ -449,11 +574,211 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
       transaction_id: transactionId,
       full_name: user.full_name,
       email: user.email,
+      status: orderStatus,
+      items: orderItems,
     });
   } catch (err) {
     console.error("Checkout error:", err);
-    res.status(500).json({ message: "Server error during checkout" });
+    res.status(500).json({ message: "Server error during checkout", error: err.message });
   }
+});
+
+// GCash Payment Intent via PayMongo
+app.post("/api/paymongo/gcash", authenticateToken, async (req, res) => {
+  const { amount, phone_number } = req.body;
+  const userId = req.userId;
+  const userAgent = req.headers["user-agent"] || "";
+  const isMobileApp = /okhttp|reactnative|mobile/i.test(userAgent);
+
+  console.log("Received from frontend:", { amount, phone_number });
+
+  if (!amount || !phone_number) {
+    return res.status(400).json({ message: "Amount and phone number are required." });
+  }
+
+  try {
+    const response = await fetch(`${PAYMONGO_URL}/sources`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:
+          "Basic " + Buffer.from(PAYMONGO_SECRET + ":").toString("base64"),
+      },
+      body: JSON.stringify({
+        data: {
+          attributes: {
+            amount: Math.round(amount * 100),
+            redirect: {
+              success: `${PUBLIC_URL}/api/paymongo/success`,
+              failed: `${PUBLIC_URL}/api/paymongo/failed`,
+            },
+            type: "gcash",
+            currency: "PHP",
+            billing: {
+              name: "Customer",
+              phone: phone_number,
+              email: "test@example.com",
+            },
+          },
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) return res.status(400).json(data);
+    const sourceId = data.data.id;
+
+    await pool.query(
+      `UPDATE orders SET source_id = $1 WHERE user_id = $2 AND status = 'pending' AND source_id IS NULL`,
+      [sourceId, userId]
+    );
+
+    res.status(200).json({
+      redirect_url: isMobileApp ? null : data.data.attributes.redirect.checkout_url,
+      source_id: sourceId,
+      message: isMobileApp
+        ? "GCash payment initialized. Wait for webhook confirmation."
+        : "GCash redirect available for browser checkout.",
+    });
+  } catch (err) {
+    console.error("PayMongo GCash error:", err);
+    res.status(500).json({ message: "GCash payment failed." });
+  }
+});
+
+// Webhook from PayMongo
+app.post("/api/paymongo/webhook", async (req, res) => {
+  try {
+    console.log("Webhook received:", JSON.stringify(req.body, null, 2));
+
+    const event = req.body.data;
+    const { type, data } = event;
+
+    // Triggered when the GCash source becomes chargeable
+    if (type === "source.chargeable") {
+      const sourceId = data.id;
+      console.log("GCash payment source chargeable:", sourceId);
+    }
+
+    // Triggered when the payment is fully paid
+    else if (type === "payment.paid") {
+      const payment = data.attributes;
+      const txnId = payment.id;
+      const sourceId = payment.source.data.id;
+
+      // Update order status
+      const result = await pool.query(
+        "UPDATE orders SET status = 'paid', transaction_id = $1 WHERE source_id = $2 RETURNING *",
+        [txnId, sourceId]
+      );
+
+      if (result.rowCount > 0) {
+        console.log("Payment confirmed via webhook:", result.rows[0]);
+
+        // (Optional) You can send confirmation email/notification here
+      } else {
+        console.warn("No matching pending order found for this payment.");
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+// PayMongo success redirect
+app.get("/api/paymongo/success", (req, res) => {
+  res.send("Payment successful. You may close this window.");
+  res.status(200).send(`
+    <html>
+      <head>
+        <title>Payment Successful</title>
+        <style>
+          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0fdf4; color: #166534; }
+          h1 { font-size: 2em; }
+          p { font-size: 1.2em; }
+        </style>
+      </head>
+      <body>
+        <h1>✅ Payment Successful!</h1>
+        <p>You can now close this window or return to the app.</p>
+      </body>
+    </html>
+  `);
+});
+
+// PayMongo failed or cancelled redirect
+app.get("/api/paymongo/failed", (req, res) => {
+  res.send("Payment failed or cancelled.");
+  res.status(400).send(`
+    <html>
+      <head>
+        <title>Payment Failed</title>
+        <style>
+          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #fef2f2; color: #991b1b; }
+          h1 { font-size: 2em; }
+          p { font-size: 1.2em; }
+        </style>
+      </head>
+      <body>
+        <h1>❌ Payment Failed</h1>
+        <p>Something went wrong or you cancelled the payment.<br>Please try again.</p>
+      </body>
+    </html>
+  `);
+});
+
+// Get Pending Orders
+app.get("/api/orders/pending", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, order_code, total_amount, payment_method, status, created_at
+       FROM orders
+       WHERE user_id = $1 AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching pending orders:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Send OTP for GCash
+app.post("/api/gcash/send-otp", authenticateToken, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: "Email required." });
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore[email] = otpCode;
+
+  // Send via email
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Your GCash Payment OTP",
+    text: `Your GCash OTP is: ${otpCode}`,
+  });
+
+  console.log("Sent GCash OTP to", email, otpCode);
+  res.json({ message: "OTP sent to your email." });
+});
+
+// Verify OTP
+app.post("/api/gcash/verify-otp", authenticateToken, (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ message: "Email and OTP required." });
+
+  if (otpStore[email] && otpStore[email] === otp) {
+    delete otpStore[email]; // clear after use
+    return res.json({ verified: true, message: "OTP verified successfully." });
+  }
+
+  return res.status(400).json({ verified: false, message: "Invalid OTP." });
 });
 
 // Get customer profile
@@ -504,6 +829,75 @@ app.post('/api/feedback', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Convert audio to text
+app.post("/api/voice-transcribe", authenticateToken, upload.single("audio"), async (req, res) => {
+  try {
+    const audioFile = fs.createReadStream(req.file.path);
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: "gpt-4o-mini-transcribe", // Or "whisper-1" if enabled
+      response_format: "text",
+    });
+
+    fs.unlinkSync(req.file.path); // Clean temp file
+    res.json({ text: transcription });
+  } catch (error) {
+    console.error("Transcription error:", error);
+    res.status(500).json({ message: "Error transcribing audio." });
+  }
+});
+
+// Voice order processing
+app.post("/api/voice-order", authenticateToken, async (req, res) => {
+  const { text } = req.body;
+
+  if (!text || text.trim() === "") {
+    return res.status(400).json({ message: "No text provided." });
+  }
+
+  try {
+    // Ask GPT to extract structured order info
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a voice order assistant. Extract food order details (product, quantity, size, special instructions) from user speech.",
+        },
+        { role: "user", content: text },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const parsed = JSON.parse(aiResponse.choices[0].message.content);
+    const { product_name, quantity, size, instructions } = parsed;
+
+    if (!product_name) {
+      return res.status(404).json({ message: "Could not match product." });
+    }
+
+    // Example price base logic
+    const priceBase = { small: 50, medium: 60, large: 70 };
+    const totalPrice = priceBase[size] * quantity;
+
+    // Save to DB
+    const result = await pool.query(
+      `INSERT INTO cart_items (customer_id, product_name, size, quantity, instructions, price)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [req.userId, product_name, size, quantity, instructions || "", totalPrice]
+    );
+
+    res.json({
+      message: "Voice order added to cart!",
+      recognized: result.rows[0],
+    });
+  } catch (err) {
+    console.error("AI voice order error:", err);
+    res.status(500).json({ message: "Failed to process voice order." });
   }
 });
 
