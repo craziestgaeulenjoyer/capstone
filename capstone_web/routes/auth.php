@@ -1,56 +1,115 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\ConfirmablePasswordController;
-use App\Http\Controllers\Auth\EmailVerificationNotificationController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use App\Http\Controllers\Administrator_Controllers\AdminAuthController;
+use App\Http\Controllers\Administrator_Controllers\SuperAdminAuthController;
+use App\Models\Admin;
+use App\Models\SuperAdmin;
 
-Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES (ADMIN + SUPER ADMIN)
+|--------------------------------------------------------------------------
+| Wrapped in 'web' middleware to ensure sessions, CSRF, and cookies work.
+| These routes handle login, email verification, and dashboards.
+*/
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+Route::middleware(['web'])->group(function () {
 
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
+    /* ---------------- ADMIN AUTH ---------------- */
+    Route::prefix('admin')->group(function () {
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+        // Login route
+        Route::post('/login', [AdminAuthController::class, 'login'])->name('admin.login');
 
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
-        ->name('password.request');
+        // Email verification link
+        Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
+            $admin = Admin::find($id);
+            if (!$admin) return response()->json(['message' => 'Invalid verification link or user not found'], 404);
 
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->name('password.email');
+            if (!hash_equals(sha1($admin->getEmailForVerification()), $hash)) {
+                return response()->json(['message' => 'Invalid or expired verification link'], 400);
+            }
 
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->name('password.reset');
+            if (!$admin->hasVerifiedEmail()) $admin->markEmailAsVerified();
 
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->name('password.store');
-});
+            return response()->make(<<<HTML
+                <html>
+                <head><title>Email Verified</title></head>
+                <body style="font-family:Arial;text-align:center;padding:40px;">
+                    <h1 style="color:#16a34a;">✅ Email Verified!</h1>
+                    <p>You can close this tab. Redirecting...</p>
+                    <script>
+                        if(window.opener){
+                            window.opener.postMessage({type:'EMAIL_VERIFIED', role:'admin'}, '*');
+                            setTimeout(()=>window.close(),1500);
+                        } else {
+                            window.location.href='/admin/';
+                        }
+                    </script>
+                </body>
+                </html>
+            HTML);
+        })->name('admin.verification.verify');
 
-Route::middleware('auth')->group(function () {
-    Route::get('verify-email', EmailVerificationPromptController::class)
-        ->name('verification.notice');
+        // Resend verification email
+        Route::post('/email/resend', [AdminAuthController::class, 'resendVerificationEmail']);
 
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
+        // Protected admin dashboard
+        Route::middleware(['auth:admin', 'admin.verified'])->group(function () {
+            Route::get('/dashboard', fn() => Inertia::render('Admin_Dashboard/Admin_Navbar'))
+                ->name('admin.dashboard'); // <-- specific dashboard route
+            Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
+        });
+    });
 
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
 
-    Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
-        ->name('password.confirm');
+    /* ---------------- SUPER ADMIN AUTH ---------------- */
+    Route::prefix('superadmin')->group(function () {
 
-    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+        // Login route
+        Route::post('/login', [SuperAdminAuthController::class, 'login'])->name('superadmin.login');
 
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-        ->name('logout');
+        // Email verification link
+        Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
+            $superAdmin = SuperAdmin::find($id);
+            if (!$superAdmin) return response()->json(['message' => 'Invalid verification link or user not found'], 404);
+
+            if (!hash_equals(sha1($superAdmin->getEmailForVerification()), $hash)) {
+                return response()->json(['message' => 'Invalid or expired verification link'], 400);
+            }
+
+            if (!$superAdmin->hasVerifiedEmail()) $superAdmin->markEmailAsVerified();
+
+            return response()->make(<<<HTML
+                <html>
+                <head><title>Email Verified</title></head>
+                <body style="font-family:Arial;text-align:center;padding:40px;">
+                    <h1 style="color:#16a34a;">✅ Email Verified!</h1>
+                    <p>You can close this tab. Redirecting...</p>
+                    <script>
+                        if(window.opener){
+                            window.opener.postMessage({type:'EMAIL_VERIFIED', role:'super_admin'}, '*');
+                            setTimeout(()=>window.close(),1500);
+                        } else {
+                            window.location.href='/superadmin/';
+                        }
+                    </script>
+                </body>
+                </html>
+            HTML);
+        })->name('superadmin.verification.verify');
+
+        // Resend verification email
+        Route::post('/email/resend', [SuperAdminAuthController::class, 'resendVerificationEmail']);
+
+        // Protected super admin dashboard
+        Route::middleware(['auth:super_admin', 'superadmin.verified'])->group(function () {
+            Route::get('/dashboard', fn() => Inertia::render('SuperAdmin_Navbar/SuperAdminNavbar'))
+                ->name('superadmin.dashboard');
+            Route::post('/logout', [SuperAdminAuthController::class, 'logout'])->name('superadmin.logout');
+        });
+    });
 });

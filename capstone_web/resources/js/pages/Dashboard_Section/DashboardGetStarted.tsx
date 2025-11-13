@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from '@inertiajs/react';
 
 function DashboardGetStarted() {
@@ -34,7 +33,7 @@ function DashboardGetStarted() {
           {/* BUTTONS */}
           <div className="flex justify-center space-x-6">
             {/* Admin */}
-            <Link href="/admin" className="block w-full max-w-[140px]">
+            <Link href="/dashboardloginform?role=admin" className="block w-full max-w-[140px]">
               <button
                 type="button"
                 className="w-full px-4 py-2 bg-white text-[#8CB662] rounded-full
@@ -49,7 +48,7 @@ function DashboardGetStarted() {
             </Link>
 
             {/* Super Admin */}
-            <Link href="/superadmin" className="block w-full max-w-[140px]">
+            <Link href="/dashboardloginform?role=super_admin" method="get" data={{ role: 'super_admin' }} className="block w-full max-w-[140px]">
               <button
                 type="button"
                 className="w-full px-4 py-2 bg-white text-[#8CB662] rounded-full

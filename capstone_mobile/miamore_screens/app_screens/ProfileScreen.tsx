@@ -31,7 +31,10 @@ const ProfileScreen: React.FC = () => {
   });
 
   const [profileImage, setProfileImage] = useState<any>(require("../../assets/default-profile-icon.png"));
-  const [view, setView] = useState<"main" | "viewProfile" | "editProfile" | "favorites">("main");
+  const [view, setView] = useState<"main" | "viewProfile" | "editProfile" | "favorites" | "pastOrders">("main");
+  const [selectedTab, setSelectedTab] = useState<"completed" | "cancelled">("completed");
+  const [completedOrders, setCompletedOrders] = useState<any[]>([]);
+  const [cancelledOrders, setCancelledOrders] = useState<any[]>([]);
   const [viewExpanded, setViewExpanded] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -123,6 +126,28 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  const fetchPastOrders = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const [completedRes, cancelledRes] = await Promise.all([
+        fetch("http://10.0.2.2:5000/api/orders/completed", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("http://10.0.2.2:5000/api/orders/cancelled", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const completedData = await completedRes.json();
+      const cancelledData = await cancelledRes.json();
+
+      setCompletedOrders(completedData);
+      setCancelledOrders(cancelledData);
+    } catch (err) {
+      console.log("Error fetching past orders:", err);
+    }
+  };
+
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -165,10 +190,18 @@ const ProfileScreen: React.FC = () => {
               <Icon name="heart-outline" size={22} color="#73C04D" />
               <Text style={styles.actionText}>Favorites</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem}>
+
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => {
+                fetchPastOrders();
+                setView("pastOrders");
+              }}
+            >
               <Icon name="time-outline" size={22} color="#73C04D" />
               <Text style={styles.actionText}>Past Orders</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.actionItem}>
               <Icon name="settings-outline" size={22} color="#73C04D" />
               <Text style={styles.actionText}>Settings</Text>
@@ -458,6 +491,77 @@ const ProfileScreen: React.FC = () => {
         ) : (
           <Text style={{ textAlign: "center", color: "#999" }}>
             No favorite items yet.
+          </Text>
+        )}
+      </ScrollView>
+    )}
+
+    {view === "pastOrders" && (
+      <ScrollView style={{ flex: 1, padding: 16 }}>
+        <TouchableOpacity onPress={() => setView("main")} style={{ marginBottom: 10 }}>
+          <Icon name="arrow-back" size={24} color="#73C04D" />
+        </TouchableOpacity>
+
+        <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Past Orders
+        </Text>
+
+        {/* Tabs */}
+        <View style={{ flexDirection: "row", justifyContent: "center", marginBottom: 15 }}>
+          {["completed", "canceled"].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 20,
+                borderBottomWidth: selectedTab === tab ? 2 : 0,
+                borderBottomColor: "#73C04D",
+                marginHorizontal: 10,
+              }}
+              onPress={() => setSelectedTab(tab as "completed" | "cancelled")}
+            >
+              <Text
+                style={{
+                  fontWeight: "600",
+                  color: selectedTab === tab ? "#73C04D" : "#666",
+                }}
+              >
+                {tab === "completed" ? "Completed Orders" : "Cancelled Orders"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Orders List */}
+        {(selectedTab === "completed" ? completedOrders : cancelledOrders).length > 0 ? (
+          (selectedTab === "completed" ? completedOrders : cancelledOrders).map((order, idx) => (
+            <View
+              key={idx}
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 10,
+                padding: 15,
+                marginBottom: 12,
+                shadowColor: "#000",
+                shadowOpacity: 0.1,
+                shadowRadius: 3,
+                elevation: 3,
+              }}
+            >
+              <Text style={{ fontWeight: "700", color: "#333" }}>
+                {order.order_code}
+              </Text>
+              <Text style={{ color: "#666", marginTop: 4 }}>
+                ₱{Number(order.total_amount).toFixed(2)} — {order.payment_method}
+              </Text>
+              <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
+                {new Date(order.created_at).toLocaleString()}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text style={{ textAlign: "center", color: "#999", marginTop: 40 }}>
+            No {selectedTab} orders found.
           </Text>
         )}
       </ScrollView>

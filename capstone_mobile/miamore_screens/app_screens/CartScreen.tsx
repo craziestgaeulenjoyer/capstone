@@ -50,6 +50,7 @@ const CartScreen: React.FC = () => {
     instructions?: string;
     price: number;
     image?: string;
+    category?: string;
   }
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -60,6 +61,7 @@ const CartScreen: React.FC = () => {
   const [editItem, setEditItem] = useState<any>(null);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrderState] = useState<any | null>(null);
+  const [selectedFreeDrinks, setSelectedFreeDrinks] = useState<any[]>([]);
   
   const [modalMessage, setModalMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");
@@ -85,6 +87,8 @@ const CartScreen: React.FC = () => {
 
   const [subtotal, setSubtotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [loyaltyRewards, setLoyaltyRewards] = useState(0);
+  const [loyaltyProgress, setLoyaltyProgress] = useState(0);
 
   const points = 120;
   const discount = 12;
@@ -149,6 +153,35 @@ const CartScreen: React.FC = () => {
     };
 
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchLoyaltyProgress = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await fetch("http://10.0.2.2:5000/api/loyalty/progress", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          if (res.ok && data.totalDrinks !== undefined) {
+            const totalDrinks = data.totalDrinks;
+            setLoyaltyProgress(totalDrinks % 10);
+            setLoyaltyRewards(Math.floor(totalDrinks / 10));
+          } else {
+            console.error("Unexpected data format:", data);
+          }
+        } catch (jsonErr) {
+          console.error("Response was not JSON:", text);
+        }
+      } catch (err) {
+        console.error("Error fetching loyalty progress:", err);
+      }
+    };
+
+    fetchLoyaltyProgress();
   }, []);
 
   useEffect(() => {
@@ -218,6 +251,14 @@ const CartScreen: React.FC = () => {
     setSelectedCartItems(filtered);
   }, [cartItems, selectedItems]);
 
+  useEffect(() => {
+    const drinksQty = cartItems
+      .filter(item => item.product_name.toLowerCase().includes("coffee") || item.category === "Drink")
+      .reduce((sum, item) => sum + item.quantity, 0);
+    const freeDrinksEarned = Math.floor(drinksQty / 10);
+    setLoyaltyRewards(freeDrinksEarned);
+  }, [cartItems]);
+
   const handleCheckout = async () => {
     if (selectedItems.length === 0) {
       Alert.alert(
@@ -227,7 +268,7 @@ const CartScreen: React.FC = () => {
       return;
     }
 
-    // 🧩 Build selectedCartItems cleanly with correct fields
+    // Build selectedCartItems cleanly with correct fields
     const selectedCartItems = cartItems
       .filter((item) => selectedItems.includes(item.id))
       .map((item) => ({
@@ -241,11 +282,22 @@ const CartScreen: React.FC = () => {
         instructions: item.instructions || "",
       }));
 
-    // 🧩 Prepare and log payload for debugging
+    const freeDrinks = Array.from({ length: loyaltyRewards }).map((_, i) => ({
+      product_id: 0,
+      product_name: `Free Drink #${i + 1}`,
+      size: "medium",
+      quantity: 1,
+      price: 0,
+      image: "BrewedIcedCoffee.png",
+      is_free: true,
+      instructions: "Loyalty Reward",
+    }));
+
+    // Prepare and log payload for debugging
     const payload = {
-      cartItems: selectedCartItems,
+      cartItems: [...selectedCartItems, ...freeDrinks],
       paymentMethod: selectedPayment,
-      totalAmount,
+      totalAmount, 
       address,
     };
 
@@ -258,7 +310,7 @@ const CartScreen: React.FC = () => {
         return;
       }
 
-      // 🟦 GCash branch
+      // GCash branch
       if (selectedPayment === "GCash") {
         // Step 1: Create pending order first
         const orderRes = await fetch("http://10.0.2.2:5000/api/checkout", {
@@ -271,7 +323,7 @@ const CartScreen: React.FC = () => {
         });
 
         const orderData = await orderRes.json();
-        console.log("✅ Checkout API response:", orderData);
+        console.log("Checkout API response:", orderData);
 
         if (!orderRes.ok) {
           Alert.alert("Error", orderData.message || "Checkout failed");
@@ -319,7 +371,7 @@ const CartScreen: React.FC = () => {
         return;
       }
 
-      // 🟨 Pay on Pickup (and other methods)
+      // Pay on Pickup (and other methods)
       const response = await fetch("http://10.0.2.2:5000/api/checkout", {
         method: "POST",
         headers: {
@@ -330,7 +382,7 @@ const CartScreen: React.FC = () => {
       });
 
       const data = await response.json();
-      console.log("✅ Checkout response (Pay on Pickup):", data);
+      console.log("Checkout response (Pay on Pickup):", data);
 
       if (response.ok) {
         // Remove selected items from backend cart
@@ -559,7 +611,7 @@ const CartScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       {showLoyalty ? (
-        // ✅ Loyalty Header
+        // Loyalty Header
         <View style={styles.checkoutHeader}>
           <TouchableOpacity
             onPress={() => setShowLoyalty(false)}
@@ -914,13 +966,49 @@ const CartScreen: React.FC = () => {
         <ScrollView style={{ padding: 16 }}>
           <View style={styles.loyaltyContainer}>
             <Text style={styles.sectionTitle}>
-              Apply Promo or Loyalty Points <Text style={{ fontWeight: "400" }}>(Optional)</Text>
+              Loyalty Progress <Text style={{ fontWeight: "400" }}>(Drinks Ordered)</Text>
             </Text>
             <Text style={styles.sectionSubtitle}>
-              Boost your savings with promo codes or loyalty rewards
+              Buy 10 drinks to earn 1 free drink — your progress so far:
             </Text>
 
-            {/* Promo Code */}
+            {/* Progress Dots */}
+            <View style={{ flexDirection: "row", justifyContent: "center", marginVertical: 20 }}>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <View
+                  key={i}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    marginHorizontal: 4,
+                    backgroundColor: i < loyaltyProgress ? "#76B13A" : "#ddd",
+                  }}
+                />
+              ))}
+            </View>
+
+            {/* Reward Info */}
+            {loyaltyRewards > 0 ? (
+              <>
+                <Text style={{ textAlign: "center", fontSize: 16, fontWeight: "600", color: "#76B13A" }}>
+                  🎉 You’ve earned {loyaltyRewards} free drink{loyaltyRewards > 1 ? "s" : ""}!
+                </Text>
+                <Text style={{ textAlign: "center", fontSize: 14, color: "#555", marginTop: 4 }}>
+                  You can claim your reward during your next checkout.
+                </Text>
+              </>
+            ) : (
+              <Text style={{ textAlign: "center", fontSize: 14, color: "#777" }}>
+                Keep going! Order {10 - loyaltyProgress} more drink{10 - loyaltyProgress > 1 ? "s" : ""} to earn your free one.
+              </Text>
+            )}
+
+            {/* Divider */}
+            <View style={{ height: 1, backgroundColor: "#eee", marginVertical: 24 }} />
+
+            {/* Still show promo code input */}
+            <Text style={styles.sectionTitle}>Apply Promo Code</Text>
             <View style={styles.promoRow}>
               <TextInput
                 placeholder="e.g SAVE10"
@@ -933,48 +1021,19 @@ const CartScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Loyalty Toggle */}
-            <TouchableOpacity
-              style={styles.switchRow}
-              onPress={() => setUsePoints(!usePoints)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.toggleOuter,
-                  usePoints ? styles.toggleActive : styles.toggleInactive,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.toggleCircle,
-                    usePoints ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" },
-                  ]}
-                />
-              </View>
-              <Text style={styles.switchLabel}>Use My Loyalty Points</Text>
-            </TouchableOpacity>
-
-            {/* Points Info */}
+            {/* Points Info (optional, keep your old look) */}
             <View style={styles.pointsInfoBox}>
               <Text style={styles.pointsText}>
-                You have: <Text style={styles.pointsValue}>{points}</Text> points
+                Total Drinks Ordered: <Text style={styles.pointsValue}>{loyaltyProgress + loyaltyRewards * 10}</Text>
               </Text>
               <Text style={styles.pointsText}>
-                Equivalent: <Text style={styles.pointsValue}>₱{discount}</Text> discount
+                Free Drinks Earned: <Text style={styles.pointsValue}>{loyaltyRewards}</Text>
               </Text>
             </View>
 
             <Text style={styles.autoText}>
-              *Loyalty points will automatically be applied to this order
+              *Rewards reset after every 10 drinks — progress carries over automatically
             </Text>
-
-            <View style={styles.redemptionBox}>
-              <Icon name="lock-closed-outline" size={14} color="#777" />
-              <Text style={styles.redemptionText}>
-                Redemption tied to User ID: <Text style={styles.userId}>#USR-001293</Text>
-              </Text>
-            </View>
           </View>
         </ScrollView>
       ) : showCheckoutTab && !showOrderConfirmTab ? (

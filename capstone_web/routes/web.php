@@ -3,17 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/home', function () {
-    return Inertia::render('website_pages/Home_MiAmore');
-})->name('home');
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
-});
-
-
 /* ---------------- WEBSITE ROUTES ---------------- */
 
 Route::get('/home', function () {
@@ -28,8 +17,7 @@ Route::get('/about-us', function () {
     return Inertia::render('website_pages/AboutUs');
 })->name('aboutus');
 
-
-/* Authentication (Get Started Section) */
+/* ---------------- AUTHENTICATION (GET STARTED SECTION) ---------------- */
 
 Route::get('/signin', function () {
     return Inertia::render('getstarted_section/MiAmoreWelcome');
@@ -49,7 +37,7 @@ Route::get('/accountverification', function () {
 
 Route::get('/forgotpasswordform', function () {
     return Inertia::render('getstarted_section/ForgotPasswordForm');
-})->name('FogotPasswordForm');
+})->name('ForgotPasswordForm');
 
 Route::get('/verificationcode', function () {
     return Inertia::render('getstarted_section/VerificationCode');
@@ -59,23 +47,9 @@ Route::get('/resetpasswordform', function () {
     return Inertia::render('getstarted_section/ResetPasswordForm');
 })->name('ResetPassWordForm');
 
-
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
-// Admin Dashboard
-
-Route::get('/admin', function () {
-    return Inertia::render('Admin_Dashboard/Admin_Navbar');
-})->name('Admin_Navbar');
-
-// Super Admin Dashboard
-
-Route::get('/superadmin', function () {
-    return Inertia::render('SuperAdmin_Navbar/SuperAdminNavbar');
-})->name('SuperAdmin_Navbar');
-
-
- // Dashboard Auth Screens
+// Dashboard Auth Screens
 
 Route::get('/dashboardgetstarted', function () {
     return Inertia::render('Dashboard_Section/DashboardGetStarted');
@@ -93,6 +67,24 @@ Route::get('/dashboardemailverificationresend', function () {
     return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
 })->name('DashboardEmailVerificationResend');
 
+Route::get('/dashboardverificationsuccess', function () {
+    return Inertia::render('Redirect_Pages/DashboardVerificationSuccess');
+})->name('DashboardVerificationSuccess');
+
+// CSRF Cookie Route
+
+Route::get('/sanctum/csrf-cookie', fn() => response()->json(['message' => 'CSRF cookie set']));
+
+// Unauthenticated Redirect Route
+
+Route::middleware(['web'])->get('/login', function () {
+    return redirect('/dashboardgetstarted');
+});
+
+/* ---------------- FALLBACK ROUTE ---------------- */
+
+Route::fallback(fn() => response()->json(['message' => 'Route not found.'], 404));
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+require __DIR__.'/api.php';

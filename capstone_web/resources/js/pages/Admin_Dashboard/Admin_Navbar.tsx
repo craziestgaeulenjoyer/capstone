@@ -1,3 +1,6 @@
+import axiosClient from "@/axiosClient";
+import { router } from "@inertiajs/react";
+
 import React, { useState, useRef, useEffect } from "react";
 import {
   Package,
@@ -54,6 +57,27 @@ const Admin_Navbar: React.FC = () => {
   const renderActiveContent = (): React.ReactElement => {
     const activeNavItem = navItems.find((item) => item.name === activeItem);
     return activeNavItem ? activeNavItem.component : <Dashboard />;
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('authToken'); 
+
+      const endpoint = window.location.pathname.includes("admin")
+        ? "/superadmin/logout"
+        : "/admin/logout";
+
+      await axiosClient.post(endpoint, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      localStorage.removeItem("authToken");
+      router.visit("/dashboardgetstarted");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   useEffect(() => {
@@ -195,12 +219,12 @@ const Admin_Navbar: React.FC = () => {
                     Settings
                   </a>
                   <div className="border-t border-gray-100"></div>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-red-600 hover:bg-gray-100 transition-colors duration-300"
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 transition-colors duration-300"
                   >
                     Logout
-                  </a>
+                  </button>
                 </div>
               )}
             </div>

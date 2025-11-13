@@ -443,12 +443,6 @@ const SalesOrder = () => {
             <Download size={16} />
             Export
           </button>
-          <a href="#" className="flex items-center justify-center">
-            <button className="bg-[#8cb662] text-white px-4 py-2 rounded-full font-medium text-sm flex items-center justify-center gap-2">
-              <Plus size={16} />
-              New sales order
-            </button>
-          </a>
         </div>
       </div>
 
