@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Search, X } from 'lucide-react';
+import React, { useState } from "react";
+import { Search, X } from "lucide-react";
 
 interface FruiteaItem {
   id: number;
   name: string;
   description: string;
-  type: 'Lemonade' | 'Fruit';
+  category: "Lemonade" | "Fruit";
   image: string;
   price: string;
 }
@@ -13,99 +13,120 @@ interface FruiteaItem {
 const fruiteaList: FruiteaItem[] = [
   {
     id: 1,
-    name: 'Classic Lemonade',
-    description: 'Fresh and zesty lemonade for that classic citrus refreshment.',
-    type: 'Lemonade',
-    image: 'images/ClassicLemonade.png',
-    price: '₱55',
+    name: "Classic Lemonade",
+    description:
+      "Perfectly refreshing—that timeless balance of tart lemon and sweetness.",
+    category: "Lemonade",
+    image: "images/ClassicLemonade.png",
+    price: "₱60/70",
   },
   {
     id: 2,
-    name: 'Strawberry Lemonade',
-    description: 'A fruity fusion of ripe strawberries and tart lemon.',
-    type: 'Lemonade',
-    image: 'images/StrawberryLemonade.png',
-    price: '₱60',
+    name: "Strawberry Lemonade",
+    description:
+      "Zesty, crisp lemonade infused with sweet, ripe strawberry juice.",
+    category: "Lemonade",
+    image: "images/StrawberryLemonade.png",
+    price: "₱70/80",
   },
   {
     id: 3,
-    name: 'Charcoal Lemonade',
-    description: 'Detox-friendly black lemonade with activated charcoal.',
-    type: 'Lemonade',
-    image: 'images/CharcoalLemonade.png',
-    price: '₱60',
+    name: "Charcoal Lemonade",
+    description:
+      "A unique, purifying and refreshing blend of activated charcoal and classic lemonade.",
+    category: "Lemonade",
+    image: "images/CharcoalLemonade.png",
+    price: "₱70/80",
   },
   {
     id: 4,
-    name: 'Cucumber Lemonade',
-    description: 'Light and hydrating cucumber blended with zesty lemon.',
-    type: 'Lemonade',
-    image: 'images/CucumberLemonade.png',
-    price: '₱70',
+    name: "Cucumber Lemonade",
+    description:
+      "Cool, crisp, and uniquely refreshing. Zesty classic lemonade blended with the cooling essence of fresh cucumber.",
+    category: "Lemonade",
+    image: "images/CucumberLemonade.png",
+    price: "₱90/100",
   },
   {
     id: 5,
-    name: 'Citro Frutti',
-    description: 'A citrus explosion of fruity goodness in every sip.',
-    type: 'Fruit',
-    image: 'images/CitroFrutti.png',
-    price: '₱70',
+    name: "Sugar-free Lemonade",
+    description:
+      "The same great tart, refreshing taste, sweetened without added sugar.",
+    category: "Lemonade",
+    image: "images/SugarfreeLemonade.png",
+    price: "₱90/100",
   },
   {
     id: 6,
-    name: 'Mango Frutti',
-    description: 'Juicy mango infused with tropical fruit flavors.',
-    type: 'Fruit',
-    image: 'images/MangoFrutti.png',
-    price: '₱70',
+    name: "Citro Frutti",
+    description:
+      "A refreshing juice blend featuring the bright, tangy flavor of orange and lemon.",
+    category: "Fruit",
+    image: "images/CitroFrutti.png",
+    price: "₱80",
   },
   {
     id: 7,
-    name: 'Punch Tropical',
-    description: 'A tropical medley of pineapple, orange, and mango.',
-    type: 'Fruit',
-    image: 'images/PunchTropical.png',
-    price: '₱70',
+    name: "Mango Frutti",
+    description:
+      "Sweet, tropical mango mixed with other fruit juices for a vibrant, fruity drink.",
+    category: "Fruit",
+    image: "images/MangoFrutti.png",
+    price: "₱80",
   },
   {
     id: 8,
-    name: 'Watermelon with Strawberry Popping Bobba',
-    description: 'Juicy watermelon juice with bursts of strawberry boba.',
-    type: 'Fruit',
-    image: 'images/WatermelonStrawberryBoba.png',
-    price: '₱75',
+    name: "Punch Tropicale",
+    description:
+      "A sweet and tangy fruit punch mix, bursting with tropical flavors.",
+    category: "Fruit",
+    image: "images/PunchTropical.png",
+    price: "₱80",
+  },
+  {
+    id: 9,
+    name: "Watermelon with Strawberry Popping Bobba",
+    description:
+      "Juicy watermelon juice loaded with fun, bursting strawberry popping boba.",
+    category: "Fruit",
+    image: "images/PoppingBobba.png",
+    price: "₱100",
+  },
+  {
+    id: 10,
+    name: "Peach Iced Tea",
+    description:
+      "Sweet, refreshing peach flavor perfectly blended with crisp iced tea.",
+    category: "Fruit",
+    image: "images/PeachIcedTea.png",
+    price: "₱100",
   },
 ];
 
 const FruiteaJuiceItems: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'All' | 'Lemonade' | 'Fruit'>('All');
-  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<"All" | "Lemonade" | "Fruit">(
+    "All"
+  );
+  const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<FruiteaItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-
-  const [selectedFlavor, setSelectedFlavor] = useState('');
-  const [selectedAddOn, setSelectedAddOn] = useState('');
-  const [selectedExtra, setSelectedExtra] = useState('');
+  const [selectedAddOn, setSelectedAddOn] = useState("");
 
   const drinkOptions = {
-    flavors: ['No Syrup', 'Vanilla Syrup', 'Caramel Syrup', 'Hazelnut Syrup'],
+    sizes: ["16oz", "22oz"],
     addOns: [
-      'Pearls',
-      'Nata',
-      'Coffee Jelly',
-      'Crushed Oreo',
-      'Cream Cheese',
-      'Cheesecake',
-      'Strawberry Popping Bobba',
+      "Pearls",
+      "Nata",
+      "Coffee Jelly",
+      "Strawberry Popping Bobba",
     ],
-    extras: ['Ice', 'Extra Milk', 'Extra Matcha Shot', 'Extra Coffee Shot'],
   };
 
   const filteredItems = fruiteaList.filter((item) => {
-    const matchType = activeTab === 'All' || item.type === activeTab;
+    const matchCategory = activeTab === "All" || item.category === activeTab;
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
+    return matchCategory && matchSearch;
   });
 
   const handleDecrease = () => {
@@ -118,14 +139,17 @@ const FruiteaJuiceItems: React.FC = () => {
 
   return (
     <div className="px-6 pt-10 pb-16">
+      {/* Tabs and Search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
         <div className="flex space-x-6">
-          {['All', 'Lemonade', 'Fruit'].map((tab) => (
+          {["All", "Lemonade", "Fruit"].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as 'All' | 'Lemonade' | 'Fruit')}
+              onClick={() => setActiveTab(tab as "All" | "Lemonade" | "Fruit")}
               className={`text-sm font-semibold px-5 py-2 rounded-full border transition-all duration-200 ${
-                activeTab === tab ? 'bg-[#8CB662] text-white border-[#8CB662]' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                activeTab === tab
+                  ? "bg-[#8CB662] text-white border-[#8CB662]"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-100"
               }`}
             >
               {tab}
@@ -147,12 +171,18 @@ const FruiteaJuiceItems: React.FC = () => {
         </div>
       </div>
 
+      {/* Item Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            onClick={() => setSelectedItem(item)}
-            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white"
+            onClick={() => {
+              setSelectedItem(item);
+              setQuantity(1);
+              setSelectedSize(null);
+              setSelectedAddOn("");
+            }}
+            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
               <img
@@ -164,7 +194,9 @@ const FruiteaJuiceItems: React.FC = () => {
             <div className="p-4">
               <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
               <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-              <div className="text-right text-lg text-[#76B13A] font-bold">{item.price}</div>
+              <div className="text-right text-lg text-[#76B13A] font-bold">
+                {item.price}
+              </div>
             </div>
           </div>
         ))}
@@ -190,16 +222,22 @@ const FruiteaJuiceItems: React.FC = () => {
               <img
                 src={selectedItem.image}
                 alt={selectedItem.name}
-                className="w-[300px] h-[300px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
+                className="w-[350px] h-[350px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
               />
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
-                <div className="text-[#65B741] font-bold text-lg mb-2">{selectedItem.price}</div>
-                <p className="text-sm text-gray-700 mb-4">{selectedItem.description}</p>
+                <div className="text-[#65B741] font-bold text-lg mb-2">
+                  {selectedItem.price}
+                </div>
+                <p className="text-sm text-gray-700 mb-4">
+                  {selectedItem.description}
+                </p>
 
                 {/* Quantity */}
                 <div className="mb-4">
-                  <label className="text-base block font-semibold">Quantity</label>
+                  <label className="text-base block font-semibold">
+                    Quantity
+                  </label>
                   <div className="flex items-center space-x-2 mt-1">
                     <button
                       onClick={handleDecrease}
@@ -219,17 +257,20 @@ const FruiteaJuiceItems: React.FC = () => {
 
                 {/* Size Options */}
                 <div className="mb-4">
-                  <label className="text-sm font-semibold mb-1">Size options</label>
+                  <label className="text-sm font-semibold mb-1">
+                    Size options
+                  </label>
                   <div className="h-[2px] w-full bg-[#8CB662] my-1" />
                   <div className="flex space-x-2 mt-4">
-                    {['Small', 'Medium', 'Large'].map((size) => (
+                    {drinkOptions.sizes.map((size) => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors
-                          ${selectedSize === size 
-                            ? 'bg-[#8CB662] text-white border-[#8CB662]' 
-                            : 'hover:bg-[#8CB662] hover:text-white'}`}
+                        className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors ${
+                          selectedSize === size
+                            ? "bg-[#8CB662] text-white border-[#8CB662]"
+                            : "hover:bg-[#8CB662] hover:text-white"
+                        }`}
                       >
                         {size}
                       </button>
@@ -237,36 +278,15 @@ const FruiteaJuiceItems: React.FC = () => {
                   </div>
                 </div>
 
-               {/* Flavors */}
-                <div className="mb-4">
-                  <label className="text-xs block font-semibold mb-1">
-                    Flavors
-                  </label>
-                  <select
-                    value={selectedFlavor}
-                    onChange={(e) => setSelectedFlavor(e.target.value)}
-                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
-                  >
-                    <option value="" disabled>
-                      Select a flavor
-                    </option>
-                    {drinkOptions.flavors.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* Add-ons */}
-                <div className="mb-4">
-                  <label className="text-xs block font-semibold mb-1">
+                <div className="mb-8">
+                  <label className="text-sm block font-semibold mb-1">
                     Add-ons
                   </label>
                   <select
                     value={selectedAddOn}
                     onChange={(e) => setSelectedAddOn(e.target.value)}
-                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-sm"
                   >
                     <option value="" disabled>
                       Select an add-on
@@ -274,27 +294,6 @@ const FruiteaJuiceItems: React.FC = () => {
                     {drinkOptions.addOns.map((o) => (
                       <option key={o} value={o}>
                         {o}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Extras */}
-                <div className="mb-8">
-                  <label className="text-xs block font-semibold mb-1">
-                    Extras
-                  </label>
-                  <select
-                    value={selectedExtra}
-                    onChange={(e) => setSelectedExtra(e.target.value)}
-                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
-                  >
-                    <option value="" disabled>
-                      Select an extra
-                    </option>
-                    {drinkOptions.extras.map((x) => (
-                      <option key={x} value={x}>
-                        {x}
                       </option>
                     ))}
                   </select>
@@ -319,3 +318,4 @@ const FruiteaJuiceItems: React.FC = () => {
 };
 
 export default FruiteaJuiceItems;
+

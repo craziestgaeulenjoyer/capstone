@@ -5,10 +5,12 @@ import { FaStar } from 'react-icons/fa';
 import { X } from 'lucide-react';
 
 type Product = {
+  id: number;
   title: string;
   description: string;
   price: string;
   image: string;
+  category: string;
 };
 
 type Category =
@@ -16,7 +18,11 @@ type Category =
   | 'Milk Tea'
   | 'Snacks'
   | 'Coffee'
-  | 'Platters';
+  | 'Platters'
+  | 'Specialty Coffee'
+  | 'Premium Matcha'
+  | 'Quesadillas & Corndogs'
+  | 'Croffles';
 
 const categories: Category[] = [
   'Lemonade & Fruit Juice',
@@ -24,204 +30,107 @@ const categories: Category[] = [
   'Snacks',
   'Coffee',
   'Platters',
+  'Specialty Coffee',
+  'Premium Matcha',
+  'Quesadillas & Corndogs',
+  'Croffles',
 ];
 
-const productData: Record<Category, Product[]> = {
-  'Lemonade & Fruit Juice': [
-    {
-      title: 'Cucumber Lemonade',
-      description:
-        'Cool, crisp, and refreshing—a zesty blend of lemon and fresh cucumber for the ultimate chill.',
-      price: '₱60',
-      image: '/images/CucumberLemonade.png',
-    },
-    {
-      title: 'Watermelon with Strawberry Popping Bobba',
-      description:
-        'Juicy watermelon meets a burst of strawberry bobba—sweet, fun, and flavor-packed in every sip!',
-      price: '₱70',
-      image: '/images/WatermelonStrawberryBoba.png',
-    },
-    {
-      title: 'Classic Lemonade',
-      description:
-        'Timelessly tangy and perfectly sweet—the all-time favorite that never goes out of style.',
-      price: '₱55',
-      image: '/images/ClassicLemonade.png',
-    },
-    {
-      title: 'Charcoal Lemonade',
-      description:
-        'Bold and detoxifying with a citrus twist—lemonade with a striking black finish and a clean, refreshing taste.',
-      price: '₱50',
-      image: '/images/CharcoalLemonade.png',
-    },
-  ],
-  'Milk Tea': [
-      {
-      title: 'Okinawa',
-      description:
-        'A creamy brown sugar milk tea blend with rich roasted caramel notes and soft pearls.',
-      price: '₱80/90',
-      image: '/images/Okinawa.png',
-    },
-    {
-      title: 'Wintermelon',
-      description:
-        'Delicately sweet with a mellow finish—this milk tea classic is both calming and satisfying.',
-      price: '₱80/90',
-      image: '/images/Wintermelon.png',
-    },
-    {
-      title: 'Oreo',
-      description:
-        'Crushed Oreo cookies blended into smooth milk tea—crunchy, creamy, and crave-worthy.',
-      price: '₱80/90',
-      image: '/images/Oreo.png',
-    },
-    {
-      title: 'Bobbatella',
-      description:
-        'Nutella meets bobba in this indulgent fusion of chocolatey richness and chewy delight.',
-      price: '₱110',
-      image: '/images/Bobbatella.png',
-    },
-  ],
-  'Snacks': [
-     {
-    title: 'Fries',
-    description:
-      'Golden, crispy, and lightly salted—our fries are the perfect companion to any drink.',
-    price: '₱45',
-    image: '/images/Fries.png',
-  },
-  {
-    title: 'Cheese Sticks',
-    description:
-      'Crunchy on the outside, melty cheese on the inside—served with a savory dip for extra delight.',
-    price: '₱50',
-    image: '/images/CheeseSticks.png',
-  },
-  ],
-  'Coffee': [
-    {
-    title: 'Ice Snow Coffee',
-    description:
-      'A chill twist on your classic brew—smooth iced coffee topped with a snowy layer of cream.',
-    price: '₱85',
-    image: '/images/IceSnowCoffee.png',
-  },
-  ],
-  'Platters': [
-     {
-    title: 'Platter #2',
-    description:
-      'A savory combo of Fries, 10 pcs Cheese Sticks, and 2 pcs Hash Browns—perfect for sharing or solo cravings.',
-    price: '₱140',
-    image: '/images/Platter2.png',
-  },
-  {
-    title: 'Platter #3',
-    description:
-      'Enjoy Fries, 10 pcs Cheese Sticks, 2 pcs Hash Browns, and 3 pcs Chicken Nuggets—a hearty and tasty mix!',
-    price: '₱170',
-    image: '/images/Platter3.png',
-  },
-  ],
+// Sample product data
+const productData: Product[] = [
+  { id: 1, title: 'Iced Snow Coffee', description: 'A unique, frosty iced coffee layered for an extra cold and creamy treat.', category: 'Coffee', image: 'images/IceSnowCoffee.png', price: '₱120' },
+  { id: 2, title: 'Sea Salt Honey', description: 'A perfect balance of sweet honey, robust coffee, and a delicate hint of sea salt.', category: 'Specialty Coffee', image: '/images/SeaSaltHoney.png', price: '₱170' },
+  { id: 3, title: 'White Chocolate Mocha', description: 'Rich, creamy white chocolate is melted into smooth espresso and finished with steamed milk.', category: 'Specialty Coffee', image: '/images/WhiteChocolateMocha.png', price: '₱180' },
+  { id: 4, title: 'Dulce De Leche', description: 'Luxuriously sweet and comforting, featuring espresso infused with rich, caramelized milk goodness.', category: 'Specialty Coffee', image: '/images/DulceDeLeche.png', price: '₱180' },
+  { id: 5, title: 'Classic Lemonade', description: 'Perfectly refreshing that timeless balance of tart lemon and sweetness.', category: 'Lemonade & Fruit Juice', image: 'images/ClassicLemonade.png', price: '₱60/70' },
+  { id: 6, title: 'Strawberry Lemonade', description: 'Zesty, crisp lemonade infused with sweet, ripe strawberry juice.', category: 'Lemonade & Fruit Juice', image: 'images/StrawberryLemonade.png', price: '₱70/80' },
+  { id: 7, title: 'Watermelon with Strawberry Popping Bobba', description: 'Juicy watermelon juice with bursts of strawberry boba.', category: 'Lemonade & Fruit Juice', image: '/images/PoppingBobba.png', price: '₱100' },
+  { id: 8, title: 'Peach Iced Tea', description: 'Sweet, refreshing peach flavor perfectly blended with crisp iced tea.', category: 'Lemonade & Fruit Juice', image: '/images/PeachIcedTea.png', price: '₱100' },
+  { id: 9, title: 'Okinawa', description: 'Brown sugar and caramel notes meet classic milk tea for a deeply caramelized, signature flavor.', category: 'Milk Tea', image: '/images/Okinawa.png', price: '₱90/100' },
+  { id: 10, title: 'Oreo Cheesecake Overload', description: 'An indulgent milk tea layered with creamy cheesecake flavor and crunchy Oreo crumbs.', category: 'Milk Tea', image: '/images/OreoCheesecakeOverload.png', price: '₱140' },
+  { id: 11, title: 'Wintermelon', description: 'Refreshing, sweet, and unique milk tea with the mellow taste of wintermelon.', category: 'Milk Tea', image: '/images/Wintermelon.png', price: '₱90/100' },
+  { id: 12, title: 'Oreo', description: 'Creamy milk tea blended with crushed Oreo cookies and chewy boba.', category: 'Milk Tea', image: '/images/Oreo.png', price: '₱90/100' },
+  { id: 13, title: 'Pure Matcha Oat Latte', description: 'A truly authentic and vibrant experience. Premium matcha is perfectly blended with creamy milk.', category: 'Premium Matcha', image: '/images/PureMatchaOatLatte.png', price: '₱160' },
+  { id: 14, title: 'Specialty Matcha', description: 'Our exclusive, high-quality matcha blend, perfectly whisked for an unparalleled, authentic taste.', category: 'Premium Matcha', image: '/images/SpecialtyMatcha.png', price: '₱250' },
+  { id: 15, title: 'Fries', description: 'Perfectly golden and crispy French fries, great for sharing.', category: 'Snacks', image: 'images/Fries.png', price: '₱70/90' },
+  { id: 16, title: 'Cheese Sticks', description: 'Deep-fried, gooey cheese sticks with a savory, crispy coating.', category: 'Snacks', image: 'images/CheeseSticks.png', price: '₱60/80' },
+  { id: 17, title: 'Cheesy Corndogs', description: 'Classic corndogs with a blend of savory hotdog and gooey, melted cheese.', category: 'Quesadillas & Corndogs', image: '/images/CheesyCorndogs.png', price: '₱135' },
+  { id: 18, title: 'Beef Quesadilla', description: 'Grilled tortilla filled with seasoned beef and cheese.', category: 'Quesadillas & Corndogs', image: 'images/BeefQuesadilla.png', price: '₱130' },
+  { id: 19, title: 'Platter #3', description: 'The ultimate combo: Fries, 10 Cheese Sticks, 2 Hash Browns, and 3 Chicken Nuggets.', category: 'Platters', image: 'images/Platter3.png', price: '₱250' },
+  { id: 21, title: 'Biscoff Croffle', description: 'Croffle slathered with rich Biscoff spread and crunchy cookie crumbs.', category: 'Croffles', image: '/images/BiscoffCroffle.png', price: '₱160' },
+  { id: 22, title: 'Croffle with Whipped Cream & Syrup', description: 'Flaky croffle topped with fluffy whipped cream and sweet syrup.', category: 'Croffles', image: '/images/WhipppedCroffle.png', price: '₱120' },
+];
+
+// Category options
+const categoryOptions: Record<Category, { flavors?: string[]; addOns?: string[]; extras?: string[] }> = {
+  'Lemonade & Fruit Juice': { addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Strawberry Popping Bobba'] },
+  'Milk Tea': { addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Extra Matcha Shot'] },
+  'Coffee': { addOns: ['Extra Matcha Shot', 'Extra Coffee Shot'] },
+  'Specialty Coffee': { flavors: ['Hot', 'Cold'] , addOns: ['Oat Milk', 'Extra Espresso Shot'] },
+  'Premium Matcha': { flavors: ['Hot', 'Cold'] },
+  'Croffles': {},
+  'Snacks': { flavors: ['Cheese', 'Sour & Cream', 'BBQ', 'Butter Cheese', 'Honey Butter'], extras: ['10 pcs', '15 pcs'] },
+  'Quesadillas & Corndogs': { addOns: ['Extra Garlic Sauce'] },
+  'Platters': {},
 };
 
+// Drinks helper
+const isDrinkCategory = (cat: Category | null) =>
+  ['Lemonade & Fruit Juice', 'Milk Tea', 'Coffee', 'Specialty Coffee', 'Premium Matcha'].includes(cat || '');
+
 const BestSellerSection: React.FC = () => {
-  const [ref, inView] = useInView({ triggerOnce: false, threshold: 0.3 });
+  const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
   const [activeCategory, setActiveCategory] = useState<Category>('Lemonade & Fruit Juice');
 
-  // Modal states
   const [selectedItem, setSelectedItem] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-
-  // Option states (per modal open)
+  const [selectedSize, setSelectedSize] = useState<string>('16oz');
   const [selectedFlavor, setSelectedFlavor] = useState<string>('');
   const [selectedAddOn, setSelectedAddOn] = useState<string>('');
   const [selectedExtra, setSelectedExtra] = useState<string>('');
 
-  const handleIncrease = () => setQuantity((q) => q + 1);
-  const handleDecrease = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
+  const handleIncrease = () => setQuantity(q => q + 1);
+  const handleDecrease = () => setQuantity(q => (q > 1 ? q - 1 : 1));
 
-  const isFoodCategory = (cat: Category | null) => cat === 'Snacks' || cat === 'Platters';
-  const isDrinkCategory = (cat: Category | null) =>
-    cat === 'Lemonade & Fruit Juice' || cat === 'Milk Tea' || cat === 'Coffee';
-
-  // Category-specific option sets shown IN THE MODAL
-  const drinkOptions = {
-    flavors: ['No Syrup', 'Vanilla Syrup', 'Caramel Syrup', 'Hazelnut Syrup'],
-    addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Strawberry Popping Bobba'],
-    extras: ['Ice', 'Extra Milk', 'Extra Matcha Shot', 'Extra Coffee Shot'],
+  // Animation variants
+  const containerVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.15, delayChildren: 0.3 } },
   };
 
-  const snackOptions = {
-    flavors: ['Original', 'Cheese', 'BBQ', 'Sour Cream', 'Garlic Parmesan', 'Spicy'],
-    addOns: ['Cheese Dip', 'Ketchup', 'Mayo', 'Honey Mustard'],
-    extras: ['Extra Cheese', 'Extra Sauce', 'Large Upgrade'],
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+    exit: { opacity: 0, y: 10, transition: { duration: 0.3, ease: 'easeIn' } },
   };
 
-  const platterOptions = {
-    flavors: ['Original', 'Spicy', 'Garlic Parmesan', 'Honey BBQ'],
-    addOns: ['Cheese Dip', 'Ketchup', 'Mayo', 'Honey Mustard'],
-    extras: ['Extra Cheese', 'Extra Sauce', 'Upgrade to Party Size'],
+  const headerVariants: Variants = {
+    hidden: { opacity: 0, y: -40 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut' } },
   };
-
-  const getOptionsFor = (cat: Category | null) => {
-    if (cat === 'Snacks') return snackOptions;
-    if (cat === 'Platters') return platterOptions;
-    return drinkOptions;
-  };  
-
-// Animations
-const containerVariants: Variants = { 
-  hidden: {}, 
-  visible: { 
-    transition: { staggerChildren: 0.2 } 
-  },
-};
-
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { duration: 0.5, ease: ['easeInOut'] } 
-  },
-  exit: { 
-    opacity: 0, 
-    y: 20, 
-    transition: { duration: 0.3, ease: ['easeInOut'] } 
-  },
-};
 
   const openModal = (item: Product, cat: Category) => {
     setSelectedItem(item);
     setSelectedCategory(cat);
     setQuantity(1);
-    setSelectedSize(null);
+    setSelectedSize('16oz');
     setSelectedFlavor('');
     setSelectedAddOn('');
     setSelectedExtra('');
   };
 
+  const getOptionsFor = (cat: Category) => categoryOptions[cat] || {};
+
   return (
     <section ref={ref} className="bg-[#B4D9DD] py-16 px-6">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -40 }}
-        animate={inView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-6"
-      >
-        <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="mx-auto w-20 md:w-30 mb-1" />
+      <motion.div variants={headerVariants} initial="hidden" animate={inView ? 'visible' : 'hidden'} className="text-center mb-6">
+        <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="mx-auto w-30 md:w-30 mb-1" />
         <h2 className="text-2xl text-[#9D7353] italic font-semibold">Our Most-Loved Sips & Bites</h2>
+        <div className="w-20 h-1 bg-[#65B741] mx-auto mt-2 mb-4 rounded-full"></div>
         <div className="flex flex-wrap justify-center mt-4 gap-2">
-          {categories.map((cat) => (
+          {categories.map((cat: Category) => (
             <motion.button
               key={cat}
               whileHover={{ scale: 1.05 }}
@@ -247,40 +156,27 @@ const cardVariants: Variants = {
         animate={inView ? 'visible' : 'hidden'}
       >
         <AnimatePresence>
-          {productData[activeCategory].map((item: Product, index: number) => (
-            <motion.div
-              key={index}
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              layout
-              onClick={() => openModal(item, activeCategory)}
-              className="bg-white rounded-md shadow-md overflow-hidden flex flex-col justify-between border border-gray-200 hover:shadow-xl transition-all duration-300 cursor-pointer"
-            >
-              <div className="bg-[#E1E1E1] p-4 flex justify-center">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-48 object-contain rounded-md"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-[15px] text-[#4F4F4F] mb-1">{item.title}</h3>
-                <div className="flex mb-2">
-                  {Array(5)
-                    .fill(0)
-                    .map((_, i) => (
-                      <FaStar key={i} className="text-yellow-400 text-xs mr-1" />
-                    ))}
+          {productData
+            .filter(p => p.category === activeCategory)
+            .map((item: Product) => (
+              <motion.div
+                key={item.id}
+                variants={cardVariants}
+                layout
+                onClick={() => openModal(item, item.category as Category)}
+                className="bg-white rounded-md shadow-md overflow-hidden flex flex-col justify-between border border-gray-200 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              >
+                <div className="bg-[#E1E1E1] p-4 flex justify-center">
+                  <img src={item.image} alt={item.title} className="w-full h-55 object-contain rounded-md" />
                 </div>
-                <p className="text-sm text-gray-800 italic mb-3 leading-snug text-justify">
-                  {item.description}
-                </p>
-                <p className="text-[#55A630] font-bold text-sm">{item.price}</p>
-              </div>
-            </motion.div>
-          ))}
+                <div className="p-4">
+                  <h3 className="font-bold text-[17px] text-[#202020] mb-1">{item.title}</h3>
+                  <div className="flex mb-2">{Array.from({ length: 5 }).map((_, i) => <FaStar key={i} className="text-yellow-400 text-xs mr-1" />)}</div>
+                  <p className="text-sm text-gray-900 italic mb-3 leading-snug text-justify">{item.description}</p>
+                  <p className="text-[#55A630] font-bold text-lg">{item.price}</p>
+                </div>
+              </motion.div>
+            ))}
         </AnimatePresence>
       </motion.div>
 
@@ -288,10 +184,7 @@ const cardVariants: Variants = {
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
           <div className="bg-white w-full max-w-4xl rounded p-10 relative">
-            <button
-              onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-black"
-            >
+            <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
               <X size={24} />
             </button>
 
@@ -299,9 +192,8 @@ const cardVariants: Variants = {
               <img
                 src={selectedItem.image}
                 alt={selectedItem.title}
-                className="w-[300px] h-[300px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
+                className="w-[350px] h-[350px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
               />
-
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2">{selectedItem.title}</h2>
                 <div className="text-[#65B741] font-bold text-lg mb-2">{selectedItem.price}</div>
@@ -311,29 +203,19 @@ const cardVariants: Variants = {
                 <div className="mb-4">
                   <label className="text-base block font-semibold">Quantity</label>
                   <div className="flex items-center space-x-2 mt-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
-                    >
-                      -
-                    </button>
+                    <button onClick={handleDecrease} className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition">-</button>
                     <span>{quantity}</span>
-                    <button
-                      onClick={handleIncrease}
-                      className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
-                    >
-                      +
-                    </button>
+                    <button onClick={handleIncrease} className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition">+</button>
                   </div>
                 </div>
 
-                {/* Size (drinks only) */}
+                {/* Size for drinks */}
                 {isDrinkCategory(selectedCategory) && (
                   <div className="mb-4">
                     <label className="text-sm font-semibold mb-1">Size options</label>
                     <div className="h-[2px] w-full bg-[#8CB662] my-1" />
                     <div className="flex space-x-2 mt-4">
-                      {['Small', 'Medium', 'Large'].map((size) => (
+                      {['16oz', '22oz'].map(size => (
                         <button
                           key={size}
                           onClick={() => setSelectedSize(size)}
@@ -341,77 +223,49 @@ const cardVariants: Variants = {
                             selectedSize === size
                               ? 'bg-[#8CB662] text-white border-[#8CB662]'
                               : 'hover:bg-[#8CB662] hover:text-white'
-                          }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
+                      }`}
+                    >
+                      {size}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Options (category-specific) */}
-                {(() => {
-                  const { flavors, addOns, extras } = getOptionsFor(selectedCategory);
+                {/* Category-specific options */}
+                {selectedCategory && (() => {
+                  const opts = getOptionsFor(selectedCategory);
                   return (
                     <>
-                      {/* Flavors */}
-                      <div className="mb-4">
-                        <label className="text-sm font-semibold mb-1">Flavors</label>
-                        <div className="h-[2px] w-full bg-[#8CB662] my-2" />
-                        <select
-                          value={selectedFlavor}
-                          onChange={(e) => setSelectedFlavor(e.target.value)}
-                          className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
-                        >
-                          <option value="" disabled>
-                            Select a flavor
-                          </option>
-                          {flavors.map((f) => (
-                            <option key={f} value={f}>
-                              {f}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {opts.flavors && (
+                        <div className="mb-4">
+                          <label className="text-sm font-semibold block mb-1">Options</label>
+                          <select value={selectedFlavor} onChange={e => setSelectedFlavor(e.target.value)} className="w-full border border-[#8CB662] rounded px-2 py-1 text-sm">
+                            <option value="">Select a options</option>
+                            {opts.flavors.map((f: string) => <option key={f} value={f}>{f}</option>)}
+                          </select>
+                        </div>
+                      )}
 
-                      {/* Add-ons */}
-                      <div className="mb-4">
-                        <label className="text-xs block font-semibold mb-1">Add-ons</label>
-                        <select
-                          value={selectedAddOn}
-                          onChange={(e) => setSelectedAddOn(e.target.value)}
-                          className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
-                        >
-                          <option value="" disabled>
-                            Select an add-on
-                          </option>
-                          {addOns.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {opts.addOns && (
+                        <div className="mb-4">
+                          <label className="text-sm font-semibold block mb-1">Add-ons</label>
+                          <select value={selectedAddOn} onChange={e => setSelectedAddOn(e.target.value)} className="w-full border border-[#8CB662] rounded px-2 py-1 text-sm">
+                            <option value="">Select an add-on</option>
+                            {opts.addOns.map((a: string) => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </div>
+                      )}
 
-                      {/* Extras */}
-                      <div className="mb-8">
-                        <label className="text-xs block font-semibold mb-1">Extras</label>
-                        <select
-                          value={selectedExtra}
-                          onChange={(e) => setSelectedExtra(e.target.value)}
-                          className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-xs"
-                        >
-                          <option value="" disabled>
-                            Select an extra
-                          </option>
-                          {extras.map((x) => (
-                            <option key={x} value={x}>
-                              {x}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {opts.extras && (
+                        <div className="mb-8">
+                          <label className="text-sm font-semibold block mb-1">Extras</label>
+                          <select value={selectedExtra} onChange={e => setSelectedExtra(e.target.value)} className="w-full border border-[#8CB662] rounded px-2 py-1 text-sm">
+                            <option value="">Select an extra</option>
+                            {opts.extras.map((x: string) => <option key={x} value={x}>{x}</option>)}
+                          </select>
+                        </div>
+                      )}
                     </>
                   );
                 })()}
@@ -435,3 +289,7 @@ const cardVariants: Variants = {
 };
 
 export default BestSellerSection;
+
+
+
+

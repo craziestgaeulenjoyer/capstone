@@ -6,25 +6,26 @@ import CoffeeItems from './CoffeeItems';
 import MilkteaItems from './MilkTeaItems';
 import FruiteaJuiceItems from './FruiteaJuiceItems';
 import FoodItems from './FoodItems';
+import PremiumMatcha from './PremiumMatchaItems';
 
 
 const MenuHeader: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Coffees');
 
-  const tabs = ['Popular', 'Coffees', 'Milktea', 'Fruitea Juice', 'Food'];
+  const tabs = ['Popular', 'Coffees', 'Milktea', 'Lemonade & Fruitti Juice', 'Premium Matcha' , 'Foods'];
 
   useEffect(() => {}, [activeTab]);
 
   return (
     <div className="w-full">
       {/* Tabs */}
-      <nav className="flex space-x-6 text-gray-700 font-semibold px-6 py-4 text-sm">
+      <nav className="flex space-x-6 text-gray-700 font-semibold px-6 py-4 text-md">
         {tabs.map((tab) => (
           <span
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`cursor-pointer hover:text-[#8CB662] ${
-              activeTab === tab ? 'text-[#8CB662] border-b-2 border-[#8CB662] pb-1' : ''
+              activeTab === tab ? 'text-[#8CB662] border-b-3 border-[#8CB662] pb-1' : ''
             }`}
           >
             {tab}
@@ -115,8 +116,8 @@ const MenuHeader: React.FC = () => {
           </motion.div>
         )}
 
-        {/* FruiteaJuiceItems */}
-        {activeTab === 'Fruitea Juice' && (
+        {/* Lemonade & FruiteaJuiceItems */}
+        {activeTab === 'Lemonade & Fruitti Juice' && (
           <motion.div
             key="fruitea-juice-items"
             initial={{ opacity: 0, y: 20 }}
@@ -128,9 +129,24 @@ const MenuHeader: React.FC = () => {
             <FruiteaJuiceItems />
           </motion.div>
         )}
+        
+        {/* PremiumMatchaItems */}
+        {activeTab === 'Premium Matcha' && (
+          <motion.div
+            key="premium-matcha-items"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="px-6 py-8"
+          >
+            <PremiumMatcha/>
+          </motion.div>
+        )}
 
-        {/* FoodItems */}
-        {activeTab === 'Food' && (
+
+        {/* FoodsItems */}
+        {activeTab === 'Foods' && (
           <motion.div
             key="food-items"
             initial={{ opacity: 0, y: 20 }}

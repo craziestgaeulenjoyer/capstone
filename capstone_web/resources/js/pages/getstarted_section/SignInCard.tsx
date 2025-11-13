@@ -1,10 +1,21 @@
-import { Link } from "@inertiajs/react";
-import { FcGoogle } from 'react-icons/fc';
-import { FaFacebookF, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { Link, useForm } from "@inertiajs/react";
+import { FcGoogle } from "react-icons/fc";
+import { FaFacebookF, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState } from "react";
 
 const SignInCard = () => {
   const [showPassword, setShowPassword] = useState(false);
+
+  // ✅ Inertia form
+  const { data, setData, post, processing, errors } = useForm({
+    email: "",
+    password: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  post(route("login.authenticate"));
+};
 
   return (
     <>
@@ -14,7 +25,6 @@ const SignInCard = () => {
 
       <section className="min-h-screen flex items-center justify-center bg-gray-200 px-4 py-10">
         <div className="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden">
-
           {/* LEFT SIDE */}
           <div className="w-full md:w-1/2 px-6 py-10 flex flex-col justify-center">
             {/* Header */}
@@ -31,67 +41,73 @@ const SignInCard = () => {
                   </svg>
                 </button>
               </Link>
-              <img
-                src="/images/MiAmore2.png"
-                alt="Mi Amore Cafe Logo"
-                className="h-15 w-auto object-contain"
-              />
+              <img src="/images/MiAmore2.png" alt="Mi Amore Cafe Logo" className="h-15 w-auto object-contain" />
             </div>
 
-            {/* Title */}
             <h2 className="text-2xl font-bold text-[#8CB662] mb-1">Login</h2>
             <p className="text-md text-gray-600 mb-6">
               Welcome back! Sign in to savor the moments.
             </p>
 
-            {/* Email */}
-            <div className="mb-4">
-              <label className="text-sm block mb-1 text-gray-700">Email</label>
-              <input
-                type="email"
-                placeholder="example@gmail.com"
-                className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-[#8CB662] focus:ring-2 focus:ring-[#DFF1D6] outline-none transition"
-              />
-            </div>
-
-            {/* Password */}
-            <div className="mb-2">
-              <label className="text-sm block mb-1 text-gray-700">Password</label>
-              <div className="relative">
+            <form onSubmit={handleSubmit}>
+              {/* Email */}
+              <div className="mb-4">
+                <label className="text-sm block mb-1 text-gray-700">Email</label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 pr-10 focus:border-[#8CB662] focus:ring-2 focus:ring-[#DFF1D6] outline-none transition"
+                  type="email"
+                  name="email"
+                  value={data.email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData("email", e.target.value)}
+                  placeholder="example@gmail.com"
+                  className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-[#8CB662] focus:ring-2 focus:ring-[#DFF1D6] outline-none transition"
                 />
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <FaEye />
-                </span>
+                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
               </div>
-            </div>
 
-            {/* Remember me / Forgot password */}
-            <div className="flex justify-between items-center text-sm text-gray-600 mb-5">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" className="form-checkbox text-[#8CB662]" />
-                Remember me
-              </label>
-              <Link href="/forgotpasswordform" className="text-[#8CB662] hover:underline">
-                Forgot your password?
-              </Link>
-            </div>
+              {/* Password */}
+              <div className="mb-4">
+                <label className="text-sm block mb-1 text-gray-700">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={data.password}
+                    onChange={(e) => setData("password", e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full rounded-md border border-gray-300 px-4 py-2 pr-10 focus:border-[#8CB662] focus:ring-2 focus:ring-[#DFF1D6] outline-none transition"
+                  />
+                  <span
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </span>
+                </div>
+                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+              </div>
 
-            {/* Sign in Button */}
-            <button
-              type="button"
-              className="w-full bg-[#8CB662] text-white font-bold py-2 rounded-full hover:opacity-90 transition-all duration-300 ease-in-out transform hover:scale-[1.02]"
-            >
-              SIGN IN
-            </button>
+              {/* Remember me / Forgot password */}
+              <div className="flex justify-between items-center text-sm text-gray-600 mb-5">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="form-checkbox text-[#8CB662]" />
+                  Remember me
+                </label>
+                <Link href="/forgotpasswordform" className="text-[#8CB662] hover:underline">
+                  Forgot your password?
+                </Link>
+              </div>
 
-          {/* Divider */}
+              {/* Sign in Button */}
+              <button
+                type="submit"
+                disabled={processing}
+                className="w-full bg-[#8CB662] text-white font-bold py-2 rounded-full hover:opacity-90 transition-all duration-300 ease-in-out transform hover:scale-[1.02]"
+              >
+                {processing ? "Signing In..." : "SIGN IN"}
+              </button>
+            </form>
+
+            {/* Divider */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />

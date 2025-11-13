@@ -76,7 +76,7 @@ export default function QRcode() {
        <img
         src="/images/InitialQRcode.png" // Replace with your actual QR code image path
         alt="QR Code"
-        className="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] md:w-[240px] md:h-[240px] object-contain"
+        className="w-[140px] sm:w-[160px] md:w-[180px] object-contain"
           />
       </div>
 

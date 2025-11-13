@@ -1,16 +1,34 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FcGoogle } from 'react-icons/fc';
-import { FaFacebookF, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { Link } from '@inertiajs/react';
+import { FaFacebookF, FaEye, FaEyeSlash, FaCheckCircle } from 'react-icons/fa';
+import { Link, useForm } from '@inertiajs/react';
 
 function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    post(route('signup.store'), {
+      onSuccess: () => {
+        setShowModal(true); // ✅ show success modal
+        reset(); // clear form
+      },
+    });
+  };
 
   return (
     <>
-      {/* Inline Google Font */}
       <style>
         {`@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');`}
       </style>
@@ -38,26 +56,36 @@ function SignUpForm() {
             <h2 className="text-3xl font-bold text-[#8CB662] mb-1">Create Account</h2>
             <p className="text-sm text-gray-500 mb-6">New here? Sign up and start your Mi Amore journey!</p>
 
-            <form>
+            <form onSubmit={handleSubmit}>
               {/* Name Fields */}
               <div className="mb-4 flex gap-4">
                 <div className="w-full">
                   <label className="block text-sm text-gray-700 mb-1">First Name</label>
                   <input
                     type="text"
+                    value={data.first_name}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setData('first_name', e.target.value)
+                    }
                     placeholder="First Name"
                     required
                     className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
                   />
+                  {errors.first_name && <p className="text-red-500 text-xs">{errors.first_name}</p>}
                 </div>
                 <div className="w-full">
                   <label className="block text-sm text-gray-700 mb-1">Last Name</label>
                   <input
                     type="text"
+                    value={data.last_name}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setData('last_name', e.target.value)
+                    }
                     placeholder="Last Name"
                     required
                     className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
                   />
+                  {errors.last_name && <p className="text-red-500 text-xs">{errors.last_name}</p>}
                 </div>
               </div>
 
@@ -66,57 +94,68 @@ function SignUpForm() {
                 <label className="block text-sm text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
+                  value={data.email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setData('email', e.target.value)
+                  }
                   placeholder="example@gmail.com"
                   required
                   className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
                 />
+                {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
               </div>
 
               {/* Password */}
-              <div className="mb-6 relative">
-              <label className="block text-sm text-gray-700 mb-1"> Password </label>
-                  <div className="relative">
-                    <input
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Confirm password"
-                    required
-                    className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
-                    />
-                    <span
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
-                      onClick={() => setShowConfirm(!showConfirm)}
-                    >
-                    {showConfirm ? <FaEyeSlash /> : <FaEye />}
-                    </span>
-                  </div>
-                </div>
+              <div className="mb-4 relative">
+                <label className="block text-sm text-gray-700 mb-1">Password</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={data.password}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setData('password', e.target.value)
+                  }
+                  placeholder="Enter password"
+                  required
+                  className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
+                />
+                <span
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
+                {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
+              </div>
 
               {/* Confirm Password */}
               <div className="mb-6 relative">
-              <label className="block text-sm text-gray-700 mb-1">Confirm Password</label>
-                  <div className="relative">
-                    <input
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Confirm password"
-                    required
-                    className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
-                    />
-                    <span
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
-                      onClick={() => setShowConfirm(!showConfirm)}
-                    >
-                    {showConfirm ? <FaEyeSlash /> : <FaEye />}
-                    </span>
-                  </div>
-                </div>
-                
-              {/* Sign Up Button */}
-              <Link
-                href={route('AccountVerification')}
+                <label className="block text-sm text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={data.password_confirmation}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setData('password_confirmation', e.target.value)
+                  }
+                  placeholder="Confirm password"
+                  required
+                  className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
+                />
+                <span
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                >
+                  {showConfirm ? <FaEyeSlash /> : <FaEye />}
+                </span>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={processing}
                 className="w-full block bg-[#8CB662] hover:bg-[#7aa44f] text-white font-bold py-2 rounded-md text-center transition duration-200"
               >
-                SIGN UP
-              </Link>
+                {processing ? 'Signing Up...' : 'SIGN UP'}
+              </button>
             </form>
 
             {/* Divider */}
@@ -139,10 +178,9 @@ function SignUpForm() {
               </button>
             </div>
 
-            {/* Footer */}
             <p className="text-sm text-center text-gray-600 mt-6">
-              Already have an account?{" "}
-              <Link href="/login" className="text-[#8CB662] hover:underline font-semibold">
+              Already have an account?{' '}
+              <Link href="/signincard" className="text-[#8CB662] hover:underline font-semibold">
                 Login
               </Link>
             </p>
@@ -165,9 +203,41 @@ function SignUpForm() {
           </div>
         </motion.div>
       </div>
+
+      {/* ✅ Success Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm mx-auto"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <FaCheckCircle className="text-green-500 text-5xl mx-auto mb-3" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Account Created!</h2>
+              <p className="text-gray-600 mb-6">
+                Your account has been created successfully.  
+                Please verify your email to continue.
+              </p>
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-[#8CB662] text-white px-6 py-2 rounded-md hover:bg-[#7aa44f] transition"
+              >
+                OK
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
 
 export default SignUpForm;
-

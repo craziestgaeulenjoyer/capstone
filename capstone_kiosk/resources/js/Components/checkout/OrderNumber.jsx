@@ -58,7 +58,7 @@ export default function OrderNumber() {
       </div>
 
       {/* Logo */}
-      <div className="flex justify-center mb-4 mt-[-300px]">
+      <div className="flex justify-center mb-4 mt-[-40px]">
         <img
           src="/images/MiAmoreWelcome.png"
           alt="Logo"
