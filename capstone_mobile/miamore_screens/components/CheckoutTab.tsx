@@ -252,9 +252,18 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
           </View>
           {cartItems.length > 0 ? (
             cartItems.map((item, index) => (
-              <View key={index} style={styles.orderRow}>
+              <View
+                key={index}
+                style={[
+                  styles.orderRow,
+                  item.is_free && { borderColor: "#76B13A", borderWidth: 1, borderRadius: 8, padding: 8 },
+                ]}
+              >
                 <Text style={styles.orderName}>{item.product_name}</Text>
                 <Text style={styles.orderQty}>x{item.quantity}</Text>
+                {item.is_free && (
+                  <Text style={{ color: "#76B13A", fontWeight: "bold", marginLeft: 8 }}>Free</Text>
+                )}
               </View>
             ))
           ) : (

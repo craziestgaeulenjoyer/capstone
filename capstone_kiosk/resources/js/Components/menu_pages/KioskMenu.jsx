@@ -142,6 +142,12 @@ export default function KioskMenu() {
 
   const languages = ["EN", "JP", "KR", "CN"];
 
+  const handleAddToCart = () => {
+  console.log("Added to cart:", selectedItem, quantity, selectedSize);
+  setSelectedItem(null);
+};
+
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-200 font-quicksand relative">
       {/* Header */}
@@ -297,7 +303,7 @@ export default function KioskMenu() {
               {/* Close Button */}
               <button
                 onClick={() => setSelectedItem(null)}
-                className="absolute top-4 left-4 text-[#8CB662] hover:text-[#6CA043] transition"
+                className="absolute top-4 right-4 text-[#8CB662] hover:text-[#6CA043] transition"
               >
                 <X size={20} strokeWidth={2.5} />
               </button>
@@ -363,11 +369,10 @@ export default function KioskMenu() {
               </div>
             )}
               
-            {/* What's Included */}
+
              {/* Modal Options / Add-ons */}
 {["Specialty Coffee","Milk Tea","Lemonade & Fruit Juices","Coffee","Premium Matcha","Snacks","Quesadillas & Corndogs","Platters"].includes(selectedCategory) ? (
   <div className="mt-3 w-full flex flex-col items-center space-y-3 text-xs">
-    {/* Determine header text dynamically */}
     <div className="w-[90%] flex flex-col items-start">
       <p className="font-medium text-gray-700 mb-1 text-xs text-left">
         {(() => {
@@ -482,13 +487,22 @@ export default function KioskMenu() {
           </div>
         ) : null}
 
-       {/* Done Button */}
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="mt-4 bg-[#8CB662] text-white px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-[#7AAF55] transition"
-              >
-                Done
-              </button>
+         {/* Action Buttons */}
+      <div className="mt-4 w-full flex justify-between px-4">
+        <button
+          onClick={handleAddToCart}
+          className="bg-[#8CB662] text-white px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-[#7AAF55] transition"
+        >
+          Add to Cart
+        </button>
+
+        <button
+          onClick={() => setSelectedItem(null)}
+          className="bg-gray-300 text-gray-700 px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-400 transition"
+        >
+          Cancel
+        </button>
+      </div>
             </motion.div>
           </div>
         )}

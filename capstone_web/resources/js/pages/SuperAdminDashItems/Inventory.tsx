@@ -8,6 +8,7 @@ import {
   Calendar,
   Upload,
   SlidersHorizontal,
+  Plus,
 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -57,63 +58,76 @@ const Inventory: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans text-gray-800">
       {/* Top Controls */}
-      <div className="flex flex-wrap items-center justify-end gap-3 mb-6 relative">
-        <button className="flex items-center gap-2 px-4 py-2 bg-[#6CB74A] text-white rounded-lg shadow hover:bg-[#5aa03f] transition">
-          <Upload size={16} /> Export
-        </button>
-
-        {/* Sort Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] transition"
-          >
-            <SlidersHorizontal size={16} /> Sort By
-          </button>
-          {sortOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 animate-fadeIn z-10">
-              <button className="block px-4 py-2 text-sm hover:bg-gray-100 w-full text-left">Name (A-Z)</button>
-              <button className="block px-4 py-2 text-sm hover:bg-gray-100 w-full text-left">Stock (Low to High)</button>
-              <button className="block px-4 py-2 text-sm hover:bg-gray-100 w-full text-left">Expiry (Soonest)</button>
-            </div>
-          )}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 relative">
+        {/* Left side: New sales order */}
+        <div>
+          <a href="#" className="flex items-center justify-center">
+            <button className="bg-[#8cb662] text-white px-4 py-2 rounded-full font-medium text-sm flex items-center justify-center gap-2 hover:bg-[#7ca551] cursor-pointer transition">
+              <Plus size={16} />
+              Add Inventory Item
+            </button>
+          </a>
         </div>
 
-        {/* Filter Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setFilterOpen(!filterOpen)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] transition"
-          >
-            <Filter size={16} /> Filter By
+        {/* Right side: other controls */}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#6CB74A] text-white rounded-lg shadow hover:bg-[#5aa03f] cursor-pointer transition">
+            <Upload size={16} /> Export
           </button>
-          {filterOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-200 animate-fadeIn z-10">
-              <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
-                <input type="checkbox" className="mr-2" /> In Stock
-              </label>
-              <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
-                <input type="checkbox" className="mr-2" /> Low Stock
-              </label>
-              <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
-                <input type="checkbox" className="mr-2" /> Expired Soon
-              </label>
-              <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
-                <input type="checkbox" className="mr-2" /> Expired
-              </label>
-            </div>
-          )}
-        </div>
 
-        {/* Calendar */}
-        <div className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] transition">
-          <Calendar size={16} />
-          <DatePicker
-            selected={selectedDate}
-            onChange={(date) => setSelectedDate(date)}
-            dateFormat="MMMM d, yyyy"
-            className="bg-transparent focus:outline-none text-sm"
-          />
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setSortOpen(!sortOpen)}
+              className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] cursor-pointer transition"
+            >
+              <SlidersHorizontal size={16} /> Sort By
+            </button>
+            {sortOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 animate-fadeIn z-10">
+                <button className="block px-4 py-2 text-sm hover:bg-gray-100 w-full text-left">Name (A-Z)</button>
+                <button className="block px-4 py-2 text-sm hover:bg-gray-100 w-full text-left">Stock (Low to High)</button>
+                <button className="block px-4 py-2 text-sm hover:bg-gray-100 w-full text-left">Expiry (Soonest)</button>
+              </div>
+            )}
+          </div>
+
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] cursor-pointer transition"
+            >
+              <Filter size={16} /> Filter By
+            </button>
+            {filterOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-200 animate-fadeIn z-10">
+                <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
+                  <input type="checkbox" className="mr-2" /> In Stock
+                </label>
+                <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
+                  <input type="checkbox" className="mr-2" /> Low Stock
+                </label>
+                <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
+                  <input type="checkbox" className="mr-2" /> Expired Soon
+                </label>
+                <label className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
+                  <input type="checkbox" className="mr-2" /> Expired
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Calendar */}
+          <div className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] cursor-pointer transition">
+            <Calendar size={16} />
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date) => setSelectedDate(date)}
+              dateFormat="MMMM d, yyyy"
+              className="bg-transparent focus:outline-none text-sm"
+            />
+          </div>
         </div>
       </div>
 

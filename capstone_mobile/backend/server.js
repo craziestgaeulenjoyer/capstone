@@ -487,6 +487,40 @@ app.put("/api/cart/:id", authenticateToken, async (req, res) => {
   }
 });
 
+// Get Completed Orders
+app.get("/api/orders/completed", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, order_code, total_amount, payment_method, status, created_at
+       FROM orders
+       WHERE user_id = $1 AND status = 'completed'
+       ORDER BY created_at DESC`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching completed orders:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get Cancelled Orders
+app.get("/api/orders/cancelled", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, order_code, total_amount, payment_method, status, created_at
+       FROM orders
+       WHERE user_id = $1 AND status = 'canceled'
+       ORDER BY created_at DESC`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching cancelled orders:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Checkout route
 app.post("/api/checkout", authenticateToken, async (req, res) => {
   const userId = req.userId;
@@ -495,7 +529,7 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
   console.log("📦 Raw checkout body:", req.body);
 
   try {
-    // 🧩 Safely handle cartItems (could be JSON string or array)
+    // Safely handle cartItems (could be JSON string or array)
     if (typeof cartItems === "string") {
       try {
         cartItems = JSON.parse(cartItems);
@@ -506,13 +540,13 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     }
 
     if (!Array.isArray(cartItems)) {
-      console.warn("⚠️ cartItems is not an array, defaulting to empty array");
+      console.warn("cartItems is not an array, defaulting to empty array");
       cartItems = [];
     }
 
-    console.log("✅ Parsed cartItems:", cartItems);
+    console.log("Parsed cartItems:", cartItems);
 
-    // 🟩 Fetch user info
+    // Fetch user info
     const userResult = await pool.query(
       "SELECT full_name, email FROM customers WHERE id = $1",
       [userId]
@@ -520,7 +554,7 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     const user = userResult.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // 🟦 Create order metadata
+    // Create order metadata
     const orderCode = "ORD-" + Math.floor(100000 + Math.random() * 900000);
     let transactionId = null;
     let orderStatus = "pending";
@@ -529,20 +563,21 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
       transactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
     }
 
-    // 🟧 Build item array
+    // Build item array
     const orderItems = cartItems.map((i) => ({
       id: i.product_id || i.id,
       name: i.product_name,
       size: i.size || null,
       quantity: Number(i.quantity),
       price: Number(i.price),
+      is_free: i.is_free || false,
       image: i.image || null,
       instructions: i.instructions || "",
     }));
 
     console.log("🧾 Final orderItems to store:", orderItems);
 
-    // 🟨 Insert into orders (with JSONB)
+    // Insert into orders (with JSONB)
     const insertOrder = `
       INSERT INTO orders (
         user_id, payment_method, total_amount, status,
@@ -644,6 +679,62 @@ app.post("/api/paymongo/gcash", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("PayMongo GCash error:", err);
     res.status(500).json({ message: "GCash payment failed." });
+  }
+});
+
+// Get total drinks purchased (completed orders)
+app.get("/api/loyalty/progress", authenticateToken, async (req, res) => {
+  try {
+    // Fetch completed orders for the user
+    const ordersRes = await pool.query(
+      `SELECT items
+       FROM orders
+       WHERE user_id = $1 AND status = 'completed'`,
+      [req.userId]
+    );
+
+    if (ordersRes.rows.length === 0) {
+      return res.json({ totalDrinks: 0 });
+    }
+
+    let totalDrinks = 0;
+
+    // Loop through orders and parse items
+    for (const row of ordersRes.rows) {
+      let items = [];
+
+      if (typeof row.items === "string") {
+        try {
+          items = JSON.parse(row.items);
+        } catch (err) {
+          console.warn("Skipping invalid items JSON in order:", row.items);
+          continue;
+        }
+      } else if (Array.isArray(row.items)) {
+        items = row.items;
+      }
+
+      for (const item of items) {
+        const name = (item.name || item.product_name || "").toLowerCase();
+        const cat = (item.category || "").toLowerCase();
+        const type = (item.type || "").toLowerCase();
+
+        // Count it if it's a drink
+        if (
+          name.includes("coffee") ||
+          cat.includes("drink") ||
+          type === "drink"
+        ) {
+          totalDrinks += Number(item.quantity || 0);
+        }
+      }
+    }
+
+    console.log(`🥤 Total completed drinks for user ${req.userId}:`, totalDrinks);
+    res.json({ totalDrinks });
+  } catch (err) {
+    console.error("Error in /api/loyalty/progress:", err);
+    res.status(500).json({ message: "Server error calculating loyalty progress." });
   }
 });
 

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -27,8 +27,22 @@ const VerificationScreen = () => {
 
   const [showResendModal, setShowResendModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showExpiredModal, setShowExpiredModal] = useState(false);
+
+  const [resendDisabled, setResendDisabled] = useState(true);
+  const [countdown, setCountdown] = useState(60);
 
   const inputRefs = Array.from({ length: 6 }, () => useRef<TextInput>(null));
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendDisabled && countdown > 0) {
+      timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
+    } else if (countdown === 0) {
+      setResendDisabled(false);
+    }
+    return () => clearInterval(timer);
+  }, [resendDisabled, countdown]);
 
   const handleChange = (index: number, value: string) => {
     if (!/^[0-9]?$/.test(value)) return;
@@ -44,7 +58,7 @@ const VerificationScreen = () => {
   const handleSubmit = async () => {
     const code = otpCode.join('');
     if (code.length !== 6) {
-      setShowSuccessModal(true);
+      setShowExpiredModal(true);
       return;
     }
 
@@ -63,8 +77,6 @@ const VerificationScreen = () => {
 
       if (response.ok) {
         await AsyncStorage.setItem("token", data.token);
-        console.log("Saved session token:", data.token);
-
         setShowSuccessModal(true);
 
         setTimeout(() => {
@@ -74,6 +86,11 @@ const VerificationScreen = () => {
             routes: [{ name: "Home" }],
           });
         }, 2000);
+      } else if (
+        data.message === "Invalid or expired OTP." ||
+        data.message === "Invalid or expired token."
+      ) {
+        setShowExpiredModal(true);
       } else {
         setShowResendModal(true);
       }
@@ -86,6 +103,9 @@ const VerificationScreen = () => {
   };
 
   const handleResend = async () => {
+    setResendDisabled(true);
+    setCountdown(60);
+
     try {
       const response = await fetch('http://10.0.2.2:5000/api/resend-otp', {
         method: 'POST',
@@ -94,8 +114,6 @@ const VerificationScreen = () => {
       });
 
       const text = await response.text();
-      console.log("Resend response:", text);
-
       let data: any;
       try {
         data = JSON.parse(text);
@@ -108,7 +126,7 @@ const VerificationScreen = () => {
         setOtpToken(data.otp_token); 
         setTimeout(() => {
           setShowResendModal(true);
-        }, 2000);
+        }, 1000);
       } else {
         setShowResendModal(true);
       }
@@ -162,10 +180,16 @@ const VerificationScreen = () => {
       </View>
 
       <Text style={styles.resendText}>
-        If you don’t receive a code,{' '}
-        <Text style={styles.resendLink} onPress={handleResend}>
-          Resend
-        </Text>
+        {resendDisabled ? (
+          <>Resend available in {countdown}s</>
+        ) : (
+          <>
+            If you don’t receive a code,{' '}
+            <Text style={styles.resendLink} onPress={handleResend}>
+              Resend
+            </Text>
+          </>
+        )}
       </Text>
 
       <TouchableOpacity style={styles.continueButton} onPress={handleSubmit} disabled={loading}>
@@ -173,33 +197,25 @@ const VerificationScreen = () => {
       </TouchableOpacity>
       
       {/* Resend Modal */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={showResendModal}
+      <Modal 
+        transparent 
+        animationType="fade" 
+        visible={showResendModal} 
         onRequestClose={() => setShowResendModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>OTP Update</Text>
             <Text style={styles.modalMessage}>A new OTP has been sent to your email.</Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setShowResendModal(false)}
-            >
+            <TouchableOpacity style={styles.modalButton} onPress={() => setShowResendModal(false)}>
               <Text style={styles.modalButtonText}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Successful OTP Modal */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={showSuccessModal}
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
+      {/* Success Modal */}
+      <Modal transparent animationType="fade" visible={showSuccessModal} onRequestClose={() => setShowSuccessModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Success</Text>
@@ -208,6 +224,18 @@ const VerificationScreen = () => {
         </View>
       </Modal>
 
+      {/* Expired/Invalid OTP Modal */}
+      <Modal transparent animationType="fade" visible={showExpiredModal} onRequestClose={() => setShowExpiredModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Invalid OTP</Text>
+            <Text style={styles.modalMessage}>OTP entered is expired or invalid. Please try again.</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setShowExpiredModal(false)}>
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
