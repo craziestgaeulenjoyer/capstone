@@ -39,6 +39,9 @@ Route::get('/about-us', function () {
     return Inertia::render('website_pages/AboutUs');
 })->name('aboutus');
 
+Route::get('/event', function () {
+    return Inertia::render('website_pages/Event');
+})->name('event');
 
 /* Authentication (Get Started Section) */
 

@@ -19,9 +19,9 @@ function HeroSection() {
     };
 
     return (
-        <section className="relative h-64 md:h-96 flex items-center justify-center overflow-hidden">
+        <section className="relative h-96 md:h-130 flex items-center justify-center overflow-hidden">
             <img
-                src="/images/img13.jpg"
+                src="/images/gallery4.jpg"
                 alt="Mi Amore Cafe banner"
                 className="absolute inset-0 w-full h-full object-cover z-0"
             />
