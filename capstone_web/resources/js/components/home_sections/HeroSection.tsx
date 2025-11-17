@@ -8,21 +8,18 @@ const HeroSection: React.FC = () => {
 
   return (
     <>
-      {/* Google Fonts */}
       <link
         href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Poppins:wght@400;500;600&display=swap"
         rel="stylesheet"
       />
 
       <section className="relative w-full flex flex-col md:flex-row items-center justify-between px-6 md:px-14 py-16 md:py-20 bg-[#B8D892] overflow-hidden">
-        {/* LEFT CONTENT */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
           className="z-10 max-w-xl text-center md:text-left flex flex-col items-center md:items-start"
         >
-          {/* HEADER */}
           <motion.h1
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -67,7 +64,6 @@ const HeroSection: React.FC = () => {
             Where every sip warms your heart and every moment feels like home.
           </motion.p>
 
-          {/* BUTTON */}
           <Link href="/menu">
             <motion.button
               whileHover={{
@@ -83,7 +79,6 @@ const HeroSection: React.FC = () => {
           </Link>
         </motion.div>
 
-        {/* RIGHT */}
         <motion.div
           initial={{ opacity: 0, x: 80 }}
           animate={{
@@ -98,7 +93,7 @@ const HeroSection: React.FC = () => {
           <img
             src="/images/MiAmore-Cup.png"
             alt="Cup"
-            className="w-[250px] sm:w-[300px] md:w-[380px] lg:w-[350px] xl:w-[380px] object-contain hidden sm:block"
+            className="w-[250px] sm:w-[300px] md:w-[380px] lg:w-[350px] xl:w-[380px] mt-6 object-contain hidden sm:block"
           />
         </motion.div>
 

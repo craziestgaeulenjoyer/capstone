@@ -4,12 +4,51 @@ import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF, FaEye, FaEyeSlash, FaCheckCircle } from 'react-icons/fa';
 import { Link, useForm } from '@inertiajs/react';
 
-function SignUpForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+interface FormData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
 
-  const { data, setData, post, processing, errors, reset } = useForm({
+interface PasswordInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  error?: string;
+}
+
+const PasswordInput: React.FC<PasswordInputProps> = ({ label, value, onChange, placeholder, error }) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="mb-4 relative">
+      <label className="block text-sm text-gray-700 mb-1">{label}</label>
+      <div className="relative">
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required
+          className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
+        />
+        <span
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
+          onClick={() => setShow(!show)}
+        >
+          {show ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+        </span>
+      </div>
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  );
+};
+
+function SignUpForm() {
+  const { data, setData, post, processing, errors, reset } = useForm<FormData>({
     first_name: '',
     last_name: '',
     email: '',
@@ -17,12 +56,14 @@ function SignUpForm() {
     password_confirmation: '',
   });
 
+  const [showModal, setShowModal] = useState(false);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     post(route('signup.store'), {
       onSuccess: () => {
-        setShowModal(true); // ✅ show success modal
-        reset(); // clear form
+        setShowModal(true);
+        reset();
       },
     });
   };
@@ -44,17 +85,28 @@ function SignUpForm() {
           <div className="w-full md:w-1/2 px-8 py-10">
             <div className="flex items-center justify-between mb-6">
               <Link href="/" className="text-[#8CB662] hover:text-[#b6f577]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none"
-                  viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
                 </svg>
               </Link>
               <img src="/images/MiAmore2.png" alt="logo" className="h-15 object-contain" />
             </div>
 
             <h2 className="text-3xl font-bold text-[#8CB662] mb-1">Create Account</h2>
-            <p className="text-sm text-gray-500 mb-6">New here? Sign up and start your Mi Amore journey!</p>
+            <p className="text-sm text-gray-500 mb-6">
+              New here? Sign up and start your Mi Amore journey!
+            </p>
 
             <form onSubmit={handleSubmit}>
               {/* Name Fields */}
@@ -64,9 +116,7 @@ function SignUpForm() {
                   <input
                     type="text"
                     value={data.first_name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setData('first_name', e.target.value)
-                    }
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('first_name', e.target.value)}
                     placeholder="First Name"
                     required
                     className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
@@ -78,9 +128,7 @@ function SignUpForm() {
                   <input
                     type="text"
                     value={data.last_name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setData('last_name', e.target.value)
-                    }
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('last_name', e.target.value)}
                     placeholder="Last Name"
                     required
                     className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
@@ -95,9 +143,7 @@ function SignUpForm() {
                 <input
                   type="email"
                   value={data.email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setData('email', e.target.value)
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('email', e.target.value)}
                   placeholder="example@gmail.com"
                   required
                   className="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
@@ -105,48 +151,22 @@ function SignUpForm() {
                 {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
               </div>
 
-              {/* Password */}
-              <div className="mb-4 relative">
-                <label className="block text-sm text-gray-700 mb-1">Password</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={data.password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setData('password', e.target.value)
-                  }
-                  placeholder="Enter password"
-                  required
-                  className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
-                />
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </span>
-                {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
-              </div>
+              {/* Passwords using PasswordInput component */}
+              <PasswordInput
+                label="Password"
+                value={data.password}
+                onChange={(val) => setData('password', val)}
+                placeholder="Enter password"
+                error={errors.password}
+              />
 
-              {/* Confirm Password */}
-              <div className="mb-6 relative">
-                <label className="block text-sm text-gray-700 mb-1">Confirm Password</label>
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  value={data.password_confirmation}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setData('password_confirmation', e.target.value)
-                  }
-                  placeholder="Confirm password"
-                  required
-                  className="w-full border border-gray-300 rounded-md py-2 px-3 pr-10 focus:ring-[#8CB662] focus:border-[#8CB662] focus:outline-none"
-                />
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                >
-                  {showConfirm ? <FaEyeSlash /> : <FaEye />}
-                </span>
-              </div>
+              <PasswordInput
+                label="Confirm Password"
+                value={data.password_confirmation}
+                onChange={(val) => setData('password_confirmation', val)}
+                placeholder="Confirm password"
+                error={errors.password_confirmation}
+              />
 
               {/* Submit Button */}
               <button
@@ -204,7 +224,7 @@ function SignUpForm() {
         </motion.div>
       </div>
 
-      {/* ✅ Success Modal */}
+      {/* Success Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -223,8 +243,7 @@ function SignUpForm() {
               <FaCheckCircle className="text-green-500 text-5xl mx-auto mb-3" />
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Account Created!</h2>
               <p className="text-gray-600 mb-6">
-                Your account has been created successfully.  
-                Please verify your email to continue.
+                Your account has been created successfully. Please verify your email to continue.
               </p>
               <button
                 onClick={() => setShowModal(false)}

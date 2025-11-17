@@ -26,6 +26,10 @@ Route::get('/about-us', function () {
     return Inertia::render('website_pages/AboutUs');
 })->name('aboutus');
 
+
+Route::get('/privacypolicy', function () {
+    return Inertia::render('PrivacyandTerms_section/PrivacyPolicy');
+})->name('privacypolicy');
 /* ---------------- AUTHENTICATION (GET STARTED SECTION) ---------------- */
 
 Route::get('/signin', function () {
