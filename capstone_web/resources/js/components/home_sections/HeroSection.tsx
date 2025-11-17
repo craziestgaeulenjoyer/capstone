@@ -25,7 +25,7 @@ const HeroSection: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
             className="leading-snug text-[#2b2b2b] mb-3 flex flex-col items-center md:items-start"
-            style={{ fontFamily: "'Kalam', cursive" }}
+            style={{ fontFamily: "'Avant Guard', cursive" }}
           >
             <span className="flex items-center justify-center md:justify-start gap-2 flex-wrap text-[24px] sm:text-[28px] md:text-[34px] lg:text-[35px] xl:text-[35px]">
               Brewed with love, served with{" "}

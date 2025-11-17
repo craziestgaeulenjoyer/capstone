@@ -5,13 +5,13 @@ use Inertia\Inertia;
 use App\Http\Controllers\CustomerSignupController;
 use App\Http\Controllers\CustomerLoginController;
 
-/* ---------------- CUSTOMER AUTH (POST REQUESTS) ---------------- */
+///SIGN UP CUSTOMER ROUTE////
+Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
+//
+//SIGN IN CUSTOMER ROUTE///
+Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
 
-Route::post('/signup', [CustomerSignupController::class, 'store'])
-    ->name('signup.store');
 
-Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])
-    ->name('login.authenticate');
 
 
 /* ---------------- WEBSITE ROUTES ---------------- */
@@ -100,3 +100,7 @@ Route::fallback(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/api.php';
+
+Route::get('/{any}', function () {
+    return view('app');
+})->where('any', '.*');

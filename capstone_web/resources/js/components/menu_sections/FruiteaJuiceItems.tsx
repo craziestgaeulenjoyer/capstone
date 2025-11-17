@@ -1,5 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { Search, X } from "lucide-react";
+
+interface ApiItem {
+  id: number;
+  name: string;
+  description: string;
+  image_path: string;
+  price: { regular?: string; large?: string };
+  categories: string[];
+  subcategories: string[];
+}
 
 interface FruiteaItem {
   id: number;
@@ -8,102 +19,11 @@ interface FruiteaItem {
   category: "Lemonade" | "Fruit";
   image: string;
   price: string;
+  rawPrice: { regular?: string; large?: string };
 }
 
-const fruiteaList: FruiteaItem[] = [
-  {
-    id: 1,
-    name: "Classic Lemonade",
-    description:
-      "Perfectly refreshing—that timeless balance of tart lemon and sweetness.",
-    category: "Lemonade",
-    image: "images/ClassicLemonade.png",
-    price: "₱60/70",
-  },
-  {
-    id: 2,
-    name: "Strawberry Lemonade",
-    description:
-      "Zesty, crisp lemonade infused with sweet, ripe strawberry juice.",
-    category: "Lemonade",
-    image: "images/StrawberryLemonade.png",
-    price: "₱70/80",
-  },
-  {
-    id: 3,
-    name: "Charcoal Lemonade",
-    description:
-      "A unique, purifying and refreshing blend of activated charcoal and classic lemonade.",
-    category: "Lemonade",
-    image: "images/CharcoalLemonade.png",
-    price: "₱70/80",
-  },
-  {
-    id: 4,
-    name: "Cucumber Lemonade",
-    description:
-      "Cool, crisp, and uniquely refreshing. Zesty classic lemonade blended with the cooling essence of fresh cucumber.",
-    category: "Lemonade",
-    image: "images/CucumberLemonade.png",
-    price: "₱90/100",
-  },
-  {
-    id: 5,
-    name: "Sugar-free Lemonade",
-    description:
-      "The same great tart, refreshing taste, sweetened without added sugar.",
-    category: "Lemonade",
-    image: "images/SugarfreeLemonade.png",
-    price: "₱90/100",
-  },
-  {
-    id: 6,
-    name: "Citro Frutti",
-    description:
-      "A refreshing juice blend featuring the bright, tangy flavor of orange and lemon.",
-    category: "Fruit",
-    image: "images/CitroFrutti.png",
-    price: "₱80",
-  },
-  {
-    id: 7,
-    name: "Mango Frutti",
-    description:
-      "Sweet, tropical mango mixed with other fruit juices for a vibrant, fruity drink.",
-    category: "Fruit",
-    image: "images/MangoFrutti.png",
-    price: "₱80",
-  },
-  {
-    id: 8,
-    name: "Punch Tropicale",
-    description:
-      "A sweet and tangy fruit punch mix, bursting with tropical flavors.",
-    category: "Fruit",
-    image: "images/PunchTropical.png",
-    price: "₱80",
-  },
-  {
-    id: 9,
-    name: "Watermelon with Strawberry Popping Bobba",
-    description:
-      "Juicy watermelon juice loaded with fun, bursting strawberry popping boba.",
-    category: "Fruit",
-    image: "images/PoppingBobba.png",
-    price: "₱100",
-  },
-  {
-    id: 10,
-    name: "Peach Iced Tea",
-    description:
-      "Sweet, refreshing peach flavor perfectly blended with crisp iced tea.",
-    category: "Fruit",
-    image: "images/PeachIcedTea.png",
-    price: "₱100",
-  },
-];
-
 const FruiteaJuiceItems: React.FC = () => {
+  const [items, setItems] = useState<FruiteaItem[]>([]);
   const [activeTab, setActiveTab] = useState<"All" | "Lemonade" | "Fruit">(
     "All"
   );
@@ -115,37 +35,90 @@ const FruiteaJuiceItems: React.FC = () => {
 
   const drinkOptions = {
     sizes: ["16oz", "22oz"],
-    addOns: [
-      "Pearls",
-      "Nata",
-      "Coffee Jelly",
-      "Strawberry Popping Bobba",
-    ],
+    addOns: ["Pearls", "Nata", "Coffee Jelly", "Strawberry Popping Bobba"],
   };
 
-  const filteredItems = fruiteaList.filter((item) => {
+  // ---------------------------
+  // FETCH ITEMS FROM API
+  // ---------------------------
+  useEffect(() => {
+    axios
+      .get("/api/menu")
+      .then((res) => {
+        // Grab the array safely like MilkteaItems.tsx
+        const data: ApiItem[] = res.data.items || res.data;
+
+        console.log("✅ Fetched menu items from API:", data);
+
+        // Filter items whose subcategories include MAIN_CATEGORY
+        const filtered = data.filter((item) =>
+          item.subcategories.some((sub) =>
+            sub.startsWith("Lemonade and Fruitti Juice:")
+          )
+        );
+
+        console.log("🔹 Items after subcategory filter:", filtered);
+
+        // Map into FruiteaItem[]
+        const fruiteaItems: FruiteaItem[] = filtered.map((item) => {
+          const sub = item.subcategories.find((sc) =>
+            sc.startsWith("Lemonade and Fruitti Juice:")
+          );
+
+          let category: "Lemonade" | "Fruit" = "Lemonade";
+          if (sub) {
+            const subCategory = sub.split(":")[1].trim();
+            if (subCategory === "Fruit") category = "Fruit";
+          }
+
+          const { regular, large } = item.price;
+          let formattedPrice = "";
+          if (regular && large) formattedPrice = `₱${regular}/${large}`;
+          else if (regular) formattedPrice = `₱${regular}`;
+          else if (large) formattedPrice = `₱${large}`;
+
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            category,
+            image: item.image_path, // <-- just use it as is
+            price: formattedPrice,
+            rawPrice: item.price,
+          };
+        });
+
+        console.log("🍹 Detected Fruitea Items:", fruiteaItems);
+
+        setItems(fruiteaItems);
+      })
+      .catch((e) => console.error("Error loading fruitea items:", e));
+  }, []);
+
+  // ---------------------------
+  // FILTER ITEMS
+  // ---------------------------
+  const filteredItems = items.filter((item) => {
     const matchCategory = activeTab === "All" || item.category === activeTab;
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch;
   });
 
-  const handleDecrease = () => {
-    if (quantity > 1) setQuantity(quantity - 1);
-  };
-
-  const handleIncrease = () => {
-    setQuantity(quantity + 1);
-  };
+  // Quantity handlers
+  const handleDecrease = () => quantity > 1 && setQuantity(quantity - 1);
+  const handleIncrease = () => setQuantity(quantity + 1);
 
   return (
     <div className="px-6 pt-10 pb-16">
       {/* Tabs and Search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
-        <div className="flex space-x-6">
+        <div className="flex flex-wrap gap-3">
           {["All", "Lemonade", "Fruit"].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as "All" | "Lemonade" | "Fruit")}
+              onClick={() =>
+                setActiveTab(tab as "All" | "Lemonade" | "Fruit")
+              }
               className={`text-sm font-semibold px-5 py-2 rounded-full border transition-all duration-200 ${
                 activeTab === tab
                   ? "bg-[#8CB662] text-white border-[#8CB662]"
@@ -171,7 +144,7 @@ const FruiteaJuiceItems: React.FC = () => {
         </div>
       </div>
 
-      {/* Item Grid */}
+      {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredItems.map((item) => (
           <div
@@ -186,14 +159,18 @@ const FruiteaJuiceItems: React.FC = () => {
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
               <img
-                src={item.image}
+                src={`/storage/${item.image}`}
                 alt={item.name}
                 className="w-50 h-50 object-contain rounded-xl"
               />
             </div>
             <div className="p-4">
-              <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+              <h3 className="text-lg font-bold text-[#2E3A2F]">
+                {item.name}
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">
+                {item.description}
+              </p>
               <div className="text-right text-lg text-[#76B13A] font-bold">
                 {item.price}
               </div>
@@ -218,37 +195,43 @@ const FruiteaJuiceItems: React.FC = () => {
             >
               <X size={24} />
             </button>
+
             <div className="flex flex-col md:flex-row gap-8">
               <img
-                src={selectedItem.image}
+                src={`/storage/${selectedItem.image}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain border-[12px] border-[#E1E1E1] rounded bg-[#E1E1E1]"
               />
+
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+                <h2 className="text-xl font-bold mb-2 text-gray-900">
+                  {selectedItem.name}
+                </h2>
+
                 <div className="text-[#65B741] font-bold text-lg mb-2">
                   {selectedItem.price}
                 </div>
-                <p className="text-sm text-gray-700 mb-4">
+
+                <p className="text-sm text-gray-700 mb-4 text-gray-900">
                   {selectedItem.description}
                 </p>
 
                 {/* Quantity */}
                 <div className="mb-4">
-                  <label className="text-base block font-semibold">
+                  <label className="text-base block font-semibold text-gray-900">
                     Quantity
                   </label>
                   <div className="flex items-center space-x-2 mt-1">
                     <button
                       onClick={handleDecrease}
-                      className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
+                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
                     >
                       -
                     </button>
-                    <span>{quantity}</span>
+                    <span className="text-gray-900">{quantity}</span>
                     <button
                       onClick={handleIncrease}
-                      className="px-2 border rounded hover:bg-[#8CB662] hover:text-white transition"
+                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
                     >
                       +
                     </button>
@@ -257,16 +240,17 @@ const FruiteaJuiceItems: React.FC = () => {
 
                 {/* Size Options */}
                 <div className="mb-4">
-                  <label className="text-sm font-semibold mb-1">
+                  <label className="text-sm font-semibold mb-1 text-gray-900">
                     Size options
                   </label>
                   <div className="h-[2px] w-full bg-[#8CB662] my-1" />
+
                   <div className="flex space-x-2 mt-4">
                     {drinkOptions.sizes.map((size) => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors ${
+                        className={`w-[95px] h-[25px] border px-3 py-1 rounded-full text-xs shadow-md transition-colors text-gray-900 ${
                           selectedSize === size
                             ? "bg-[#8CB662] text-white border-[#8CB662]"
                             : "hover:bg-[#8CB662] hover:text-white"
@@ -280,13 +264,13 @@ const FruiteaJuiceItems: React.FC = () => {
 
                 {/* Add-ons */}
                 <div className="mb-8">
-                  <label className="text-sm block font-semibold mb-1">
+                  <label className="text-sm block font-semibold mb-1 text-gray-900">
                     Add-ons
                   </label>
                   <select
                     value={selectedAddOn}
                     onChange={(e) => setSelectedAddOn(e.target.value)}
-                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-sm"
+                    className="w-[300px] border border-[#8CB662] rounded px-2 py-1 text-sm text-gray-900"
                   >
                     <option value="" disabled>
                       Select an add-on
@@ -318,4 +302,3 @@ const FruiteaJuiceItems: React.FC = () => {
 };
 
 export default FruiteaJuiceItems;
-

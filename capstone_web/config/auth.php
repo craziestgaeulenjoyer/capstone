@@ -50,6 +50,7 @@ return [
             'driver' => 'session',
             'provider' => 'super_admins',
         ],
+        
         'api' => [
             'driver' => 'sanctum',
             'provider' => 'users', 
