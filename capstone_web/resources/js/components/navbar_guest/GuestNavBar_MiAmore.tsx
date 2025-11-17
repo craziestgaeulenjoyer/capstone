@@ -30,7 +30,7 @@ const GuestNavBar_MiAmore: React.FC = () => {
 
   const rightLinks = [
     { name: "Location", href: "/location" },
-    { name: "Contact", href: "/contact" },
+    { name: "Contact", href: "/contact-us" },
   ];
 
   return (
