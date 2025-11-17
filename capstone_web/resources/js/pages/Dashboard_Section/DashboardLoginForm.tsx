@@ -53,6 +53,9 @@ const DashboardLoginForm = () => {
         if (response.data.token) {
             localStorage.setItem('token', response.data.token);
         }
+
+        sessionStorage.setItem("dashboard_role", response.data.role);
+        sessionStorage.setItem("dashboard_user_id", response.data.user?.id);
         
         if (!response.data.verified) {
             // Redirect to email verification page

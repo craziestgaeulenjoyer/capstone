@@ -41,10 +41,12 @@ function DashboardEmailVerification() {
 
     sendVerification();
 
-    // Listen for verification confirmation from new tab
     const listener = (event: MessageEvent) => {
       if (event.data?.type === 'EMAIL_VERIFIED') {
-        console.log('✅ Email verified message received');
+        console.log('Email verified message received');
+        if (event.data.role) {
+          sessionStorage.setItem("dashboard_role", event.data.role);
+        }
         if (event.data.role === 'super_admin') {
           router.visit('/superadmin');
         } else {

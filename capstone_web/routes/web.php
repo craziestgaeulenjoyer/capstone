@@ -12,8 +12,6 @@ Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup
 Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
 
 
-
-
 /* ---------------- WEBSITE ROUTES ---------------- */
 
 Route::get('/home', function () {
@@ -99,3 +97,7 @@ Route::fallback(fn() => response()->json(['message' => 'Route not found.'], 404)
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/api.php';
+
+Route::get('/{any}', function () {
+    return view('app');
+})->where('any', '.*');

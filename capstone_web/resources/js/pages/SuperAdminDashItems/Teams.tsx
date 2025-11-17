@@ -485,7 +485,7 @@ const Step4Form = ({ formData, onBack, onSubmit }: Step4FormProps) => {
 };
 
 // The main App component that contains the entire UI.
-const App = () => {
+const Teams = () => {
   const [step, setStep] = useState(1);
   const [view, setView] = useState<'onboarding' | 'adminTable' | 'accountSettings'>('onboarding'); // New state for view switching
   const [formData, setFormData] = useState<FormData>({
@@ -615,75 +615,6 @@ const App = () => {
     </div>
   );
 
-  const handleSubmit = async () => {
-    try {
-      const token = localStorage.getItem('token'); // Use the stored Bearer token
-      if (!token) {
-        alert('Please log in as Super Admin first');
-        return;
-      }
-
-      const response = await axios.post(
-        'http://127.0.0.1:8000/api/superadmin/create/request-otp',
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log('Submitting OTP request with data:', formData);
-
-      if (response.data.success) setStep(4);
-      else alert('OTP request failed.');
-    } catch (error: any) {
-      console.error('OTP request failed:', error);
-      alert(
-        error.response?.status === 401
-            ? 'Unauthorized. Please log in as Super Admin.'
-            : 'Something went wrong while requesting OTP.'
-      );
-    }
-  };
-
-  const handleOtpSubmit = async (otp: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please log in as Super Admin first');
-        return;
-      }
-
-      const payload = {
-        name: formData.fullName, 
-        username: formData.username,
-        email: formData.email,
-        role: formData.role,
-        branch: formData.branch,
-        otp,
-      };
-
-      console.log('Sending OTP verification payload:', payload);
-
-      const response = await axios.post(
-        'http://127.0.0.1:8000/api/superadmin/create/verify-otp',
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (response.data.success) {
-        alert('Account successfully created!');
-        setView('adminTable');
-      } else {
-        alert('Invalid OTP. Please try again.');
-      }
-    } catch (error: any) {
-      console.error('OTP verification failed:', error.response?.data || error);
-      alert(
-        error.response?.status === 401
-            ? 'Unauthorized. Please log in as Super Admin.'
-            : 'Something went wrong while verifying OTP.'
-      );
-    }
-  };
-
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar (only shows during onboarding) */}
@@ -734,5 +665,5 @@ const App = () => {
   );
 };
 
-export default App;
+export default Teams;
 

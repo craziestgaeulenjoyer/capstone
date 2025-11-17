@@ -142,91 +142,91 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-{/* Middle Charts */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-  {/* Order Summary */}
-  <div className="bg-white p-5 rounded-lg shadow h-full flex flex-col">
-    <div className="flex justify-between items-center mb-5">
-      <h3 className="font-bold text-lg">Order Summary</h3>
-      <select className="border rounded-full px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#6CB74A] transition">
-        <option>Today</option>
-        <option>Weekly</option>
-        <option>Monthly</option>
-      </select>
-    </div>
-
-    {/* Fix container height */}
-    <div className="flex justify-around items-center flex-1">
-      {orderSummaryData.map((item, idx) => (
-        <div key={idx} className="flex flex-col items-center">
-          <div className="w-24 h-24">
-          <Doughnut
-            data={{
-              labels: [item.label, "Other"],
-              datasets: [
-                {
-                  data: [item.value, 100 - item.value],
-                  backgroundColor: [item.color, "#e5e7eb"],
-                },
-              ],
-            }}
-            options={{
-              cutout: "70%", 
-              plugins: { legend: { display: false } },
-              maintainAspectRatio: false,
-              responsive: true,
-            }}
-          />
+      {/* Middle Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Order Summary */}
+        <div className="bg-white p-5 rounded-lg shadow h-full flex flex-col">
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="font-bold text-lg">Order Summary</h3>
+            <select className="border rounded-full px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#6CB74A] transition">
+              <option>Today</option>
+              <option>Weekly</option>
+              <option>Monthly</option>
+            </select>
           </div>
-          <p className="mt-2 font-bold text-lg">{item.value}%</p>
-          <p className="text-xs text-gray-500">{item.label}</p>
+
+          {/* Fix container height */}
+          <div className="flex justify-around items-center flex-1">
+            {orderSummaryData.map((item, idx) => (
+              <div key={idx} className="flex flex-col items-center">
+                <div className="w-24 h-24">
+                <Doughnut
+                  data={{
+                    labels: [item.label, "Other"],
+                    datasets: [
+                      {
+                        data: [item.value, 100 - item.value],
+                        backgroundColor: [item.color, "#e5e7eb"],
+                      },
+                    ],
+                  }}
+                  options={{
+                    cutout: "70%", 
+                    plugins: { legend: { display: false } },
+                    maintainAspectRatio: false,
+                    responsive: true,
+                  }}
+                />
+                </div>
+                <p className="mt-2 font-bold text-lg">{item.value}%</p>
+                <p className="text-xs text-gray-500">{item.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
 
-  {/* Overview */}
-  <div className="bg-white p-5 rounded-lg shadow h-full flex flex-col">
-    <div className="flex justify-between items-center mb-5">
-      <h3 className="font-bold text-lg">Overview</h3>
-      <a href="#" className="text-[#6CB74A] text-sm font-medium hover:underline">
-        View all
-      </a>
-    </div>
-
-    <div className="flex items-center justify-center flex-1">
-      {/* Doughnut chart */}
-      <div className="w-36 h-36">
-        <Doughnut
-          data={overviewData}
-          options={{
-            plugins: { legend: { display: false } },
-            maintainAspectRatio: false,
-            responsive: true,
-          }}
-        />
-      </div>
-
-      {/* Legend */}
-      <div className="ml-8 space-y-3">
-        {overviewData.labels.map((label, i) => (
-          <div key={i} className="flex items-center justify-between w-40 text-sm">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: overviewData.datasets[0].backgroundColor[i] }}
-              />
-              <span>{label}</span>
-            </div>
-            <span className="font-semibold">
-              {overviewData.datasets[0].data[i]}%
-            </span>
+        {/* Overview */}
+        <div className="bg-white p-5 rounded-lg shadow h-full flex flex-col">
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="font-bold text-lg">Overview</h3>
+            <a href="#" className="text-[#6CB74A] text-sm font-medium hover:underline">
+              View all
+            </a>
           </div>
-        ))}
+
+          <div className="flex items-center justify-center flex-1">
+            {/* Doughnut chart */}
+            <div className="w-36 h-36">
+              <Doughnut
+                data={overviewData}
+                options={{
+                  plugins: { legend: { display: false } },
+                  maintainAspectRatio: false,
+                  responsive: true,
+                }}
+              />
+            </div>
+
+            {/* Legend */}
+            <div className="ml-8 space-y-3">
+              {overviewData.labels.map((label, i) => (
+                <div key={i} className="flex items-center justify-between w-40 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: overviewData.datasets[0].backgroundColor[i] }}
+                    />
+                    <span>{label}</span>
+                  </div>
+                  <span className="font-semibold">
+                    {overviewData.datasets[0].data[i]}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
       {/* Bottom Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
