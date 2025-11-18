@@ -157,7 +157,7 @@ const PremiumMatcha: React.FC = () => {
             </button>
             <div className="flex flex-col md:flex-row gap-8">
               <img
-                src={`/storage/${selectedItem.image}`}
+                src={`/${selectedItem.image}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
               />
