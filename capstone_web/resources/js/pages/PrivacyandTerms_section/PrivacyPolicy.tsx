@@ -1,186 +1,138 @@
 import React from "react";
-import { GiCoffeeCup } from "react-icons/gi";
-import { FaLeaf } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { Link } from "@inertiajs/react";
 
 function PrivacyPolicy() {
-  const cardVariants = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0 },
-  };
-
-  const floatingIcons = [
-    { top: "5%", left: "5%", size: 35 },
-    { top: "10%", left: "25%", size: 40 },
-    { top: "15%", left: "50%", size: 30 },
-    { top: "20%", left: "70%", size: 50 },
-    { top: "30%", left: "10%", size: 45 },
-    { top: "35%", left: "85%", size: 30 },
-    { top: "40%", left: "40%", size: 50 },
-    { top: "50%", left: "15%", size: 35 },
-    { top: "55%", left: "75%", size: 40 },
-    { top: "60%", left: "55%", size: 45 },
-    { top: "70%", left: "5%", size: 30 },
-    { top: "75%", left: "80%", size: 35 },
-    { top: "80%", left: "25%", size: 40 },
-    { top: "85%", left: "60%", size: 30 },
-  ];
+  const bubbles = Array.from({ length: 22 }).map((_, i) => ({
+    size: Math.floor(Math.random() * 120) + 60,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: Math.random() * 2,
+    duration: Math.random() * 4 + 3,
+  }));
 
   return (
-    <div className="relative min-h-screen bg-[#B8D892] font-poppins overflow-hidden">
-      {/* Floating Coffee/Milk Tea Icons */}
-      {floatingIcons.map((icon, idx) => (
+    <div className="relative min-h-screen font-poppins overflow-hidden bg-gradient-to-br from-[#dff5d1] via-[#e8ffe0] to-[#d4f0c9]">
+      {bubbles.map((b, i) => (
         <motion.div
-          key={idx}
-          className="absolute text-[#6B8E23] opacity-50"
-          style={{ top: icon.top, left: icon.left }}
-          animate={{ y: [0, 15, 0], rotate: [0, 5, -5, 0] }}
-          transition={{ repeat: Infinity, duration: 5 + idx * 0.3, ease: "easeInOut" }}
-        >
-          <GiCoffeeCup size={icon.size} />
-        </motion.div>
+          key={i}
+          className="absolute rounded-full bg-[#bde5ac] opacity-60 blur-[3px] shadow-md"
+          style={{
+            width: b.size,
+            height: b.size,
+            top: b.top,
+            left: b.left,
+            boxShadow: "0 0 25px #a5d594",
+          }}
+          animate={{
+            y: [-20, 25, -20],
+            x: [-10, 10, -10],
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{
+            repeat: Infinity,
+            repeatType: "mirror",
+            duration: b.duration,
+            delay: b.delay,
+            ease: "easeInOut",
+          }}
+        />
       ))}
 
-      <div className="flex justify-center py-10 px-4">
-        <div className="w-full max-w-3xl bg-white shadow-2xl rounded-3xl overflow-hidden relative z-10">
-
-          {/* HEADER */}
-          <header className="flex flex-col items-center px-6 py-4 border-b border-gray-300">
-            <motion.div
-              className="text-xl font-semibold flex items-center gap-2"
-              initial={{ y: -10 }}
-              animate={{ y: [0, -8, 0] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            >
-              <img
-                src=""
-                alt="Mi Amore Logo"
-                className="w-8 h-8 rounded-full object-cover"
-              />
-              Mi Amore Cafeteria
-            </motion.div>
-          </header>
-
-          {/* TITLE */}
-          <section className="bg-[#E6F2D9] px-6 py-12 text-center">
-            <motion.h1
-              className="text-4xl font-bold text-[#556B2F] flex items-center justify-center gap-2"
+      <div className="flex justify-center py-12 px-4">
+        <div className="w-full max-w-3xl bg-gradient-to-br from-white to-[#f3ffea] shadow-2xl rounded-3xl relative z-10 overflow-hidden border border-[#dcefd2]">
+          
+          <header className="flex flex-col items-center px-6 py-6 border-b border-gray-200 bg-[#f2ffe8]">
+            <motion.img
+              src="/images/MiAmore2.png"
+              alt="Mi Amore Logo"
+              className="w-14 h-14 rounded-full shadow-md"
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
+              transition={{ duration: 0.8 }}
+            />
+            <motion.h1
+              className="text-2xl font-bold mt-3 text-[#8e674a]"
+              style={{ fontFamily: "'Kalam', cursive" }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1 }}
             >
-              <FaLeaf /> Privacy Policy
+              Mi Amore Café
             </motion.h1>
-            <p className="text-sm text-gray-500 mt-2">Last Updated: November 2025</p>
+          </header>
+
+          <section className="bg-[#e1f7d8] px-6 py-12 text-center border-b border-[#cfeac6]">
+            <motion.h2
+              className="text-4xl font-bold text-[#5e8e3e] tracking-wide"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 1 }}
+            >
+              Privacy Policy
+            </motion.h2>
+            <p className="text-sm text-gray-600 mt-2">Last Updated: November 2025</p>
+
+            <Link
+              href="/termsandcondition"
+              className="mt-6 inline-block px-6 py-3 bg-[#6ca856] text-white font-semibold rounded-full shadow-md hover:bg-[#5a9c42] transition"
+            >
+              View Terms & Conditions
+            </Link>
           </section>
 
-          {/* CONTENT */}
           <div className="px-6 py-10 space-y-6 text-gray-700">
-
             <motion.div
-              className="bg-[#F7FFF1] p-6 rounded-xl shadow-md border border-gray-200"
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-              whileHover={{ y: -8, boxShadow: "0 12px 25px rgba(0,0,0,0.15)", transition: { duration: 0.3 } }}
+              className="bg-[#f2ffe7] p-6 rounded-xl shadow-md border border-[#d2e8c8]"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: "easeOut" }}
             >
               <p>
-                At Mi Amore Cafeteria ("we", "our", or "us"), your privacy matters to us.
-                This Privacy Policy explains how we collect, use, and safeguard your
-                information when you visit our café, browse our website, or place orders
-                online.
+                At Mi Amore Café, your privacy is our priority. This Privacy Policy
+                explains how we collect, use, and protect your information when you visit
+                our café, browse our website, or place an online order.
               </p>
             </motion.div>
 
-            {/* Sections */}
             {[
               {
                 title: "Information We Collect",
-                icon: <GiCoffeeCup />,
                 sections: [
-                  {
-                    subtitle: "Personal Information",
-                    items: [
-                      "Name, phone number, and email address",
-                      "Order details and preferences",
-                      "Payment information (handled securely by third-party processors)",
-                      "Feedback or inquiries you send us",
-                    ],
-                  },
-                  {
-                    subtitle: "Non-Personal Information",
-                    items: [
-                      "Device and browser type",
-                      "Website usage and traffic patterns",
-                      "Cookies used to enhance your browsing experience",
-                    ],
-                  },
-                  {
-                    subtitle: "Information from Third Parties",
-                    items: [
-                      "Delivery partners (for online orders)",
-                      "Online payment gateways",
-                      "Social media platforms when you interact with us",
-                    ],
-                  },
+                  { subtitle: "Personal Information", items: ["Name, phone number, and email address", "Order details and preferences", "Payment information (processed securely)", "Feedback or inquiries you send us"] },
+                  { subtitle: "Non-Personal Information", items: ["Browser and device details", "Traffic patterns", "Website activity and cookies"] },
                 ],
               },
               {
                 title: "How We Use Your Information",
-                icon: <GiCoffeeCup />,
-                sections: [
-                  {
-                    subtitle: "",
-                    items: [
-                      "Process and fulfill your café or online orders",
-                      "Improve our menu, services, and customer experience",
-                      "Send promotions, updates, or marketing messages (with your consent)",
-                      "Enhance website performance and security",
-                    ],
-                  },
-                ],
+                sections: [{ subtitle: "", items: ["Process orders and bookings", "Improve café services and menu quality", "Send updates or promotions (with consent)", "Enhance website performance and security"] }],
               },
               {
                 title: "How We Protect Your Data",
-                icon: <GiCoffeeCup />,
-                sections: [
-                  {
-                    subtitle: "",
-                    items: [
-                      "Secure payment processing through trusted providers",
-                      "Encrypted data handling and storage",
-                      "Restricted access to customer information",
-                    ],
-                  },
-                ],
+                sections: [{ subtitle: "", items: ["Secure payment processors", "Encrypted data transmission", "Restricted access to sensitive information"] }],
               },
             ].map((section, idx) => (
               <motion.div
                 key={idx}
-                className="bg-[#F7FFF1] p-6 rounded-xl shadow-md border border-gray-200"
-                variants={cardVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 1, delay: 0.4 + idx * 0.3, ease: "easeOut" }}
-                whileHover={{ y: -8, boxShadow: "0 12px 25px rgba(0,0,0,0.15)", transition: { duration: 0.3 } }}
+                className="bg-[#f4ffef] p-6 rounded-xl shadow-md border border-[#d3e8c9]"
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: idx * 0.3 }}
+                whileHover={{ y: -5, transition: { duration: 0.3 } }}
               >
-                <h2 className="text-2xl font-semibold text-[#6B8E23] flex items-center gap-2 mb-3">
-                  {section.icon} {section.title}
-                </h2>
-                {section.sections.map((sub, subIdx) => (
-                  <div key={subIdx} className="mt-2">
-                    {sub.subtitle && <h3 className="font-semibold text-lg">{sub.subtitle}</h3>}
-                    <ul className="list-disc ml-6 mt-1">
-                      {sub.items.map((item, i) => (
-                        <li key={i}>{item}</li>
+                <h3 className="text-2xl font-semibold text-[#6ca856] mb-3">{section.title}</h3>
+                {section.sections.map((sub, i) => (
+                  <div key={i}>
+                    {sub.subtitle && <h4 className="font-semibold text-lg mt-2 text-[#517a3c]">{sub.subtitle}</h4>}
+                    <ul className="list-disc ml-6 mt-1 space-y-1">
+                      {sub.items.map((item, j) => (
+                        <li key={j}>{item}</li>
                       ))}
                     </ul>
                   </div>
                 ))}
               </motion.div>
             ))}
-
           </div>
         </div>
       </div>
@@ -189,3 +141,6 @@ function PrivacyPolicy() {
 }
 
 export default PrivacyPolicy;
+
+
+

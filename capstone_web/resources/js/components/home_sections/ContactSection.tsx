@@ -3,6 +3,7 @@ import { FaPhoneAlt } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";
 import { IoMdArrowForward } from "react-icons/io";
 import { motion } from "framer-motion";
+import { Link } from "@inertiajs/react";
 
 const ContactSection: React.FC = () => {
   return (
