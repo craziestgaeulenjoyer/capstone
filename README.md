@@ -46,6 +46,7 @@ Dependencies to Install (PowerShell Terminal):
 - `npm install multer` (install this in the ./backend folder)
 - `npm install -g localtunnel` (for webhooking in testing apis)
 - `npm install node-fetch` (install this in the ./backend folder)
+- `npm install form-data` (install this in the ./backend folder)
 
 Commands to Enable (PowerShell Terminal):
 
