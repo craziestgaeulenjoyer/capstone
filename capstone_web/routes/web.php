@@ -16,86 +16,91 @@ Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticat
 
 /* ---------------- WEBSITE ROUTES ---------------- */
 
-Route::get('/home', function () {
-    return Inertia::render('website_pages/Home_MiAmore');
-})->name('home');
+Route::get('/home', fn() => Inertia::render('website_pages/Home_MiAmore'))->name('home');
 
-Route::get('/menu', function () {
-    return Inertia::render('website_pages/Menu');
-})->name('menu');
+Route::get('/menu', fn() => Inertia::render('website_pages/Menu'))->name('menu');
 
-Route::get('/about-us', function () {
-    return Inertia::render('website_pages/AboutUs');
-})->name('aboutus');
+Route::get('/about-us', fn() => Inertia::render('website_pages/AboutUs'))->name('aboutus');
 
-/* ---------------- AUTHENTICATION (GET STARTED SECTION) ---------------- */
+Route::get('/event', fn() => Inertia::render('website_pages/Event'))->name('event');
 
-Route::get('/signin', function () {
-    return Inertia::render('getstarted_section/MiAmoreWelcome');
-})->name('SignIn');
+Route::get('/contact-us', fn() => Inertia::render('home_sections/ContactSection'))
+    ->name('contact-us');
 
-Route::get('/signincard', function () {
-    return Inertia::render('getstarted_section/SignInCard');
-})->name('SignInCard');
+Route::get('/privacypolicy', fn() => Inertia::render('PrivacyandTerms_section/PrivacyPolicy'))
+    ->name('privacypolicy');
 
-Route::get('/signupform', function () {
-    return Inertia::render('getstarted_section/SignUpForm');
-})->name('SignUpForm');
+Route::get('/termsandcondition', fn() => Inertia::render('PrivacyandTerms_section/TermsAndCondition'))
+    ->name('termsandcondition');    
 
-Route::get('/accountverification', function () {
-    return Inertia::render('getstarted_section/AccountVerification');
-})->name('AccountVerification');
 
-Route::get('/forgotpasswordform', function () {
-    return Inertia::render('getstarted_section/ForgotPasswordForm');
-})->name('ForgotPasswordForm');
+/* ---------------- GET STARTED / AUTH SCREENS ---------------- */
 
-Route::get('/verificationcode', function () {
-    return Inertia::render('getstarted_section/VerificationCode');
-})->name('VerificationCode');
+Route::get('/signin', fn() => Inertia::render('getstarted_section/MiAmoreWelcome'))
+    ->name('SignIn');
 
-Route::get('/resetpasswordform', function () {
-    return Inertia::render('getstarted_section/ResetPasswordForm');
-})->name('ResetPassWordForm');
+Route::get('/signincard', fn() => Inertia::render('getstarted_section/SignInCard'))
+    ->name('SignInCard');
+
+Route::get('/signupform', fn() => Inertia::render('getstarted_section/SignUpForm'))
+    ->name('SignUpForm');
+
+Route::get('/accountverification', fn() => Inertia::render('getstarted_section/AccountVerification'))
+    ->name('AccountVerification');
+
+Route::get('/forgotpasswordform', fn() => Inertia::render('getstarted_section/ForgotPasswordForm'))
+    ->name('ForgotPasswordForm');
+
+Route::get('/verificationcode', fn() => Inertia::render('getstarted_section/VerificationCode'))
+    ->name('VerificationCode');
+
+Route::get('/resetpasswordform', fn() => Inertia::render('getstarted_section/ResetPasswordForm'))
+    ->name('ResetPassWordForm');
+
 
 /* ---------------- DASHBOARD ROUTES ---------------- */
 
-// Dashboard Auth Screens
+Route::get('/dashboardgetstarted', fn() => Inertia::render('Dashboard_Section/DashboardGetStarted'))
+    ->name('DashboardGetStarted');
 
-Route::get('/dashboardgetstarted', function () {
-    return Inertia::render('Dashboard_Section/DashboardGetStarted');
-})->name('DashboardGetStarted');
+Route::get('/dashboardloginform', fn() => Inertia::render('Dashboard_Section/DashboardLoginForm'))
+    ->name('DashboardLoginForm');
 
-Route::get('/dashboardloginform', function () {
-    return Inertia::render('Dashboard_Section/DashboardLoginForm');
-})->name('DashboardLoginForm');
+Route::get('/dashboardemailverification', fn() => Inertia::render('Dashboard_Section/DashboardEmailVerification'))
+    ->name('DashboardEmailVerification');
 
-Route::get('/dashboardemailverification', function () {
-    return Inertia::render('Dashboard_Section/DashboardEmailVerification');
-})->name('DashboardEmailVerification');
+Route::get('/dashboardemailverificationresend', fn() => Inertia::render('Dashboard_Section/DashboardEmailVerificationResend'))
+    ->name('DashboardEmailVerificationResend');
 
-Route::get('/dashboardemailverificationresend', function () {
-    return Inertia::render('Dashboard_Section/DashboardEmailVerificationResend');
-})->name('DashboardEmailVerificationResend');
+Route::get('/dashboardverificationsuccess', fn() => Inertia::render('Redirect_Pages/DashboardVerificationSuccess'))
+    ->name('DashboardVerificationSuccess');
 
-Route::get('/dashboardverificationsuccess', function () {
-    return Inertia::render('Redirect_Pages/DashboardVerificationSuccess');
-})->name('DashboardVerificationSuccess');
 
-// CSRF Cookie Route
+/* ---------------- SANCTUM COOKIE ---------------- */
 
 Route::get('/sanctum/csrf-cookie', fn() => response()->json(['message' => 'CSRF cookie set']));
 
-// Unauthenticated Redirect Route
+/* ---------------- LOGIN REDIRECT ---------------- */
 
-Route::middleware(['web'])->get('/login', function () {
-    return redirect('/dashboardgetstarted');
+Route::middleware(['web'])->get('/login', fn() => redirect('/dashboardgetstarted'));
+
+
+/* ---------------- FALLBACK (FIXES INERTIA ERROR) ---------------- */
+
+Route::fallback(function () {
+    return Inertia::render('Errors/NotFound', [
+        'status' => 404,
+        'message' => 'Page not found'
+    ])->toResponse(request())->setStatusCode(404);
 });
 
-/* ---------------- FALLBACK ROUTE ---------------- */
 
-Route::fallback(fn() => response()->json(['message' => 'Route not found.'], 404));
+/* ---------------- ADDITIONAL ROUTES ---------------- */
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/api.php';
+
+Route::get('/{any}', function () {
+    return view('app');
+})->where('any', '.*');

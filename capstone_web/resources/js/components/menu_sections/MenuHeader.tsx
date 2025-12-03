@@ -10,7 +10,7 @@ import PremiumMatcha from './PremiumMatchaItems';
 
 
 const MenuHeader: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Coffees');
+  const [activeTab, setActiveTab] = useState('Popular');
 
   const tabs = ['Popular', 'Coffees', 'Milktea', 'Lemonade & Fruitti Juice', 'Premium Matcha' , 'Foods'];
 
@@ -19,7 +19,7 @@ const MenuHeader: React.FC = () => {
   return (
     <div className="w-full">
       {/* Tabs */}
-      <nav className="flex space-x-6 text-gray-700 font-semibold px-6 py-4 text-md">
+      <nav className="flex space-x-6 text-gray-700 font-semibold px-6 mt-25 py-4 text-md">
         {tabs.map((tab) => (
           <span
             key={tab}

@@ -59,8 +59,10 @@ Route::middleware(['web'])->group(function () {
 
         // Protected admin dashboard
         Route::middleware(['auth:admin', 'admin.verified'])->group(function () {
-            Route::get('/dashboard', fn() => Inertia::render('Admin_Dashboard/Admin_Navbar'))
-                ->name('admin.dashboard'); // <-- specific dashboard route
+            Route::get('/dashboard/{subpage?}', fn($subpage = null) => Inertia::render('Admin_Dashboard/DashboardLayout', [
+                'subpage' => $subpage
+            ]))->where('subpage', '.*')->name('admin.dashboard');
+
             Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
         });
     });
@@ -107,8 +109,10 @@ Route::middleware(['web'])->group(function () {
 
         // Protected super admin dashboard
         Route::middleware(['auth:super_admin', 'superadmin.verified'])->group(function () {
-            Route::get('/dashboard', fn() => Inertia::render('SuperAdmin_Navbar/SuperAdminNavbar'))
-                ->name('superadmin.dashboard');
+            Route::get('/dashboard/{subpage?}', fn($subpage = null) => Inertia::render('SuperAdmin_Dashboard/DashboardLayout', [
+                'subpage' => $subpage
+            ]))->where('subpage', '.*')->name('superadmin.dashboard');
+
             Route::post('/logout', [SuperAdminAuthController::class, 'logout'])->name('superadmin.logout');
         });
     });

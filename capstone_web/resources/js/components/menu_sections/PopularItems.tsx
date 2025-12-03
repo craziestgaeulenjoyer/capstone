@@ -1,253 +1,139 @@
 // resources/js/Pages/website_pages/components/PopularItems.tsx
-import React, { useState } from 'react';
-import { Search, X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Search, X } from "lucide-react";
 
-interface PopularItem {
+interface MenuItem {
   id: number;
   name: string;
   description: string;
-  category:
-    | 'Coffee'
-    | 'Milk Tea'
-    | 'Premium Matcha'
-    | 'Specialty Coffee'
-    | 'Lemonade & Fruit Juices'
-    | 'Snacks'
-    | 'Platters'
-    | 'Quesadillas & Korean Corndogs'
-    | 'Croffles';
-  image: string;
-  price: string;
+  type: "food" | "drink";
+  categories: string[];
+  subcategories: string[];
+  price: { regular: string; large?: string };
+  image_path: string;
 }
 
-const popularItems: PopularItem[] = [
-  { 
-    id: 1, 
-    name: 'Iced Snow Coffee', 
-    description: 'A unique, frosty iced coffee layered for an extra cold and creamy treat.', 
-    category: 'Coffee',
-    image: 'images/IceSnowCoffee.png', 
-    price: '₱120' 
-  },
-  { 
-    id: 2, 
-    name: 'Sea Salt Honey', 
-    description: 'A perfect balance of sweet honey, robust coffee, and a delicate hint of sea salt.', 
-    category: 'Specialty Coffee', 
-    image: '/images/SeaSaltHoney.png', 
-    price: '₱170' 
-  },
-  { 
-    id: 3, 
-    name: 'White Chocolate Mocha', 
-    description: 'Rich, creamy white chocolate is melted into smooth espresso and finished with steamed milk.', 
-    category: 'Specialty Coffee', 
-    image: '/images/WhiteChocolateMocha.png', 
-    price: '₱180' 
-  },
-  { 
-    id: 4, 
-    name: 'Dulce De Leche', 
-    description: 'Luxuriously sweet and comforting, featuring espresso infused with rich, caramelized milk goodness.', 
-    category: 'Specialty Coffee', 
-    image: '/images/DulceDeLeche.png', 
-    price: '₱180' 
-  },
-  { 
-    id: 5, 
-    name: 'Classic Lemonade', 
-    description: 'Perfectly refreshing that timeless balance of tart lemon and sweetness.', 
-    category: 'Lemonade & Fruit Juices', 
-    image: 'images/ClassicLemonade.png', 
-    price: '₱60/70' 
-  },
-  { 
-    id: 6, 
-    name: 'Strawberry Lemonade', 
-    description: 'Zesty, crisp lemonade infused with sweet, ripe strawberry juice.', 
-    category: 'Lemonade & Fruit Juices', 
-    image: 'images/StrawberryLemonade.png', 
-    price: '₱70/80' 
-  },
-  { 
-    id: 7, 
-    name: 'Watermelon with Strawberry Popping Bobba', 
-    description: 'Juicy watermelon juice with bursts of strawberry boba.', 
-    category: 'Lemonade & Fruit Juices', 
-    image: '/images/PoppingBobba.png', 
-    price: '₱100' 
-  },
-  { 
-    id: 8, 
-    name: 'Peach Iced Tea', 
-    description: 'Sweet, refreshing peach flavor perfectly blended with crisp iced tea.', 
-    category: 'Lemonade & Fruit Juices', 
-    image: '/images/PeachIcedTea.png', 
-    price: '₱100' 
-  },
-  { 
-    id: 9, 
-    name: 'Okinawa', 
-    description: 'Brown sugar and caramel notes meet classic milk tea for a deeply caramelized, signature flavor.', 
-    category: 'Milk Tea', 
-    image: '/images/Okinawa.png', 
-    price: '₱90/100' 
-  },
-  { 
-    id: 10, 
-    name: 'Oreo Cheesecake Overload', 
-    description: 'An indulgent milk tea layered with creamy cheesecake flavor and crunchy Oreo crumbs.', 
-    category: 'Milk Tea', 
-    image: '/images/OreoCheesecakeOverload.png', 
-    price: '₱140' 
-  },
-  { 
-    id: 11, 
-    name: 'Wintermelon', 
-    description: 'Refreshing, sweet, and unique milk tea with the mellow taste of wintermelon.', 
-    category: 'Milk Tea', 
-    image: '/images/Wintermelon.png', 
-    price: '₱90/100' 
-  },
-   { 
-    id: 12, 
-    name: 'Oreo', 
-    description: 'Creamy milk tea blended with crushed Oreo cookies and chewy boba.', 
-    category: 'Milk Tea', 
-    image: '/images/Oreo.png', 
-    price: '₱90/100' 
-  },
-  { 
-    id: 13, 
-    name: 'Pure Matcha Oat Latte', 
-    description: 'A truly authentic and vibrant experience. Premium matcha is perfectly blended with creamy milk.', 
-    category: 'Premium Matcha', 
-    image: '/images/PureMatchaOatLatte.png', 
-    price: '₱160' 
-  
-  },
-  { 
-    id: 14, 
-    name: 'Specialty Matcha', 
-    description: 'Our exclusive, high-quality matcha blend, perfectly whisked for an unparalleled, authentic taste.', 
-    category: 'Premium Matcha', 
-    image: '/images/SpecialtyMatcha.png', 
-    price: '₱250' 
-  },
-  { 
-    id: 15, 
-    name: 'Fries', 
-    description: 'perfectly golden and crispy French fries, great for sharing.', 
-    category: 'Snacks', 
-    image: 'images/Fries.png', 
-    price: '₱70/90' 
-  },
-  { 
-    id: 16, 
-    name: 'Cheese Sticks', 
-    description: 'Deep-fried, gooey cheese sticks with a savory, crispy coating.', 
-    category: 'Snacks', 
-    image: 'images/CheeseSticks.png', 
-    price: '₱60/80' 
-  },
-  { 
-    id: 17, 
-    name: 'Cheesy Corndogs', 
-    description: 'Classic corndogs with a blend of savory hotdog and gooey, melted cheese.', 
-    category: 'Quesadillas & Korean Corndogs', 
-    image: '/images/CheesyCorndogs.png', 
-    price: '₱135' 
-  },
-  { 
-    id: 18, 
-    name: 'Beef Quesadilla', 
-    description: 'Grilled tortilla filled with seasoned beef and cheese.', 
-    category: 'Quesadillas & Korean Corndogs', 
-    image: 'images/BeefQuesadilla.png', 
-    price: '₱130' 
-  },
-  { 
-    id: 19, 
-    name: 'Platter #3', 
-    description: 'The ultimate combo: Fries, 10 Cheese Sticks, 2 Hash Browns, and 3 Chicken Nuggets.', 
-    category: 'Platters', 
-    image: 'images/Platter3.png', 
-    price: '₱250' 
-  },
-  { 
-    id: 21, 
-    name: 'Biscoff Croffle', 
-    description: 'Croffle slathered with rich Biscoff spread and crunchy cookie crumbs.', 
-    category: 'Croffles', 
-    image: '/images/BiscoffCroffle.png', 
-    price: '₱160' 
-  },
-  { 
-    id: 22, 
-    name: 'Croffle with Whipped Cream & Syrup', 
-    description: 'Flaky croffle topped with fluffy whipped cream and sweet syrup.',
-    category: 'Croffles', 
-    image: '/images/WhipppedCroffle.png', 
-    price: '₱120' 
-  },
-];
-
 const PopularItems: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'All' | PopularItem['category']>('All');
-  const [search, setSearch] = useState('');
-  const [selectedItem, setSelectedItem] = useState<PopularItem | null>(null);
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("All");
+  const [search, setSearch] = useState("");
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedFlavor, setSelectedFlavor] = useState<string>('');
-  const [selectedAddOn, setSelectedAddOn] = useState<string>('');
+  const [selectedFlavor, setSelectedFlavor] = useState<string>("");
+  const [selectedAddOn, setSelectedAddOn] = useState<string>("");
 
-  const categories: ('All' | PopularItem['category'])[] = [
-    'All',
-    'Coffee',
-    'Milk Tea',
-    'Premium Matcha',
-    'Specialty Coffee',
-    'Lemonade & Fruit Juices',
-    'Snacks',
-    'Platters',
-    'Quesadillas & Korean Corndogs',
-    'Croffles',
+  // Fetch menu items from backend
+  useEffect(() => {
+    axios
+      .get("/api/menu")
+      .then((res) => setItems(res.data))
+      .catch((err) => console.error("Error fetching menu items:", err));
+  }, []);
+
+  // Capitalize first letter of each word
+  const capitalize = (str: string) =>
+    str.replace(/\b\w/g, (l) => l.toUpperCase());
+
+  // Dynamic categories from DB
+  const categories = [
+    "All",
+    ...Array.from(
+      new Set(
+        items
+          .flatMap((i) => i.categories.map((c) => capitalize(c)))
+          .filter((c) => c !== "Popular") // ⬅ REMOVE "Popular"
+      )
+    ),
   ];
 
-  const filtered = popularItems.filter((i) => {
-    const byCat = activeTab === 'All' || i.category === activeTab;
-    const bySearch = i.name.toLowerCase().includes(search.toLowerCase());
-    return byCat && bySearch;
+  // Filter logic
+  const filtered = items.filter((i) => {
+    const matchesCategory =
+      activeTab === "All" ||
+      i.categories.some((c) => capitalize(c) === activeTab);
+    const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
   });
 
+  // Quantity handlers
   const handleDecrease = () => quantity > 1 && setQuantity(quantity - 1);
   const handleIncrease = () => setQuantity(quantity + 1);
 
-  const isDrinkCategory = (cat: PopularItem['category']) =>
-    ['Coffee', 'Milk Tea', 'Premium Matcha', 'Specialty Coffee', 'Lemonade & Fruit Juices'].includes(cat);
-
-  const optionsMap: Record<string, { flavors: string[]; addOns: string[] }> = {
-    'Premium Matcha': { flavors: ['Hot', 'Cold'], addOns: ['Oat Milk'] },
-    'Specialty Coffee': { flavors: ['Hot', 'Cold'], addOns: ['Oat Milk', 'Extra Espresso'] },
-    'Lemonade & Fruit Juices': {
-      flavors: [],
-      addOns: [
-        'Pearls',
-        'Nata',
-        'Coffee Jelly',
-        'Strawberry Popping Bobba',
-        
-      ],
-    },
-    'Quesadillas & Korean Corndogs': { flavors: [], addOns: [] },
-    'Coffee': { flavors: [], addOns: ['Extra Matcha','Extra Coffee Shot'] },
-    'Milk Tea': { flavors: [], addOns: ['Pearls', 'Nata','Coffee Jelly','Crushed Oreo','Cream Cheese','Cheesecake','Extra Matcha Shot'] },
-    'Snacks': { flavors: [], addOns: [] },
-    'Platters': { flavors: [], addOns: [] },
-    'Croffles': { flavors: [], addOns: [] },
+  // Helper: map DB category/subcategory to optionsMap key
+  const mapToOptionsKey = (name: string) => {
+    const key = name.toLowerCase().replace(/fruitti/g, "fruit").trim();
+    if (["coffee", "coffees"].includes(key)) return "coffee";
+    if (["milk tea", "milktea"].includes(key)) return "milk tea";
+    if (["premium matcha"].includes(key)) return "premium matcha";
+    if (["specialty coffee"].includes(key)) return "specialty coffee";
+    if (["lemonade and fruit juices", "lemonade and frutti juice"].includes(key))
+      return "lemonade and fruit juices";
+    return key;
   };
 
-  const getOptionsFor = (item: PopularItem) => optionsMap[item.category] || { flavors: [], addOns: [] };
+  // Check if item is a drink
+  const isDrinkCategory = (item: MenuItem) => {
+    const drinkKeys = [
+      "coffee",
+      "milk tea",
+      "premium matcha",
+      "specialty coffee",
+      "lemonade and fruit juices",
+    ];
+    const allCats = [...item.categories, ...item.subcategories].map(mapToOptionsKey);
+    return allCats.some((c) => drinkKeys.includes(c));
+  };
+
+  // Get options for item
+  const getOptionsFor = (item: MenuItem) => {
+    const allCats = [...item.categories, ...item.subcategories].map(mapToOptionsKey);
+    const cat = allCats.find((c) => optionsMap[c]);
+    return cat ? optionsMap[cat] : { flavors: [], addOns: [] };
+  };
+
+  const optionsMap: Record<string, { flavors: string[]; addOns: string[] }> = {
+    "premium matcha": { flavors: ["Hot", "Cold"], addOns: ["Oat Milk"] },
+    "specialty coffee": { flavors: ["Hot", "Cold"], addOns: ["Oat Milk", "Extra Espresso"] },
+    "lemonade and fruit juices": {
+      flavors: [],
+      addOns: ["Pearls", "Nata", "Coffee Jelly", "Strawberry Popping Bobba"],
+    },
+    coffee: { flavors: [], addOns: ["Extra Matcha", "Extra Coffee Shot"] },
+    "milk tea": {
+      flavors: [],
+      addOns: [
+        "Pearls",
+        "Nata",
+        "Coffee Jelly",
+        "Crushed Oreo",
+        "Cream Cheese",
+        "Cheesecake",
+        "Extra Matcha Shot",
+      ],
+    },
+  };
+
+  const formatPrice = (price: { regular: string; large?: string }) => {
+    if (!price) return "";
+
+    const values = [
+      price.regular ? `₱${price.regular}` : null,
+      price.large ? `₱${price.large}` : null,
+    ];
+
+    return values.filter(Boolean).join(" | ");
+  };
+
+  const getAvailableSizes = (price: { regular?: string; large?: string }) => {
+    const sizes: string[] = [];
+
+    if (price.regular) sizes.push("16oz");
+    if (price.large) sizes.push("22oz");
+
+    return sizes;
+  };
 
   return (
     <div className="px-6 pt-10 pb-16">
@@ -260,8 +146,8 @@ const PopularItems: React.FC = () => {
               onClick={() => setActiveTab(t)}
               className={`text-sm font-semibold px-5 py-2 rounded-full border ${
                 activeTab === t
-                  ? 'bg-[#8CB662] text-white border-[#8CB662]'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  ? "bg-[#8CB662] text-white border-[#8CB662]"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-100"
               }`}
             >
               {t}
@@ -282,70 +168,94 @@ const PopularItems: React.FC = () => {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => setSelectedItem(item)}
-            className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden bg-white border cursor-pointer"
-          >
-            <div className="bg-[#E1E1E1] p-4 flex justify-center">
-              <img src={item.image} alt={item.name} className="w-60 h-60 object-contain rounded-xl" />
+        {filtered.map((item) => {
+          const isDrink = isDrinkCategory(item);
+          const displayPrice = formatPrice(item.price);
+
+          return (
+            <div
+              key={item.id}
+              onClick={() => setSelectedItem(item)}
+              className="rrounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
+            >
+              <div className="bg-[#E1E1E1] p-4 flex justify-center">
+                <img
+                  src={`/storage/${item.image_path}`}
+                  alt={item.name}
+                  className="w-60 h-60 object-contain rounded-xl"
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
+                <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                <div className="text-right text-lg text-[#76B13A] font-bold">
+                  {displayPrice}
+                </div>
+              </div>
             </div>
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-              <div className="text-right text-lg text-[#76B13A] font-bold">{item.price}</div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Modal */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-4xl rounded p-10 relative">
-            <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-black"
+            >
               <X size={24} />
             </button>
-            <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex flex-col md:flex-row gap-8 text-gray-900">
               <img
-                src={selectedItem.image}
+                src={`/storage/${selectedItem.image_path}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
               />
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
-                <div className="text-[#65B741] font-bold text-xl mb-2">{selectedItem.price}</div>
-                <p className="text-md text-gray-700 mb-4">{selectedItem.description}</p>
+                <div className="text-[#65B741] font-bold text-xl mb-2">
+                  {formatPrice(selectedItem.price)}
+                </div>
+                <p className="text-md text-gray-700 mb-4">
+                  {selectedItem.description}
+                </p>
 
                 {/* Quantity */}
                 <div className="mb-4">
                   <label className="text-base block font-semibold">Quantity</label>
                   <div className="flex items-center gap-2 mt-1">
-                    <button onClick={handleDecrease} className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white">
+                    <button
+                      onClick={handleDecrease}
+                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
+                    >
                       -
                     </button>
                     <span>{quantity}</span>
-                    <button onClick={handleIncrease} className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white">
+                    <button
+                      onClick={handleIncrease}
+                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
+                    >
                       +
                     </button>
                   </div>
                 </div>
 
                 {/* Size (Drinks Only) */}
-                {isDrinkCategory(selectedItem.category) && (
+                {isDrinkCategory(selectedItem) && (
                   <div className="mb-4">
                     <label className="text-sm font-semibold">Cup Size</label>
                     <div className="h-[2px] bg-[#8CB662] my-2" />
                     <div className="flex gap-2">
-                      {['16oz', '22oz'].map((s) => (
+                      {getAvailableSizes(selectedItem.price).map((s) => (
                         <button
                           key={s}
                           onClick={() => setSelectedSize(s)}
                           className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg ${
                             selectedSize === s
-                              ? 'bg-[#8CB662] text-white border-[#8CB662]'
-                              : 'hover:bg-[#8CB662] hover:text-white'
+                              ? "bg-[#8CB662] text-white border-[#8CB662]"
+                              : "hover:bg-[#8CB662] hover:text-white"
                           }`}
                         >
                           {s}
@@ -423,4 +333,3 @@ const PopularItems: React.FC = () => {
 };
 
 export default PopularItems;
-

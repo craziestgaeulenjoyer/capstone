@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { X, Search } from 'lucide-react';
+
+interface ApiItem {
+  id: number;
+  name: string;
+  description: string;
+  image_path: string;
+  price: { regular?: string; large?: string };
+  categories: string[];
+}
 
 interface PremiumMatchaItem {
   id: number;
@@ -8,51 +18,72 @@ interface PremiumMatchaItem {
   category: 'Premium Matcha';
   image: string;
   price: string;
+  rawPrice: { regular?: string; large?: string };
 }
 
-const premiumMatchaList: PremiumMatchaItem[] = [
-  { 
-    id: 1, 
-    name: 'Pure Matcha Latte', 
-    description: 'A truly authentic and vibrant experience. Premium matcha is perfectly blended with creamy milk.', 
-    category: 'Premium Matcha', 
-    image: '/images/PureMatchaLatte.png', 
-    price: '₱120' 
-  },
-  { 
-    id: 2, 
-    name: 'Pure Matcha Oat Latte', 
-    description: 'The dairy-free delight! Vibrant matcha blended with rich, creamy oat milk.', 
-    category: 'Premium Matcha', 
-    image: '/images/PureMatchaOatLatte.png', 
-    price: '₱160' 
-  },
-  { 
-    id: 3, 
-    name: 'Matcha Ichigo', 
-    description: 'A delicious fusion of smooth, earthy matcha and sweet, fruity strawberry flavor.', 
-    category: 'Premium Matcha', 
-    image: '/images/MatchaIchigo.png', 
-    price: '₱180' 
-  },
-  { 
-    id: 4, 
-    name: 'Specialty Matcha', 
-    description: 'Our exclusive, high-quality matcha blend, perfectly whisked for an unparalleled, authentic taste.', 
-    category: 'Premium Matcha', 
-    image: '/images/SpecialtyMatcha.png', 
-    price: '₱250' 
-  },
-];
-
 const PremiumMatcha: React.FC = () => {
+  const CATEGORY = 'Premium Matcha';
+
+  const [items, setItems] = useState<PremiumMatchaItem[]>([]);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<PremiumMatchaItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('16oz');
   const [selectedOption, setSelectedOption] = useState('');
 
-  const filtered = premiumMatchaList.filter(item =>
+  // ---------------------------
+  // FETCH PREMIUM MATCHA ITEMS
+  // ---------------------------
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const res = await axios.get('/api/menu');
+        const data: ApiItem[] = res.data.items || res.data || [];
+
+        console.log('Fetched menu items from API:', data);
+
+        // Filter only Premium Matcha category
+        const filtered = data.filter((item) =>
+          item.categories.includes(CATEGORY)
+        );
+
+        console.log('Filtered Premium Matcha items:', filtered);
+
+        // Map into PremiumMatchaItem with price formatting
+        const formatted: PremiumMatchaItem[] = filtered.map((item) => {
+          const { regular, large } = item.price;
+          let formattedPrice = '';
+          if (regular && large) formattedPrice = `₱${regular}/${large}`;
+          else if (regular) formattedPrice = `₱${regular}`;
+          else if (large) formattedPrice = `₱${large}`;
+
+          // Fix image URL (remove leading slash if exists)
+          const imagePath = item.image_path.startsWith('/')
+            ? item.image_path.slice(1)
+            : item.image_path;
+
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            category: 'Premium Matcha',
+            image: `/${imagePath}`,
+            price: formattedPrice,
+            rawPrice: item.price,
+          };
+        });
+
+        console.log('🍵 Formatted Premium Matcha items:', formatted);
+        setItems(formatted);
+      } catch (error) {
+        console.error('Error fetching Premium Matcha items:', error);
+      }
+    };
+
+    fetchItems();
+  }, []);
+
+  const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -66,7 +97,7 @@ const PremiumMatcha: React.FC = () => {
 
   return (
     <div className="px-6 pt-10 pb-16">
-      {/* Search bar  */}
+      {/* Search bar */}
       <div className="flex justify-end mb-10">
         <div className="relative w-full max-w-md">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -97,14 +128,13 @@ const PremiumMatcha: React.FC = () => {
             key={item.id}
             onClick={() => {
               setSelectedItem(item);
-              setSelectedSize('16oz');
               setSelectedOption('');
               setQuantity(1);
             }}
             className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden bg-white border cursor-pointer"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
-              <img src={item.image} alt={item.name} className="w-60 h-60 object-contain rounded-xl" />
+              <img src={`/storage/${item.image}`} alt={item.name} className="w-60 h-60 object-contain rounded-xl" />
             </div>
             <div className="p-4">
               <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
@@ -127,45 +157,45 @@ const PremiumMatcha: React.FC = () => {
             </button>
             <div className="flex flex-col md:flex-row gap-8">
               <img
-                src={selectedItem.image}
+                src={`/${selectedItem.image}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
               />
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+                <h2 className="text-xl font-bold mb-2 text-gray-900">{selectedItem.name}</h2>
                 <div className="text-[#65B741] font-bold text-xl mb-2">{selectedItem.price}</div>
-                <p className="text-md text-gray-700 mb-4">{selectedItem.description}</p>
+                <p className="text-md text-gray-700 mb-4 text-gray-900">{selectedItem.description}</p>
 
                 {/* Quantity */}
                 <div className="mb-4">
-                  <label className="text-base block font-semibold">Quantity</label>
+                  <label className="text-base block font-semibold text-gray-900">Quantity</label>
                   <div className="flex items-center gap-2 mt-1">
                     <button
                       onClick={handleDecrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
+                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
                     >
                       -
                     </button>
-                    <span>{quantity}</span>
+                    <span className='text-gray-900'>{quantity}</span>
                     <button
                       onClick={handleIncrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
+                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
                     >
                       +
                     </button>
                   </div>
                 </div>
 
-                {/* Cup Size  */}
+                {/* Cup Size */}
                 <div className="mb-4">
-                  <label className="text-sm font-semibold">Cup Size</label>
+                  <label className="text-sm font-semibold text-gray-900">Cup Size</label>
                   <div className="h-[2px] bg-[#8CB662] my-2" />
                   <div className="flex gap-2">
                     {['16oz', '22oz'].map(size => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg ${
+                        className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg text-gray-900 ${
                           selectedSize === size
                             ? 'bg-[#8CB662] text-white border-[#8CB662]'
                             : 'hover:bg-[#8CB662] hover:text-white'
@@ -179,12 +209,12 @@ const PremiumMatcha: React.FC = () => {
 
                 {/* Hot/Cold Option */}
                 <div className="mb-6">
-                  <label className="text-sm font-semibold">Option</label>
+                  <label className="text-sm font-semibold text-gray-900">Option</label>
                   <div className="h-[2px] bg-[#8CB662] my-2" />
                   <select
                     value={selectedOption}
                     onChange={(e) => setSelectedOption(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-2 focus:ring-[#8CB662]"
+                    className="w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-2 focus:ring-[#8CB662] text-gray-900"
                   >
                     <option value="" disabled>Select option</option>
                     {getOptions(selectedItem).map(opt => (
@@ -207,7 +237,7 @@ const PremiumMatcha: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> 
       )}
     </div>
   );
