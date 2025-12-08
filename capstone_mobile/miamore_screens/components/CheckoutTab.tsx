@@ -52,6 +52,7 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
   const [gcashModalVisible, setGcashModalVisible] = useState(false);
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<"delivery" | "pickup" | null>(null);
 
   // Step 1 → Proceed button
   const proceedToPayment = () => {
@@ -60,6 +61,11 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
 
   // Step 2 → Handle GCash modal + OTP flow
   const handleProceedPayment = async () => {
+    if (!fulfillmentMethod) {
+      Alert.alert("Select Fulfillment Method", "Please choose delivery or pickup.");
+      return;
+    }
+
     if (selectedPayment === "GCash") {
       setGcashModalVisible(true);
     } else if (selectedPayment === "Pay on Pickup") {
@@ -335,6 +341,52 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
             }
             size={22}
             color={selectedPayment === "Pay on Pickup" ? "#76B13A" : "#999"}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.paymentLabel}>Fulfillment Method</Text>
+
+        {/* To Deliver */}
+        <TouchableOpacity
+          style={[
+            styles.paymentOptionRow,
+            fulfillmentMethod === "delivery" && styles.paymentOptionSelected,
+          ]}
+          onPress={() => setFulfillmentMethod("delivery")}
+        >
+          <View style={styles.paymentLeftRow}>
+            <Icon name="bicycle-outline" size={24} color="#76B13A" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={styles.paymentName}>To Deliver</Text>
+              <Text style={styles.paymentDesc}>Your order will be delivered to your address.</Text>
+            </View>
+          </View>
+          <Icon
+            name={fulfillmentMethod === "delivery" ? "radio-button-on-outline" : "radio-button-off-outline"}
+            size={22}
+            color={fulfillmentMethod === "delivery" ? "#76B13A" : "#999"}
+          />
+        </TouchableOpacity>
+
+        {/* Pickup on Counter */}
+        <TouchableOpacity
+          style={[
+            styles.paymentOptionRow,
+            fulfillmentMethod === "pickup" && styles.paymentOptionSelected,
+          ]}
+          onPress={() => setFulfillmentMethod("pickup")}
+        >
+          <View style={styles.paymentLeftRow}>
+            <Icon name="walk-outline" size={24} color="#76B13A" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={styles.paymentName}>To Pickup on Counter</Text>
+              <Text style={styles.paymentDesc}>Pick up your order personally at the counter.</Text>
+            </View>
+          </View>
+          <Icon
+            name={fulfillmentMethod === "pickup" ? "radio-button-on-outline" : "radio-button-off-outline"}
+            size={22}
+            color={fulfillmentMethod === "pickup" ? "#76B13A" : "#999"}
           />
         </TouchableOpacity>
 

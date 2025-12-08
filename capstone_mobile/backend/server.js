@@ -1,8 +1,8 @@
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
-  console.log("Incoming token:", token ? token.slice(0, 40) + "..." : "None"); 
+  console.log("Incoming token:", token ? token.slice(0, 40) + "..." : "None");
 
   if (!token) return res.sendStatus(401);
 
@@ -11,14 +11,16 @@ function authenticateToken(req, res, next) {
       console.log("Token verification failed:", err.message);
       return res.sendStatus(403);
     }
-    req.userId = decoded.userId;
-    console.log("Token verified for user:", decoded.userId);
+
+    req.userId = decoded.userId; 
     next();
   });
 }
 
 const dotenv = require('dotenv'); 
 dotenv.config({ path: __dirname + '/.env' }); 
+
+const JWT_SECRET = process.env.JWT_SECRET || 'CFoJy9csauDWon3fhdTcviGLMZt6afHm'; 
 
 const express = require('express');
 const pool = require('./db');
@@ -32,6 +34,8 @@ const googleClient = new OAuth2Client('1018371869413-d6k2ancgs59ujstbuu8j6b38lo6
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 const fs = require("fs");
+const axios = require("axios");
+const FormData = require("form-data");
 
 console.log("Email user:", process.env.EMAIL_USER);
 console.log("Email pass exists:", !!process.env.EMAIL_PASS);
@@ -40,8 +44,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-const JWT_SECRET = 'CFoJy9csauDWon3fhdTcviGLMZt6afHm'; 
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -399,10 +401,92 @@ app.post('/api/reset-password', async (req, res) => {
   }
 });
 
+app.post("/api/profile/upload-picture", authenticateToken, upload.single("image"), async (req, res) => {
+  try {
+    // 1. Multer validation
+    if (!req.file) {
+      return res.status(400).json({ message: "No image uploaded." });
+    }
+
+    const userId = req.userId;  // FIXED: use req.userId (not req.user.id)
+    const filePath = req.file.path;
+
+    const formData = new FormData();
+    formData.append("image", fs.createReadStream(filePath));
+
+    // 2. Upload to Laravel
+    let uploadResponse;
+    try {
+      uploadResponse = await axios.post(
+        "http://127.0.0.1:8000/api/upload-profile-picture",
+        formData,
+        { headers: formData.getHeaders() }
+      );
+    } catch (laravelErr) {
+      console.error("Laravel upload FAILED:", laravelErr.response?.data || laravelErr);
+      return res.status(500).json({ message: "Laravel image upload failed." });
+    }
+
+    // 3. Laravel result
+    const data = uploadResponse.data;
+
+    // 4. Remove temp file
+    fs.unlinkSync(filePath);
+
+    // 5. Save path to PostgreSQL
+    await pool.query(
+      "UPDATE customers SET profile_picture = $1 WHERE id = $2",
+      [data.image_path, userId]
+    );
+
+    // 6. Response
+    return res.json({
+      message: "Profile updated successfully",
+      profile_picture: data.url
+    });
+
+  } catch (err) {
+    console.error("NODE upload error:", err);
+    res.status(500).json({ message: "Upload failed on server." });
+  }
+});
+
 // Menu Routes
 
+// Fetch menu items
+app.get('/api/menu-items', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, type, price, categories, subcategories, description, image_path
+      FROM menu_items
+      ORDER BY created_at DESC
+    `);
+
+    // Base URL for Laravel public storage
+    const LARAVEL_BASE_URL = process.env.LARAVEL_BASE_URL || "http://127.0.0.1:8000";
+
+    const items = result.rows.map(item => {
+      // Convert Node DB path to Laravel public storage path
+      const image_url = `${LARAVEL_BASE_URL}/storage/${item.image_path.replace("menu_images/", "menu-images/")}`;
+
+      // Log for backend debugging
+      console.log(`Menu item fetched: id=${item.id}, image_url=${image_url}`);
+
+      return {
+        ...item,
+        image_url
+      };
+    });
+
+    res.json(items);
+  } catch (err) {
+    console.error("Error fetching menu items:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 // Adding Items to Cart
-// Add Item to Cart with created_at timestamp
 app.post('/api/cart', authenticateToken, async (req, res) => {
   const { product_id, product_name, size, quantity, instructions, price, image } = req.body;
 
@@ -524,7 +608,7 @@ app.get("/api/orders/cancelled", authenticateToken, async (req, res) => {
 // Checkout route
 app.post("/api/checkout", authenticateToken, async (req, res) => {
   const userId = req.userId;
-  let { cartItems, paymentMethod, totalAmount, address } = req.body;
+  let { cartItems, paymentMethod, totalAmount, address, fulfillmentMethod } = req.body;
 
   console.log("📦 Raw checkout body:", req.body);
 
@@ -582,9 +666,9 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
       INSERT INTO orders (
         user_id, payment_method, total_amount, status,
         transaction_id, order_code, customer_name, customer_email,
-        customer_address, items, created_at
+        customer_address, items, fulfillment_method, created_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())
       RETURNING *;
     `;
 
@@ -598,6 +682,7 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
       user.full_name,
       user.email,
       address || null,
+      fulfillmentMethod,
       JSON.stringify(orderItems),
     ]);
 
@@ -876,13 +961,36 @@ app.post("/api/gcash/verify-otp", authenticateToken, (req, res) => {
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, full_name, email, gender, birthday, phone_number 
+      `SELECT id, full_name, email, gender, birthday, phone_number, profile_picture
        FROM customers 
        WHERE id = $1`,
       [req.userId]
     );
-    if (result.rows.length === 0) return res.status(404).json({ message: "User not found." });
-    res.json(result.rows[0]);
+    if (result.rows.length === 0)
+      return res.status(404).json({ message: "User not found." });
+
+    // Return the correct Laravel image URL
+    const user = result.rows[0];
+    const LOCAL_LARAVEL = "http://127.0.0.1:8000";  
+    const EMULATOR_LARAVEL = "http://10.0.2.2:8000";  
+    const isAndroidEmulator = req.headers['user-agent']?.includes("okhttp");
+
+    const baseUrl = isAndroidEmulator ? EMULATOR_LARAVEL : LOCAL_LARAVEL;
+
+    if (user.profile_picture) {
+      const storagePath = user.profile_picture;
+      const finalUrl = `${baseUrl}/storage/${storagePath}`;
+
+      console.log("-------- PROFILE IMAGE DEBUG --------");
+      console.log("Raw DB value:         ", storagePath);
+      console.log("Final URL Returned:   ", finalUrl);
+      console.log("Client Type:          ", isAndroidEmulator ? "Android Emulator" : "Web Browser / Node");
+      console.log("------------------------------------");
+
+      user.profile_picture = finalUrl;
+    }
+
+    res.json(user);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error." });

@@ -56,6 +56,10 @@ const SignInScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    console.log("🔥 SignInScreen Mounted!");
+  }, []);
+
   const handleLogin = async () => {
     setLoginError(''); 
 
