@@ -2,17 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\CustomerSignupController;
-use App\Http\Controllers\CustomerLoginController;
-
-///SIGN UP CUSTOMER ROUTE////
-Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
-//
-//SIGN IN CUSTOMER ROUTE///
-Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
-
-
-
+use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
+use App\Http\Controllers\Customer_Controllers\CustomerProfileController;
+use App\Http\Controllers\Customer_Controllers\CustomerPasswordResetController;
 
 /* ---------------- WEBSITE ROUTES ---------------- */
 

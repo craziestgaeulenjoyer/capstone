@@ -7,7 +7,7 @@ use App\Http\Controllers\Administrator_Controllers\AdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\SuperAdminAuthController;
 use App\Models\Admin;
 use App\Models\SuperAdmin;
-
+use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
 /*
 |--------------------------------------------------------------------------
 | AUTH ROUTES (ADMIN + SUPER ADMIN)
@@ -17,6 +17,47 @@ use App\Models\SuperAdmin;
 */
 
 Route::middleware(['web'])->group(function () {
+
+     /* =========================
+       CUSTOMER AUTH ROUTES
+    ==========================*/
+    Route::prefix('customer')->group(function () {
+
+        /* ---- SIGNUP PROCESS ---- */
+        Route::post('/signup', [CustomerAuthController::class, 'signup'])
+            ->name('customer.signup.store');
+
+        Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])
+            ->name('customer.signup.verify');
+
+        Route::post('/signup/resend', [CustomerAuthController::class, 'resendOtp'])
+            ->name('customer.signup.resend');
+
+        // After OTP verification → show form to complete profile
+        Route::get('/signup/form', [CustomerAuthController::class, 'showSignupForm'])
+            ->name('customer.signup.form');
+
+        // Show Verification screen
+        Route::get('/verification', [CustomerAuthController::class, 'showVerification'])
+            ->name('customer.verification');
+
+        /* ---- LOGIN ---- */
+        Route::post('/login', [CustomerAuthController::class, 'login'])
+            ->name('customer.login');
+
+        /* ---- PROTECTED CUSTOMER DASHBOARD ---- */
+        Route::middleware(['auth:customer', 'customer.verified'])->group(function () {
+
+            Route::get('/dashboard', function () {
+                return Inertia::render('CustomerDashboard/Home');
+            })->name('customer.dashboard');
+
+            Route::post('/logout', [CustomerAuthController::class, 'logout'])
+                ->name('customer.logout');
+        });
+
+    });
+
 
     /* ---------------- ADMIN AUTH ---------------- */
     Route::prefix('admin')->group(function () {

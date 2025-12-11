@@ -215,7 +215,7 @@ const CoffeeItems: React.FC = () => {
       {/* Modal */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-4xl rounded p-10 relative">
+          <div className="bg-white w-full max-w-4xl rounded p-10000 relative">
             <button
               onClick={() => setSelectedItem(null)}
               className="absolute top-4 right-4 text-gray-500 hover:text-black"
@@ -239,26 +239,7 @@ const CoffeeItems: React.FC = () => {
                   {selectedItem.description}
                 </p>
 
-                {/* Quantity */}
-                <div className="mb-4">
-                  <label className="text-base block font-semibold">Quantity</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
-                    >
-                      -
-                    </button>
-                    <span>{quantity}</span>
-                    <button
-                      onClick={handleIncrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
+                
                 {/* Size */}
                 <div className="mb-4">
                   <label className="text-sm font-semibold">Cup Size</label>
