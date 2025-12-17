@@ -98,19 +98,44 @@ class CustomerController extends Controller
     // Get loyalty progress (number of completed orders)
     public function getLoyalty($id)
     {
+        // Get customer
         $customer = DB::table('customers')->where('id', $id)->first();
+
         if (!$customer) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
-        $completedOrders = DB::table('orders')
-            ->where('user_id', $id)
+        // Fetch all completed orders for this customer's email
+        $orders = DB::table('orders')
+            ->where('customer_email', $customer->email)
             ->where('status', 'completed')
-            ->count();
+            ->get();
+
+        $totalDrinks = 0;
+
+        foreach ($orders as $order) {
+
+            // Decode JSONB items
+            $items = json_decode($order->items, true);
+
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    // Add quantity safely
+                    if (isset($item['quantity'])) {
+                        $totalDrinks += intval($item['quantity']);
+                    }
+                }
+            }
+        }
+
+        // Free drink when drinks >= 10
+        $freeAvailable = $totalDrinks >= 10;
 
         return response()->json([
             'customer_id' => $id,
-            'stamps' => $completedOrders,
+            'stamps' => $totalDrinks,
+            'free_drink_available' => $freeAvailable,
+            'free_drink_redeemed' => false   
         ]);
     }
 }

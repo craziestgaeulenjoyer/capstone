@@ -9,6 +9,8 @@ use App\Http\Controllers\Administrator_Controllers\MenuController;
 use App\Http\Controllers\Administrator_Controllers\InventoryController;
 use App\Http\Controllers\Administrator_Controllers\CustomerController;
 use App\Http\Controllers\Administrator_Controllers\SalesOrderController;
+use App\Http\Controllers\Administrator_Controllers\AnalyticsController;
+use App\Http\Controllers\Administrator_Controllers\ReportsController;
 
 /* ---------------- SUPER ADMIN ROUTES ---------------- */
 Route::prefix('superadmin')->group(function () {
@@ -48,6 +50,11 @@ Route::prefix('superadmin')->group(function () {
         Route::get('/customers/{id}/loyalty', [CustomerController::class, 'getLoyalty']);
     
         Route::get('/sales_orders', [SalesOrderController::class, 'index']);
+
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('superadmin.analytics');
+    
+        Route::get('/reports/daily', [ReportsController::class, 'daily'])
+        ->name('superadmin.reports.daily');
     });
 });
 
@@ -80,6 +87,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/customers/{id}/loyalty', [CustomerController::class, 'getLoyalty']);
     
         Route::get('/sales_orders', [SalesOrderController::class, 'index']);
+    
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('admin.analytics');
+    
+        Route::get('/reports/daily', [ReportsController::class, 'daily'])
+            ->name('admin.reports.daily');
     });
 });
 
