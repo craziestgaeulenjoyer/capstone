@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, Filter, Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, Filter } from 'lucide-react';
 import axios from 'axios';
 
-// Define the types for your data structures to avoid 'any'
 interface Customer {
   id: string;
   name: string;
@@ -10,6 +9,7 @@ interface Customer {
   orders: number;
   lastOrder: string;
   status: 'Active' | 'New' | 'Inactive';
+  created_at: string;
 }
 
 interface Metrics {
@@ -18,7 +18,6 @@ interface Metrics {
   new: number;
 }
 
-// Helper function to get the status tag style, with typed parameter
 const getStatusClasses = (status: Customer['status']) => {
   switch (status) {
     case 'Active':
@@ -38,138 +37,159 @@ const Customer_View = () => {
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const calendarRef = useRef<HTMLDivElement>(null);
-
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-
-  const statusOptions = ['Available', 'Low Stock', 'Out of Stock'];
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-
-  const sortOptions = ['Name (A-Z)', 'Stock (Low to High)', 'Stock (High to Low)', 'Expiry (Soonest)'];
+  const [selectedFilter, setSelectedFilter] = useState<string>('All Customers');
   const [selectedSort, setSelectedSort] = useState<string>('Name (A-Z)');
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      setLoading(true);
-      try {
-        const dashboardRole = sessionStorage.getItem('dashboard_role');
-        const authToken = localStorage.getItem('token'); 
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [profileModal, setProfileModal] = useState<any>(null);
+  const [loyaltyModal, setLoyaltyModal] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("profile");
 
-        let apiRoleSegment = '';
+  const filterOptions = [
+    'Newest Customers', 
+    'Active Customers', 
+    'All Customers'
+  ];
 
-        if (!authToken) {
-            console.warn('Authentication token not found in session storage. Redirecting to login or showing unauthorized message.');
-            // Optionally redirect to login page or display a specific "Please log in" message
-            setCustomerData([]);
-            setMetrics({ total: 0, active: 0, new: 0 });
-            setLoading(false);
-            return; // Stop execution if no token
-        }
+  const sortOptions = [
+    'Name (A-Z)',
+    'Date Created (Descending)',
+    'Date Created (Ascending)',
+    'Most Orders'
+  ];
 
-        if (dashboardRole === 'super_admin') {
-          apiRoleSegment = 'superadmin';
-        } else if (dashboardRole === 'admin') {
-          apiRoleSegment = 'admin';
-        } else {
-          console.warn('Unauthorized role or no role found in session storage. Defaulting to an empty state.');
-          setCustomerData([]);
-          setMetrics({ total: 0, active: 0, new: 0 });
-          setLoading(false);
-          return;
-        }
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const dashboardRole = sessionStorage.getItem('dashboard_role');
+      const authToken = localStorage.getItem('token');
+      const apiRoleSegment = dashboardRole === 'super_admin' ? 'superadmin' : 'admin';
+      const response = await axios.get(`/api/${apiRoleSegment}/customers`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = response.data;
 
-        const apiUrl = `/api/${apiRoleSegment}/customers`;
-        console.log(`Attempting to fetch customers from: ${apiUrl}`); // Log the URL for debugging
-
-        // Make the Axios request with the Authorization header
-        const response = await axios.get(apiUrl, {
-          headers: {
-            'Authorization': `Bearer ${authToken}` // <--- IMPORTANT: Add the Bearer token
-          }
-        });
-
-        const data = response.data;
-        console.log('API Response Data:', data); // Log the raw data here
-
-        if (!Array.isArray(data)) {
-          console.error('API response is not an array:', data);
-          setCustomerData([]);
-          setMetrics({ total: 0, active: 0, new: 0 });
-          return;
-        }
-
-        const formattedData: Customer[] = data.map((item: any) => ({
+      const formattedData: Customer[] = data.map((item: any) => ({
           id: String(item.id),
-          name: item.name || 'N/A',
-          contact: item.contact || 'N/A',
-          orders: item.orders !== undefined ? Number(item.orders) : 0,
-          lastOrder: item.lastOrder || 'No Orders',
-          status: item.status as Customer['status'] || 'Inactive',
-        }));
+          name: item.full_name ?? 'N/A',
+          contact: item.phone_number ?? item.email ?? 'N/A',
+          orders: item.orders ?? 0,
+          lastOrder: item.lastOrder ?? 'No Orders',
+          status: item.status as Customer['status'] ?? 'Inactive',
+          created_at: item.created_at ?? '',
+      }));
 
-        console.log('Formatted Customer Data:', formattedData);
+      setCustomerData(formattedData);
 
-        setCustomerData(formattedData);
+      const total = formattedData.length;
+      const active = formattedData.filter((c) => c.status === 'Active').length;
+      const newCust = formattedData.filter((c) => c.status === 'New').length;
+      setMetrics({ total, active, new: newCust });
+    } catch {
+      setCustomerData([]);
+      setMetrics({ total: 0, active: 0, new: 0 });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        // Metrics calculation
-        const total = formattedData.length;
-        const active = formattedData.filter((c: Customer) => c.status === 'Active').length;
-        const newCust = formattedData.filter((c: Customer) => c.status === 'New').length;
-
-        setMetrics({ total, active, new: newCust });
-      } catch (error) {
-        console.error('Error fetching customers:', error);
-        // If it's a 401, you might want to specifically handle it (e.g., redirect to login)
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-            console.error('Authentication failed, please log in.');
-            // Example: window.location.href = '/login';
-        }
-        setCustomerData([]);
-        setMetrics({ total: 0, active: 0, new: 0 });
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchCustomers();
-  }, []); 
+  }, []);
+
+  // View Profile Modal
+  const handleViewProfile = async (id: string) => {
+    try {
+      const dashboardRole = sessionStorage.getItem('dashboard_role');
+      const apiRoleSegment = dashboardRole === 'super_admin' ? 'superadmin' : 'admin';
+      const token = localStorage.getItem('token');
+
+      const res = await axios.get(`/api/${apiRoleSegment}/customers/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log('Profile API Response:', res.data); // Debugging
+
+      const data = res.data;
+
+      // Set modal with safe defaults
+      setProfileModal({
+        id: data.id ?? '',
+        full_name: data.full_name ?? 'No Name',
+        gender: data.gender ?? 'N/A',
+        birthday: data.birthday ?? 'N/A',
+        phone_number: data.phone_number ?? data.email ?? 'N/A',
+        email: data.email ?? 'N/A',
+        profile_picture: "/images/profile.jpg",
+        orders: data.orders ?? 0,
+        lastOrder: data.lastOrder ?? 'No Orders',
+        status: data.status ?? 'Inactive',
+        created_at: data.created_at ?? '',
+    });
+
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      alert('Failed to fetch customer profile.');
+    }
+  };
+
+  // View Loyalty Modal
+  const handleViewLoyalty = async (id: string) => {
+    try {
+      const dashboardRole = sessionStorage.getItem('dashboard_role');
+      const apiRoleSegment = dashboardRole === 'super_admin' ? 'superadmin' : 'admin';
+      const token = localStorage.getItem('token');
+
+      const res = await axios.get(`/api/${apiRoleSegment}/customers/${id}/loyalty`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log("LOYALTY:", res.data);
+
+      setLoyaltyModal({
+        customer_id: id,
+        stamps: res.data?.stamps ?? 0,
+        free_drink_available: res.data?.free_drink_available ?? false,
+        free_drink_redeemed: res.data?.free_drink_redeemed ?? false,
+      });
+
+    } catch (error) {
+      console.error('Error fetching loyalty:', error);
+      alert('Failed to fetch loyalty progress.');
+    }
+  };
 
   const filteredAndSortedData = customerData
-  .filter((customer) => {
-    // Search by ID or name or contact
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      customer.id.toLowerCase().includes(searchLower) ||
-      customer.name.toLowerCase().includes(searchLower) ||
-      customer.contact.toLowerCase().includes(searchLower);
-
-    // Filter by status
-    const matchesFilter =
-      selectedFilters.length === 0 || selectedFilters.includes(customer.status);
-
-    return matchesSearch && matchesFilter;
-  })
-  .sort((a, b) => {
-    switch (selectedSort) {
-      case 'Name (A-Z)':
-        return a.name.localeCompare(b.name);
-      case 'Stock (Low to High)':
-        return a.orders - b.orders;
-      case 'Stock (High to Low)':
-        return b.orders - a.orders;
-      case 'Expiry (Soonest)':
-        // Assuming lastOrder is a date string
-        return new Date(a.lastOrder).getTime() - new Date(b.lastOrder).getTime();
-      default:
-        return 0;
-    }
-  });
+    .filter((customer) => {
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch =
+        customer.id.toLowerCase().includes(searchLower) ||
+        customer.name.toLowerCase().includes(searchLower) ||
+        customer.contact.toLowerCase().includes(searchLower);
+      let matchesFilter = true;
+      if (selectedFilter === 'Active Customers') matchesFilter = customer.status === 'Active';
+      else if (selectedFilter === 'Newest Customers') {
+        const createdDate = new Date(customer.created_at);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        matchesFilter = createdDate >= sevenDaysAgo;
+      }
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      switch (selectedSort) {
+        case 'Name (A-Z)': return a.name.localeCompare(b.name);
+        case 'Date Created (Descending)': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'Date Created (Ascending)': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'Most Orders': return b.orders - a.orders;
+        default: return 0;
+      }
+    });
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 font-sans text-gray-800">
-      {/* Top Bar for controls */}
       <div className="flex flex-col sm:flex-row items-center justify-end gap-3 mb-4">
         {/* Sort by Button */}
         <div className="relative">
@@ -217,20 +237,19 @@ const Customer_View = () => {
           </button>
           {filterOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-md z-50 p-2">
-              {statusOptions.map((status) => (
-                <label key={status} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-gray-100 rounded">
+              {filterOptions.map((option) => (
+                <label
+                  key={option}
+                  className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 rounded"
+                >
                   <input
-                    type="checkbox"
-                    checked={selectedFilters.includes(status)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedFilters([...selectedFilters, status]);
-                      } else {
-                        setSelectedFilters(selectedFilters.filter((f) => f !== status));
-                      }
-                    }}
+                    type="radio"
+                    name="customerFilter"
+                    value={option}
+                    checked={selectedFilter === option}
+                    onChange={() => setSelectedFilter(option)}
                   />
-                  <span className="text-sm">{status}</span>
+                  <span className="text-sm">{option}</span>
                 </label>
               ))}
             </div>
@@ -287,80 +306,321 @@ const Customer_View = () => {
         </div>
       </div>
 
-      {/* Customer Overview Table Section */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-        
-        {/* Table Header with controls */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <h2 className="text-xl font-semibold text-gray-700">Customer Overview</h2>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-auto">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Filter search"
-                className="pl-9 pr-3 py-2 w-full rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Top Bar for controls */}
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mt-6">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Order Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+            </tr>
+          </thead>
+
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredAndSortedData.map((customer) => (
+              <tr key={customer.id}>
+                <td className="px-6 py-4 text-sm">{customer.id}</td>
+                <td className="px-6 py-4 text-sm">{customer.name}</td>
+                <td className="px-6 py-4 text-sm">{customer.contact}</td>
+                <td className="px-6 py-4 text-sm">{customer.orders}</td>
+                <td className="px-6 py-4 text-sm">{customer.lastOrder}</td>
+                <td className="px-6 py-4 text-sm">
+                  <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${getStatusClasses(customer.status)}`}>
+                    {customer.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-right relative">
+                  <MoreHorizontal
+                    className="cursor-pointer text-gray-500"
+                    onClick={() => setMenuOpenId(menuOpenId === customer.id ? null : customer.id)}
+                  />
+
+                  {menuOpenId === customer.id && (
+                    <div className="absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                      <div
+                        className="px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          handleViewProfile(customer.id);
+                          setMenuOpenId(null); // dropdown closes
+                        }}
+                      >
+                        View Profile
+                      </div>
+
+                      <div
+                        className="px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          handleViewLoyalty(customer.id);
+                          setMenuOpenId(null);
+                        }}
+                      >
+                        View Loyalty Progress
+                      </div>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* PROFILE MODAL */}
+      {profileModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-transparent flex items-center justify-center z-[999] p-4">
+
+          {/* MODAL CARD */}
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
+
+            {/* TOP BANNER */}
+            <div className="relative h-32 bg-gray-200">
+              <img
+                src="/images/profile-banner.jpg"
+                className="w-full h-full object-cover opacity-70"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#6CB74A] text-white rounded-lg border border-gray-300 hover:bg-[#8cb662] transition-colors duration-200 cursor-pointer">
-              <Upload size={16} />
-              Export
-            </button>
+
+            {/* AVATAR */}
+            <div className="relative flex justify-center -mt-12">
+              <img
+                src="/images/profile.jpg"
+                className="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover"
+              />
+            </div>
+
+            {/* NAME + EMAIL */}
+            <div className="text-center mt-3">
+              <h2 className="text-xl font-semibold">{profileModal.full_name}</h2>
+              <p className="text-gray-500 text-sm">{profileModal.email}</p>
+            </div>
+
+            {/* TAB STATE */}
+            {/** Add this at the top of your component */}
+            {/* const [activeTab, setActiveTab] = useState("profile"); */}
+
+            {/* TABS */}
+            <div className="flex justify-center gap-10 mt-5 border-b pb-2">
+              <button
+                className={`text-sm font-medium pb-1 ${
+                  activeTab === "profile"
+                    ? "border-b-2 border-black text-black"
+                    : "text-gray-500 hover:text-black"
+                }`}
+                onClick={() => setActiveTab("profile")}
+              >
+                Profile
+              </button>
+
+              <button
+                className={`text-sm font-medium pb-1 ${
+                  activeTab === "details"
+                    ? "border-b-2 border-black text-black"
+                    : "text-gray-500 hover:text-black"
+                }`}
+                onClick={() => setActiveTab("details")}
+              >
+                Other Details
+              </button>
+            </div>
+
+            {/* MAIN CONTENT */}
+            <div className="p-6 space-y-4">
+
+              {/* === PROFILE TAB === */}
+              {activeTab === "profile" && (
+                <>
+                  {/* FULL NAME */}
+                  <div>
+                    <label className="text-sm font-medium">Full Name</label>
+                    <input
+                      type="text"
+                      defaultValue={profileModal.full_name}
+                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
+                    />
+                  </div>
+
+                  {/* EMAIL */}
+                  <div>
+                    <label className="text-sm font-medium">Email</label>
+                    <input
+                      type="email"
+                      defaultValue={profileModal.email}
+                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
+                    />
+                  </div>
+
+                  {/* USERNAME */}
+                  <div>
+                    <label className="text-sm font-medium">Username</label>
+                    <input
+                      type="text"
+                      defaultValue={
+                        "@" + profileModal.full_name.replace(/\s+/g, "").toLowerCase()
+                      }
+                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* === OTHER DETAILS TAB === */}
+              {activeTab === "details" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div>
+                      <label className="text-sm font-medium">Phone Number</label>
+                      <input
+                        type="text"
+                        defaultValue={profileModal.phone_number}
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Birthday</label>
+                      <input
+                        type="text"
+                        defaultValue={profileModal.birthday}
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Gender</label>
+                      <input
+                        type="text"
+                        defaultValue={profileModal.gender}
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Status</label>
+                      <input
+                        type="text"
+                        defaultValue={profileModal.status}
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Total Orders</label>
+                      <input
+                        type="text"
+                        defaultValue={profileModal.orders}
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Last Order</label>
+                      <input
+                        type="text"
+                        defaultValue={profileModal.lastOrder}
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Created At</label>
+                      <input
+                        type="text"
+                        defaultValue={
+                          profileModal.created_at
+                            ? new Date(profileModal.created_at).toLocaleDateString()
+                            : "N/A"
+                        }
+                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* FOOTER */}
+            <div className="flex justify-end px-6 py-4 bg-gray-50">
+              <button
+                className="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400 transition"
+                onClick={() => setProfileModal(null)}
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
+      )}
 
-        {/* The main table */}
-        <div className="overflow-x-auto rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Order Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-4 text-center text-gray-500">
-                    Loading customer data...
-                  </td>
-                </tr>
-              ) : filteredAndSortedData.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-4 text-center text-gray-500">
-                    No matching customers found.
-                  </td>
-                </tr>
+      {/* LOYALTY MODAL */}
+      {loyaltyModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-transparent flex items-center justify-center z-[999] p-4">
+
+          <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl">
+
+            {/* TITLE */}
+            <h2 className="text-2xl font-semibold text-center mb-4">
+              Loyalty Progress
+            </h2>
+
+            <p className="text-sm text-gray-600 text-center">
+              1 drink = 1 stamp. Collect 10 stamps to earn a free drink.
+            </p>
+
+            {/* STATUS BADGE */}
+            <div className="text-center mt-4">
+              {loyaltyModal.free_drink_redeemed ? (
+                <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700">
+                  Free drink already redeemed 🎉
+                </span>
+              ) : loyaltyModal.free_drink_available ? (
+                <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">
+                  Free drink unlocked! 🎁
+                </span>
               ) : (
-                filteredAndSortedData.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50 transition-colors duration-200">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{customer.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.contact}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.orders}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.lastOrder}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClasses(customer.status)}`}>
-                        {customer.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <MoreHorizontal size={20} className="text-gray-400 cursor-pointer" />
-                    </td>
-                  </tr>
-                ))
+                <span className="px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-600">
+                  {10 - loyaltyModal.stamps} more stamps to unlock reward
+                </span>
               )}
-            </tbody>
-          </table>
+            </div>
+
+            {/* STAMP CIRCLES */}
+            <div className="grid grid-cols-5 gap-3 mt-6 justify-center">
+              {Array.from({ length: 10 }).map((_, i) => {
+                const filled = i < loyaltyModal.stamps;
+
+                return (
+                  <div
+                    key={i}
+                    className={`w-12 h-12 rounded-full border flex items-center justify-center font-semibold text-sm
+                      ${filled ? 'bg-green-300 border-green-600' : 'bg-gray-200 border-gray-400'}
+                    `}
+                  >
+                    {i + 1}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* CLOSE BUTTON */}
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setLoyaltyModal(null)}
+                className="px-5 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition"
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

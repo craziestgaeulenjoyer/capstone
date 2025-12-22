@@ -61,7 +61,6 @@ const CartScreen: React.FC = () => {
   const [editItem, setEditItem] = useState<any>(null);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrderState] = useState<any | null>(null);
-  const [selectedFreeDrinks, setSelectedFreeDrinks] = useState<any[]>([]);
   
   const [modalMessage, setModalMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");
@@ -89,9 +88,7 @@ const CartScreen: React.FC = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [loyaltyRewards, setLoyaltyRewards] = useState(0);
   const [loyaltyProgress, setLoyaltyProgress] = useState(0);
-
-  const points = 120;
-  const discount = 12;
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<"delivery" | "pickup" | null>(null);
 
   useEffect(() => {
     const loadCart = async () => {
@@ -299,6 +296,7 @@ const CartScreen: React.FC = () => {
       paymentMethod: selectedPayment,
       totalAmount, 
       address,
+      fulfillmentMethod,
     };
 
     console.log("🛒 Sending checkout payload:", JSON.stringify(payload, null, 2));
@@ -917,6 +915,7 @@ const CartScreen: React.FC = () => {
                       return;
                     }
 
+                    setFulfillmentMethod(null); 
                     setShowCheckoutTab(true);
                   }}
                 >
@@ -1043,6 +1042,8 @@ const CartScreen: React.FC = () => {
           setAddress={setAddress}
           selectedPayment={selectedPayment}
           setSelectedPayment={setSelectedPayment}
+          fulfillmentMethod={fulfillmentMethod}              
+          setFulfillmentMethod={setFulfillmentMethod}  
           handleCheckout={handleCheckout}
           subtotal={cartItems
             .filter((item) => selectedItems.includes(item.id))

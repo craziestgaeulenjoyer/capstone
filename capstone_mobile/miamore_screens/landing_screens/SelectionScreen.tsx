@@ -93,7 +93,23 @@ const SelectionScreen = () => {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate('SignIn')}
+        onPress={() => {
+          console.log("📌 Sign In button PRESSED");
+
+          if (!navigation) {
+            console.log("❌ Navigation object is NULL or undefined!");
+            return;
+          }
+
+          console.log("➡️ Navigating to: SignIn");
+
+          try {
+            navigation.navigate("SignIn");
+            console.log("✅ navigation.navigate('SignIn') executed");
+          } catch (error) {
+            console.log("🔥 Navigation ERROR:", error);
+          }
+        }}
       >
         <Text style={styles.buttonText}>Sign In</Text>
       </TouchableOpacity>

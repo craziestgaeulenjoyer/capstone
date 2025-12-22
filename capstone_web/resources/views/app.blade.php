@@ -37,7 +37,7 @@
 
         @routes
         @viteReactRefresh
-        @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+        @vite(['resources/js/app.tsx'])
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
@@ -46,61 +46,3 @@
     </body>
 </html>
 
-<!--
- 
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    {{-- Inline script to detect system dark mode preference --}}
-    <script>
-        (function() {
-            const appearance = '{{ $appearance ?? "system" }}';
-            if (appearance === 'system') {
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (prefersDark) {
-                    document.documentElement.classList.add('dark');
-                }
-            }
-        })();
-    </script>
-
-    {{-- Inline background color --}}
-    <style>
-        html { background-color: oklch(1 0 0); }
-        html.dark { background-color: oklch(0.145 0 0); }
-    </style>
-
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
-
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
-
-    @routes
-    @inertiaHead
-
-    {{-- Production Vite assets --}}
-    @php
-        $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
-        $appJs = $manifest['resources/js/app.tsx']['file'] ?? '';
-        $appCss = $manifest['resources/js/app.tsx']['css'][0] ?? '';
-        $pageJs = $manifest["resources/js/pages/{$page['component']}.tsx"]['file'] ?? '';
-    @endphp
-
-    @if($appCss)
-        <link rel="stylesheet" href="{{ asset('build/' . $appCss) }}">
-    @endif
-    @if($appJs)
-        <script type="module" src="{{ asset('build/' . $appJs) }}"></script>
-    @endif
-    @if($pageJs)
-        <script type="module" src="{{ asset('build/' . $pageJs) }}"></script>
-    @endif
-</head>
-<body class="font-sans antialiased">
-    @inertia
-</body>
-
---> 

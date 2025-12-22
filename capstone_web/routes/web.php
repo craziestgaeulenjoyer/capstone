@@ -2,19 +2,33 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\CustomerSignupController;
+use App\Http\Controllers\CustomerLoginController;
+
+///SIGN UP CUSTOMER ROUTE////
+Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
+//
+//SIGN IN CUSTOMER ROUTE///
+Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
+
+Route::get('/', fn () => Inertia::render('website_pages/Home_MiAmore'))->name('home');  
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
 use App\Http\Controllers\Customer_Controllers\CustomerProfileController;
 use App\Http\Controllers\Customer_Controllers\CustomerPasswordResetController;
 
 /* ---------------- WEBSITE ROUTES ---------------- */
 
-Route::get('/home', fn() => Inertia::render('website_pages/Home_MiAmore'))->name('home');
+Route::get('/home', fn() => Inertia::render('website_pages/Home_MiAmore'))
+    ->name('home');
 
-Route::get('/menu', fn() => Inertia::render('website_pages/Menu'))->name('menu');
+Route::get('/menu', fn() => Inertia::render('website_pages/Menu'))
+    ->name('menu');
 
-Route::get('/about-us', fn() => Inertia::render('website_pages/AboutUs'))->name('aboutus');
+Route::get('/about-us', fn() => Inertia::render('website_pages/AboutUs'))   
+    ->name('aboutus');
 
-Route::get('/event', fn() => Inertia::render('website_pages/Event'))->name('event');
+Route::get('/event', fn() => Inertia::render('website_pages/Event'))
+    ->name('event');
 
 Route::get('/contact-us', fn() => Inertia::render('home_sections/ContactSection'))
     ->name('contact-us');
@@ -76,15 +90,12 @@ Route::get('/sanctum/csrf-cookie', fn() => response()->json(['message' => 'CSRF 
 
 Route::middleware(['web'])->get('/login', fn() => redirect('/dashboardgetstarted'));
 
-
 /* ---------------- FALLBACK (FIXES INERTIA ERROR) ---------------- */
 
-Route::fallback(function () {
-    return Inertia::render('Errors/NotFound', [
-        'status' => 404,
-        'message' => 'Page not found'
-    ])->toResponse(request())->setStatusCode(404);
-});
+Route::fallback(fn() => Inertia::render('Errors/NotFound', [
+    'status' => 404,
+    'message' => 'Page not found'
+])->toResponse(request())->setStatusCode(404));
 
 
 /* ---------------- ADDITIONAL ROUTES ---------------- */
@@ -92,7 +103,3 @@ Route::fallback(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/api.php';
-
-Route::get('/{any}', function () {
-    return view('app');
-})->where('any', '.*');

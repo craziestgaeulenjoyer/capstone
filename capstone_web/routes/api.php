@@ -1,12 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Administrator_Controllers\AdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\SuperAdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\AdminsCreationController;
 use App\Http\Controllers\Administrator_Controllers\MenuController;
 use App\Http\Controllers\Administrator_Controllers\InventoryController;
 use App\Http\Controllers\Administrator_Controllers\CustomerController;
+use App\Http\Controllers\Administrator_Controllers\SalesOrderController;
+use App\Http\Controllers\Administrator_Controllers\AnalyticsController;
+use App\Http\Controllers\Administrator_Controllers\ReportsController;
 use Illuminate\Http\Request;
 
 // ---------------- CONTROLLERS ----------------
@@ -92,6 +96,15 @@ Route::prefix('superadmin')->group(function () {
         Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('inventory.archive');
     
         Route::get('/customers', [CustomerController::class, 'listCustomers']);
+        Route::get('/customers/{id}', [CustomerController::class, 'getCustomer']);
+        Route::get('/customers/{id}/loyalty', [CustomerController::class, 'getLoyalty']);
+    
+        Route::get('/sales_orders', [SalesOrderController::class, 'index']);
+
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('superadmin.analytics');
+    
+        Route::get('/reports/daily', [ReportsController::class, 'daily'])
+        ->name('superadmin.reports.daily');
     });
 });
 
@@ -117,11 +130,37 @@ Route::prefix('admin')->group(function () {
         Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('inventory.archive');
     
         Route::get('/customers', [CustomerController::class, 'listCustomers']);
+        Route::get('/customers/{id}', [CustomerController::class, 'getCustomer']);
+        Route::get('/customers/{id}/loyalty', [CustomerController::class, 'getLoyalty']);
+    
+        Route::get('/sales_orders', [SalesOrderController::class, 'index']);
+    
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('admin.analytics');
+    
+        Route::get('/reports/daily', [ReportsController::class, 'daily'])
+            ->name('admin.reports.daily');
     });
 });
 
 /* ---------------- PUBLIC MENU ---------------- */
+// Public Menu
 Route::get('/api/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
+
+// Upload Profile Picture
+Route::post('/upload-profile-picture', function (Request $request) {
+    $request->validate([
+        'image' => 'required|image|max:2048'
+    ]);
+
+    // Store into storage/app/public/profile-pictures
+    $path = $request->file('image')->store('profile-pictures', 'public');
+
+    return response()->json([
+        'message' => 'Uploaded successfully',
+        'image_path' => $path,
+        'url' => asset("storage/" . $path)
+    ]);
+});
 
 /* ---------------- FALLBACK ---------------- */
 Route::fallback(fn() => response()->json(['message' => 'Route not found.'], 404));

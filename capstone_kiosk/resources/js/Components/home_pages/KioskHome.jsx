@@ -1,11 +1,20 @@
 import React, { useState } from "react";
 import { IoIosArrowBack, IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 
 export default function KioskHome() {
   const [activeTab, setActiveTab] = useState("Home");
   const [language, setLanguage] = useState("EN");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+
+  const [selectedOption, setSelectedOption] = useState("");
+  const [selectedAddon, setSelectedAddon] = useState("");
+  const [selectedExtra, setSelectedExtra] = useState("");
+  const [selectedFlavor, setSelectedFlavor] = useState("");
 
   const languages = ["EN", "KR", "JP", "CN", "PH"];
 
@@ -22,34 +31,162 @@ export default function KioskHome() {
   ];
 
   const bestSellers = [
-    { id: 1, name: "Pure Matcha Oat Latte", image: "/images/PureMatchaOatLatte.png" },
-    { id: 2, name: "Specialty Matcha", image: "/images/SpecialtyMatcha.png" },
-    { id: 3, name: "Sea Salt Honey", image: "/images/SeaSaltHoney.png" },
-    { id: 4, name: "White Chocolate Mocha", image: "/images/WhiteChocolateMocha.png" },
-    { id: 5, name: "Dulce De Leche", image: "/images/DulceDeLeche.png" },
-    { id: 6, name: "Ice Snow Coffee", image: "/images/IceSnowCoffee.png" },
-    { id: 7, name: "Okinawa", image: "/images/Okinawa.png" },
-    { id: 8, name: "Wintermelon", image: "/images/Wintermelon.png" },
-    { id: 9, name: "Oreo", image: "/images/Oreo.png" },
-    { id: 10, name: "Oreo Cheesecake Overload", image: "/images/OreoCheesecakeOverload.png" },
-    { id: 11, name: "Classic Lemonade", image: "/images/ClassicLemonade.png" },
-    { id: 12, name: "Strawberry Lemonade", image: "/images/StrawberryLemonade.png" },
-    { id: 13, name: "Watermelon with Strawberry Popping Bobba", image: "/images/PoppingBobba.png" },
-    { id: 14, name: "Peach Iced Tea", image: "/images/PeachIcedTea.png" },
-    { id: 15, name: "Fries", image: "/images/Fries.png" },
-    { id: 16, name: "Cheese Sticks", image: "/images/CheeseSticks.png" },
-    { id: 17, name: "Platter #3", image: "/images/Platter3.png" },
-    { id: 18, name: "Beef Quesadillas", image: "/images/BeefQuesadilla.png" },
-    { id: 19, name: "Cheesy Corndogs", image: "/images/CheesyCorndogs.png" },
-    { id: 20, name: "Croffle with Whipped Cream & Syrup", image: "/images/WhipppedCroffle.png" },
-    { id: 21, name: "Biscoff Croffle", image: "/images/BiscoffCroffle.png" },
-  ];
+  { id: 1, name: "Pure Matcha Oat Latte", image: "/images/PureMatchaOatLatte.png", price: 160 },
+  { id: 2, name: "Specialty Matcha", image: "/images/SpecialtyMatcha.png", price: 250 },
+  { id: 3, name: "Sea Salt Honey", image: "/images/SeaSaltHoney.png", price: 170 },
+  { id: 4, name: "White Chocolate Mocha", image: "/images/WhiteChocolateMocha.png", price: 180 },
+  { id: 5, name: "Dulce De Leche", image: "/images/DulceDeLeche.png", price: 180 },
+  { id: 6, name: "Iced Snow Coffee", image: "/images/IceSnowCoffee.png", price: 120 },
+  { id: 7, name: "Okinawa", image: "/images/Okinawa.png", price: 90 },
+  { id: 8, name: "Wintermelon", image: "/images/Wintermelon.png", price: 90 },
+  { id: 9, name: "Oreo", image: "/images/Oreo.png", price: 90 },
+  { id: 10, name: "Oreo Cheesecake Overload", image: "/images/OreoCheesecakeOverload.png", price: 140 },
+  { id: 11, name: "Classic Lemonade", image: "/images/ClassicLemonade.png", price: 60 },
+  { id: 12, name: "Strawberry Lemonade", image: "/images/StrawberryLemonade.png", price: 70 },
+  { id: 13, name: "Watermelon with Strawberry Popping Bobba", image: "/images/PoppingBobba.png", price: 100 },
+  { id: 14, name: "Peach Iced Tea", image: "/images/PeachIcedTea.png", price: 100 },
+  { id: 15, name: "French Fries", image: "/images/Fries.png", price: 70 },
+  { id: 16, name: "Cheese Sticks", image: "/images/CheeseSticks.png", price: 50 },
+  { id: 17, name: "Platter #3", image: "/images/Platter3.png", price: 210 },
+  { id: 18, name: "Beef Quesadillas", image: "/images/BeefQuesadilla.png", price: 130 },
+  { id: 19, name: "Cheesy Corndogs", image: "/images/CheesyCorndogs.png", price: 135 },
+  { id: 20, name: "Croffle with Whipped Cream & Syrup", image: "/images/WhipppedCroffle.png", price: 120 },
+  { id: 21, name: "Biscoff Croffle", image: "/images/BiscoffCroffle.png", price: 160 },
+];
 
   const displayedItems = activeTab === "Home" ? menuItems : bestSellers;
 
   const handleLanguageSelect = (lang) => {
     setLanguage(lang);
     setDropdownOpen(false);
+  };
+
+
+   // Detect Category Based on Product Name
+  const detectCategory = (name) => {
+    if (["Pure Matcha Oat Latte", "Specialty Matcha"].includes(name)) return "Premium Matcha";
+
+    if (
+      ["Sea Salt Honey", "White Chocolate Mocha", "Dulce De Leche"].includes(name)
+    )
+      return "Specialty Coffee";
+
+    if (["Ice Snow Coffee"].includes(name)) return "Coffee";
+
+    if (
+      ["Okinawa", "Wintermelon", "Oreo", "Oreo Cheesecake Overload"].includes(name)
+    )
+      return "Milk Tea";
+
+    if (
+      ["Classic Lemonade", "Strawberry Lemonade", "Watermelon with Strawberry Popping Bobba", "Peach Iced Tea"].includes(name)
+    )
+      return "Lemonade & Fruit Juices";
+
+    if (["Fries", "Cheese Sticks"].includes(name)) return "Snacks";
+
+    if (["Platter #3"].includes(name)) return "Platters";
+
+    if (["Beef Quesadillas"].includes(name)) return "Quesadillas";
+
+    if (["Cheesy Corndogs"].includes(name)) return "Corndog";
+
+    if (
+      ["Croffle with Whipped Cream & Syrup", "Biscoff Croffle"].includes(name)
+    )
+      return "Croffle";
+
+    return null;
+  };
+
+  // Option Mapping
+  const optionConfig = {
+    "Premium Matcha": {
+      optionLabel: "Select Option",
+      options: ["Hot", "Cold"],
+      addOns: [],
+      extras: [],
+      flavors: [],
+    },
+
+    "Specialty Coffee": {
+      optionLabel: "Select Option",
+      options: ["Hot", "Cold"],
+      addOns: ["Oat Milk", "Extra Espresso"],
+    },
+
+    Coffee: {
+      optionLabel: null,
+      options: [],
+      addOns: ["Extra Matcha Shot", "Extra Coffee Shot"],
+    },
+
+    "Milk Tea": {
+      optionLabel: null,
+      options: [],
+      addOns: [
+        "Pearls",
+        "Nata",
+        "Coffee Jelly",
+        "Crushed Oreo",
+        "Cream Cheese",
+        "Cheesecake",
+        "Extra Match Shot",
+      ],
+    },
+
+    "Lemonade & Fruit Juices": {
+      options: [],
+      addOns: ["Pearls", "Nata", "Coffee Jelly", "Strawberry Popping Bobba"],
+    },
+
+    Snacks: {
+      flavors: ["Cheese", "Sour & Cream", "BBQ", "Butter Cheese", "Honey Butter"],
+    },
+
+    Platters: {
+      extras: ["Add Extra Nuggets"],
+    },
+
+    Quesadillas: {
+      extras: ["Extra Garlic Sauce"],
+    },
+
+    Corndog: {
+      noOptions: true,
+    },
+
+    Croffle: {
+      noOptions: true,
+    },
+  };
+
+  const handleItemClick = (item) => {
+    if (activeTab !== "Popular") return;
+
+    setSelectedItem({
+      ...item,
+      category: detectCategory(item.name),
+    });
+
+    setQuantity(1);
+    setSelectedOption("");
+    setSelectedAddon("");
+    setSelectedExtra("");
+    setSelectedFlavor("");
+  };
+
+  const handleAddToCart = () => {
+    console.log("Added to cart:", {
+      item: selectedItem,
+      quantity,
+      option: selectedOption,
+      addon: selectedAddon,
+      extra: selectedExtra,
+      flavor: selectedFlavor,
+    });
+
+    setSelectedItem(null);
   };
 
   return (
@@ -138,6 +275,7 @@ export default function KioskHome() {
           {displayedItems.map((item) => (
             <motion.div
               key={item.id}
+              onClick={() => handleItemClick(item)}
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 200 }}
               className="bg-[#f8f8f8] rounded-lg flex flex-col items-center p-4 shadow-lg"
@@ -154,6 +292,170 @@ export default function KioskHome() {
           ))}
         </motion.div>
       </div>
+
+
+{/* MODAL */}
+      <AnimatePresence>
+        {selectedItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white w-[90%] max-w-[480px] rounded-[30px] p-5 relative shadow-2xl flex flex-col items-center text-center"
+            >
+              {/* CLOSE BUTTON */}
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="absolute top-4 right-4 text-[#8CB662]"
+              >
+                <X size={22} />
+              </button>
+
+              {/* IMAGE */}
+              <img
+                src={selectedItem.image}
+                alt={selectedItem.name}
+                className="w-[110px] h-[110px] object-contain mt-2"
+              />
+
+              {/* NAME */}
+              <h2 className="text-base font-semibold mt-2">
+                {selectedItem.name}
+              </h2>
+
+              {/* PRICE */}
+              <p className="text-[#65B741] font-bold text-sm">
+                ₱ {selectedItem.price?.toFixed(2)}
+              </p>
+
+
+              {/* QUANTITY */}
+              <div className="mt-3 flex items-center space-x-3">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="px-3 py-1 border rounded"
+                >
+                  –
+                </button>
+                <span>{quantity}</span>
+                <button
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="px-3 py-1 border rounded"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* OPTIONS BASED ON CATEGORY */}
+              {(() => {
+                const cat = selectedItem.category;
+                const cfg = optionConfig[cat];
+
+                if (!cfg || cfg.noOptions) return null;
+
+                return (
+                  <>
+                    {/* OPTION (Hot/Cold) */}
+                    {cfg.options?.length > 0 && (
+                      <div className="mt-4 w-full px-4 text-left">
+                        <p className="font-semibold mb-1 text-sm">
+                          {cfg.optionLabel || "Select Option"}
+                        </p>
+                        <select
+                          value={selectedOption}
+                          onChange={(e) => setSelectedOption(e.target.value)}
+                          className="w-full border px-3 py-2 rounded-lg text-sm"
+                        >
+                          <option value="">Select option</option>
+                          {cfg.options.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* ADD-ONS */}
+                    {cfg.addOns?.length > 0 && (
+                      <div className="mt-4 w-full px-4 text-left">
+                        <p className="font-semibold mb-1 text-sm">Add-ons</p>
+                        <select
+                          value={selectedAddon}
+                          onChange={(e) => setSelectedAddon(e.target.value)}
+                          className="w-full border px-3 py-2 rounded-lg text-sm"
+                        >
+                          <option value="">Select Add-on</option>
+                          {cfg.addOns.map((ad) => (
+                            <option key={ad} value={ad}>
+                              {ad}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* FLAVORS */}
+                    {cfg.flavors?.length > 0 && (
+                      <div className="mt-4 w-full px-4 text-left">
+                        <p className="font-semibold mb-1 text-sm">Select Flavor</p>
+                        <select
+                          value={selectedFlavor}
+                          onChange={(e) => setSelectedFlavor(e.target.value)}
+                          className="w-full border px-3 py-2 rounded-lg text-sm"
+                        >
+                          <option value="">Select Flavor</option>
+                          {cfg.flavors.map((flav) => (
+                            <option key={flav} value={flav}>
+                              {flav}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* EXTRAS */}
+                    {cfg.extras?.length > 0 && (
+                      <div className="mt-4 w-full px-4 text-left">
+                        <p className="font-semibold mb-1 text-sm">Extras</p>
+                        <select
+                          value={selectedExtra}
+                          onChange={(e) => setSelectedExtra(e.target.value)}
+                          className="w-full border px-3 py-2 rounded-lg text-sm"
+                        >
+                          <option value="">Select Extra</option>
+                          {cfg.extras.map((ex) => (
+                            <option key={ex} value={ex}>
+                              {ex}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="mt-6 flex justify-between w-full px-4">
+                <button
+                  onClick={handleAddToCart}
+                  className="bg-[#8CB662] text-white px-6 py-2 rounded-full text-xs font-semibold"
+                >
+                  Add to Cart
+                </button>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="bg-gray-300 px-6 py-2 rounded-full text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Navigation */}
       <div className="sticky bottom-0 w-full bg-white py-3 shadow-inner flex flex-col items-center">
