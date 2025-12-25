@@ -10,22 +10,27 @@ interface Props {
 
 const VerificationEmail: React.FC<Props> = ({ email, success, error }) => {
   const { data, setData, post, processing, errors } = useForm({
-    email,
-    otp_code: "",
+    email, // Keep existing email logic
+    otp_code: "", // Keep existing string-based otp logic
   });
 
-  const [otpExpiry, setOtpExpiry] = useState<number>(5 * 60); // 5 mins
+  const [otpExpiry, setOtpExpiry] = useState<number>(5 * 60);
   const [resendDisabled, setResendDisabled] = useState<boolean>(true);
   const [resendTimer, setResendTimer] = useState<number>(10);
 
-  // OTP expiry countdown
+  // Helper to mask email like in the picture (e.g., jo****123@gmail.com)
+  const maskEmail = (userEmail: string) => {
+    const [name, domain] = userEmail.split("@");
+    if (name.length <= 4) return userEmail;
+    return `${name.substring(0, 2)}*******${name.slice(-3)}@${domain}`;
+  };
+
   useEffect(() => {
     if (otpExpiry <= 0) return;
     const timer = setInterval(() => setOtpExpiry((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [otpExpiry]);
 
-  // Resend button cooldown
   useEffect(() => {
     if (resendTimer <= 0) {
       setResendDisabled(false);
@@ -45,103 +50,90 @@ const VerificationEmail: React.FC<Props> = ({ email, success, error }) => {
     setResendTimer(10);
     setOtpExpiry(5 * 60);
     setData("otp_code", "");
-
-    post(route("customer.signup.resend"), {
-      onSuccess: () => {
-        alert("A new OTP has been sent to your email!");
-      },
-      onError: () => {
-        alert("Failed to resend OTP. Please try again.");
-      },
-    });
-  };
-
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60).toString().padStart(2, "0");
-    const sec = (s % 60).toString().padStart(2, "0");
-    return `${m}:${sec}`;
+    post(route("customer.signup.resend"));
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-[#F5F7FA] px-4">
+    <div className="min-h-screen flex justify-center items-center bg-[#F2F4F7] px-4 font-sans">
       <motion.div
-        initial={{ opacity: 0, y: 25 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8"
+        className="bg-white rounded-[32px] shadow-sm w-full max-w-[380px] p-8 relative overflow-hidden"
       >
-        <h1 className="text-2xl font-bold text-center text-[#1B3C2A] mb-2">
-          Verify Your Email
-        </h1>
+        {/* Back Arrow */}
+        <button 
+          onClick={() => window.history.back()} 
+          className="absolute top-6 left-6 text-[#8CB662] hover:opacity-70 transition cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
 
-        <p className="text-center text-gray-600 mb-6">
-          We sent a One-Time Password (OTP) to your email: <br />
-          <span className="font-semibold">{email}</span>
+        {/* Illustration Area */}
+        <div className="flex justify-center mb-4 mt-6">
+          <div className="w-40 h-40 flex items-center justify-center">
+            <img 
+              src="images/Emails-amico.png" 
+              alt="Verification Illustration"
+              className="max-w-full h-auto"
+            />
+          </div>
+        </div>
+
+        <h2 className="text-[24px] font-bold text-center text-[#1A1A1A] mb-2">
+          Verification
+        </h2>
+
+        <p className="text-center text-gray-400 text-[14px] leading-relaxed mb-8">
+          Please enter the code we sent to <br />
+          <span className="text-gray-500 font-medium">
+            {maskEmail(email)}
+          </span>
         </p>
 
-        {success && (
-          <p className="text-green-600 text-center mb-2 font-medium">
-            {success}
-          </p>
-        )}
-        {error && (
-          <p className="text-red-600 text-center mb-2 font-medium">{error}</p>
-        )}
-
-        {/* OTP INPUT */}
         <form onSubmit={handleSubmit}>
-          <label className="block text-gray-700 font-medium mb-2">
-            Enter OTP Code
-          </label>
+          {/* Unified Input */}
+          <div className="flex flex-col items-center mb-6">
+            <input
+              type="text"
+              maxLength={6}
+              placeholder="••••••"
+              value={data.otp_code}
+              onChange={(e) => setData("otp_code", e.target.value)}
+              className="w-full max-w-[240px] text-center text-3xl tracking-[12px] font-bold py-3 border-b-2 border-gray-100 focus:border-[#8CB662] outline-none transition-colors text-gray-700 placeholder:text-gray-200"
+            />
+            {errors.otp_code && (
+              <p className="text-red-500 text-xs mt-2">{errors.otp_code}</p>
+            )}
+          </div>
 
-          <motion.input
-            whileFocus={{ scale: 1.02 }}
-            type="text"
-            maxLength={6}
-            value={data.otp_code}
-            onChange={(e) => setData("otp_code", e.target.value)}
-            className="w-full text-center text-2xl tracking-widest font-bold border border-gray-300 rounded-lg py-3 focus:ring-2 focus:ring-[#8CB662] outline-none"
-            required
-          />
-
-          {errors.otp_code && (
-            <p className="text-red-500 text-sm mt-1">{errors.otp_code}</p>
-          )}
+          <div className="text-center mb-8">
+            <p className="text-[13px] text-gray-500">
+              If you don't receive a code!{" "}
+              <button
+                type="button"
+                disabled={resendDisabled}
+                onClick={handleResend}
+                className={`font-semibold transition-colors ${
+                  resendDisabled ? "text-gray-300 cursor-not-allowed" : "text-[#F06A6A] hover:underline cursor-pointer"
+                }`}
+              >
+                Resend {resendDisabled && `(${resendTimer}s)`}
+              </button>
+            </p>
+          </div>
 
           <button
             type="submit"
             disabled={processing}
-            className={`mt-6 w-full py-3 rounded-lg text-white text-lg font-semibold transition ${
-              processing
-                ? "bg-gray-400"
-                : "bg-[#8CB662] hover:bg-[#7aa85a] shadow-md"
+            className={`w-full py-4 rounded-[22px] text-white text-[18px] font-bold shadow-md transition-all active:scale-[0.98] ${
+              processing ? "bg-gray-300" : "bg-[#8CB662] hover:bg-[#7da357] shadow-[#8CB662]/20"
             }`}
           >
-            {processing ? "Verifying..." : "Verify OTP"}
+            {processing ? "Verifying..." : "Verify"}
           </button>
         </form>
-
-        {/* TIMER + RESEND */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 mb-2">
-            OTP expires in:{" "}
-            <span className="font-semibold">{formatTime(otpExpiry)}</span>
-          </p>
-
-          <button
-            disabled={resendDisabled}
-            onClick={handleResend}
-            className={`px-5 py-2 rounded-lg font-semibold transition ${
-              resendDisabled
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-blue-500 text-white hover:bg-blue-600 shadow-md"
-            }`}
-          >
-            {resendDisabled
-              ? `Resend OTP in ${resendTimer}s`
-              : "Resend OTP"}
-          </button>
-        </div>
       </motion.div>
     </div>
   );

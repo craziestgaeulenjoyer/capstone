@@ -9,18 +9,28 @@ use App\Http\Controllers\Administrator_Controllers\MenuController;
 use App\Http\Controllers\Administrator_Controllers\InventoryController;
 use App\Http\Controllers\Administrator_Controllers\CustomerController;
 use App\Http\Controllers\Administrator_Controllers\SalesOrderController;
-use App\Http\Controllers\Administrator_Controllers\AnalyticsController;
-use App\Http\Controllers\Administrator_Controllers\ReportsController;
-use Illuminate\Http\Request;
-
-// ---------------- CONTROLLERS ----------------
 use App\Http\Controllers\Home_Controllers\ContactController;
 use App\Http\Controllers\Home_Controllers\EventInquiryController;
-
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
 use App\Http\Controllers\Customer_Controllers\CustomerProfileController;
 use App\Http\Controllers\Customer_Controllers\CustomerSocialController;
 use App\Http\Controllers\Customer_Controllers\ForgotPasswordController;
+/* ---------------- CART ROUTES ---------------- */
+
+use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
+use App\Http\Controllers\Cart_Controllers\CartController;
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/cart/add', [CartController::class, 'store']);
+    Route::get('/cart/items', [CartController::class, 'items']);
+    Route::get('/cart/count', [CartController::class, 'count']);
+    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+    Route::post('/order/store', [PlacedOrderController::class, 'store']);
+    Route::post(
+    '/order/confirm',
+    [PlacedOrderController::class, 'confirm']);
+});
+
 
 /* ---------------- PUBLIC ROUTES ---------------- */
 // Event Inquiry
@@ -100,11 +110,6 @@ Route::prefix('superadmin')->group(function () {
         Route::get('/customers/{id}/loyalty', [CustomerController::class, 'getLoyalty']);
     
         Route::get('/sales_orders', [SalesOrderController::class, 'index']);
-
-        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('superadmin.analytics');
-    
-        Route::get('/reports/daily', [ReportsController::class, 'daily'])
-        ->name('superadmin.reports.daily');
     });
 });
 
@@ -134,16 +139,14 @@ Route::prefix('admin')->group(function () {
         Route::get('/customers/{id}/loyalty', [CustomerController::class, 'getLoyalty']);
     
         Route::get('/sales_orders', [SalesOrderController::class, 'index']);
-    
-        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('admin.analytics');
-    
-        Route::get('/reports/daily', [ReportsController::class, 'daily'])
-            ->name('admin.reports.daily');
     });
 });
 
+
 /* ---------------- PUBLIC MENU ---------------- */
+
 // Public Menu
+
 Route::get('/api/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
 
 // Upload Profile Picture

@@ -45,7 +45,8 @@ const Customer_View = () => {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [profileModal, setProfileModal] = useState<any>(null);
   const [loyaltyModal, setLoyaltyModal] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("profile");
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const filterOptions = [
     'Newest Customers', 
@@ -59,6 +60,19 @@ const Customer_View = () => {
     'Date Created (Ascending)',
     'Most Orders'
   ];
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -122,7 +136,7 @@ const Customer_View = () => {
         birthday: data.birthday ?? 'N/A',
         phone_number: data.phone_number ?? data.email ?? 'N/A',
         email: data.email ?? 'N/A',
-        profile_picture: "/images/profile.jpg",
+        profile_picture: data.profile_picture ?? null,
         orders: data.orders ?? 0,
         lastOrder: data.lastOrder ?? 'No Orders',
         status: data.status ?? 'Inactive',
@@ -146,13 +160,11 @@ const Customer_View = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log("LOYALTY:", res.data);
+      console.log('Loyalty API Response:', res.data); // Debugging
 
       setLoyaltyModal({
         customer_id: id,
-        stamps: res.data?.stamps ?? 0,
-        free_drink_available: res.data?.free_drink_available ?? false,
-        free_drink_redeemed: res.data?.free_drink_redeemed ?? false,
+        stamps: res.data?.stamps ?? 0, // default to 0 if undefined
       });
 
     } catch (error) {
@@ -335,292 +347,113 @@ const Customer_View = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right relative">
-                  <MoreHorizontal
-                    className="cursor-pointer text-gray-500"
-                    onClick={() => setMenuOpenId(menuOpenId === customer.id ? null : customer.id)}
-                  />
-
-                  {menuOpenId === customer.id && (
-                    <div className="absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-                      <div
-                        className="px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
-                        onClick={() => {
-                          handleViewProfile(customer.id);
-                          setMenuOpenId(null); // dropdown closes
-                        }}
-                      >
-                        View Profile
+                  <div ref={dropdownRef}>
+                    <MoreHorizontal
+                      className="cursor-pointer text-gray-500"
+                      onClick={() => setMenuOpenId(menuOpenId === customer.id ? null : customer.id)}
+                    />
+                    {menuOpenId === customer.id && (
+                      <div className="absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                        <div
+                          className="px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            handleViewProfile(customer.id);
+                            setMenuOpenId(null);
+                          }}
+                        >
+                          View Profile
+                        </div>
+                        <div
+                          className="px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            handleViewLoyalty(customer.id);
+                            setMenuOpenId(null);
+                          }}
+                        >
+                          View Loyalty Progress
+                        </div>
                       </div>
-
-                      <div
-                        className="px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
-                        onClick={() => {
-                          handleViewLoyalty(customer.id);
-                          setMenuOpenId(null);
-                        }}
-                      >
-                        View Loyalty Progress
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      
+
       {/* PROFILE MODAL */}
-      {profileModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-transparent flex items-center justify-center z-[999] p-4">
+      {profileModal ? (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-[999]">
+          <div className="bg-white w-full max-w-md p-6 rounded-xl shadow-lg">
+            <h2 className="text-xl font-semibold mb-4">Customer Profile</h2>
 
-          {/* MODAL CARD */}
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
-
-            {/* TOP BANNER */}
-            <div className="relative h-32 bg-gray-200">
-              <img
-                src="/images/profile-banner.jpg"
-                className="w-full h-full object-cover opacity-70"
-              />
-            </div>
-
-            {/* AVATAR */}
-            <div className="relative flex justify-center -mt-12">
-              <img
-                src="/images/profile.jpg"
-                className="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover"
-              />
-            </div>
-
-            {/* NAME + EMAIL */}
-            <div className="text-center mt-3">
-              <h2 className="text-xl font-semibold">{profileModal.full_name}</h2>
-              <p className="text-gray-500 text-sm">{profileModal.email}</p>
-            </div>
-
-            {/* TAB STATE */}
-            {/** Add this at the top of your component */}
-            {/* const [activeTab, setActiveTab] = useState("profile"); */}
-
-            {/* TABS */}
-            <div className="flex justify-center gap-10 mt-5 border-b pb-2">
-              <button
-                className={`text-sm font-medium pb-1 ${
-                  activeTab === "profile"
-                    ? "border-b-2 border-black text-black"
-                    : "text-gray-500 hover:text-black"
-                }`}
-                onClick={() => setActiveTab("profile")}
-              >
-                Profile
-              </button>
-
-              <button
-                className={`text-sm font-medium pb-1 ${
-                  activeTab === "details"
-                    ? "border-b-2 border-black text-black"
-                    : "text-gray-500 hover:text-black"
-                }`}
-                onClick={() => setActiveTab("details")}
-              >
-                Other Details
-              </button>
-            </div>
-
-            {/* MAIN CONTENT */}
-            <div className="p-6 space-y-4">
-
-              {/* === PROFILE TAB === */}
-              {activeTab === "profile" && (
-                <>
-                  {/* FULL NAME */}
-                  <div>
-                    <label className="text-sm font-medium">Full Name</label>
-                    <input
-                      type="text"
-                      defaultValue={profileModal.full_name}
-                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
-                    />
-                  </div>
-
-                  {/* EMAIL */}
-                  <div>
-                    <label className="text-sm font-medium">Email</label>
-                    <input
-                      type="email"
-                      defaultValue={profileModal.email}
-                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
-                    />
-                  </div>
-
-                  {/* USERNAME */}
-                  <div>
-                    <label className="text-sm font-medium">Username</label>
-                    <input
-                      type="text"
-                      defaultValue={
-                        "@" + profileModal.full_name.replace(/\s+/g, "").toLowerCase()
-                      }
-                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
-                    />
-                  </div>
-                </>
+            <div className="flex flex-col items-center gap-3 mb-4">
+              {profileModal.profile_picture ? (
+                <img
+                  src={profileModal.profile_picture}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                  No Image
+                </div>
               )}
-
-              {/* === OTHER DETAILS TAB === */}
-              {activeTab === "details" && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                    <div>
-                      <label className="text-sm font-medium">Phone Number</label>
-                      <input
-                        type="text"
-                        defaultValue={profileModal.phone_number}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Birthday</label>
-                      <input
-                        type="text"
-                        defaultValue={profileModal.birthday}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Gender</label>
-                      <input
-                        type="text"
-                        defaultValue={profileModal.gender}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Status</label>
-                      <input
-                        type="text"
-                        defaultValue={profileModal.status}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Total Orders</label>
-                      <input
-                        type="text"
-                        defaultValue={profileModal.orders}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Last Order</label>
-                      <input
-                        type="text"
-                        defaultValue={profileModal.lastOrder}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium">Created At</label>
-                      <input
-                        type="text"
-                        defaultValue={
-                          profileModal.created_at
-                            ? new Date(profileModal.created_at).toLocaleDateString()
-                            : "N/A"
-                        }
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
+              <h3 className="text-lg font-semibold">{profileModal.full_name || 'N/A'}</h3>
             </div>
 
-            {/* FOOTER */}
-            <div className="flex justify-end px-6 py-4 bg-gray-50">
-              <button
-                className="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400 transition"
-                onClick={() => setProfileModal(null)}
-              >
-                Close
-              </button>
+            <div className="text-sm space-y-2">
+              <p><strong>Gender:</strong> {profileModal.gender || 'N/A'}</p>
+              <p><strong>Birthday:</strong> {profileModal.birthday || 'N/A'}</p>
+              <p><strong>Phone:</strong> {profileModal.phone_number || 'N/A'}</p>
+              <p><strong>Email:</strong> {profileModal.email || 'N/A'}</p>
+              <p><strong>Status:</strong> {profileModal.status || 'N/A'}</p>
+              <p><strong>Created:</strong> {profileModal.created_at ? new Date(profileModal.created_at).toLocaleDateString() : 'N/A'}</p>
+              <p><strong>Total Orders:</strong> {profileModal.orders ?? 0}</p>
+              <p><strong>Last Order:</strong> {profileModal.lastOrder || 'No Orders'}</p>
             </div>
 
+            <button
+              className="mt-4 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition"
+              onClick={() => setProfileModal(null)}
+            >
+              Close
+            </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* LOYALTY MODAL */}
-      {loyaltyModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-transparent flex items-center justify-center z-[999] p-4">
+      {loyaltyModal ? (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-[999]">
+          <div className="bg-white w-full max-w-md p-6 rounded-xl shadow-lg text-center">
+            <h2 className="text-xl font-semibold mb-4">Loyalty Progress</h2>
 
-          <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl">
+            <p className="mb-2">Each circle represents 1 completed drink order.</p>
+            <p className="mb-4">Redeem a free drink every 10 completed orders.</p>
 
-            {/* TITLE */}
-            <h2 className="text-2xl font-semibold text-center mb-4">
-              Loyalty Progress
-            </h2>
-
-            <p className="text-sm text-gray-600 text-center">
-              1 drink = 1 stamp. Collect 10 stamps to earn a free drink.
-            </p>
-
-            {/* STATUS BADGE */}
-            <div className="text-center mt-4">
-              {loyaltyModal.free_drink_redeemed ? (
-                <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700">
-                  Free drink already redeemed 🎉
-                </span>
-              ) : loyaltyModal.free_drink_available ? (
-                <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">
-                  Free drink unlocked! 🎁
-                </span>
-              ) : (
-                <span className="px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-600">
-                  {10 - loyaltyModal.stamps} more stamps to unlock reward
-                </span>
-              )}
+            <div className="grid grid-cols-5 gap-3 mt-4">
+              {[...Array(10)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-10 h-10 rounded-full border flex items-center justify-center text-sm
+                    ${i < (loyaltyModal.stamps ?? 0) ? 'bg-green-300 border-green-600' : 'bg-gray-200 border-gray-400'}`}
+                >
+                  {i + 1}
+                </div>
+              ))}
             </div>
 
-            {/* STAMP CIRCLES */}
-            <div className="grid grid-cols-5 gap-3 mt-6 justify-center">
-              {Array.from({ length: 10 }).map((_, i) => {
-                const filled = i < loyaltyModal.stamps;
-
-                return (
-                  <div
-                    key={i}
-                    className={`w-12 h-12 rounded-full border flex items-center justify-center font-semibold text-sm
-                      ${filled ? 'bg-green-300 border-green-600' : 'bg-gray-200 border-gray-400'}
-                    `}
-                  >
-                    {i + 1}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* CLOSE BUTTON */}
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => setLoyaltyModal(null)}
-                className="px-5 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition"
-              >
-                Close
-              </button>
-            </div>
-
+            <button
+              className="mt-6 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition"
+              onClick={() => setLoyaltyModal(null)}
+            >
+              Close
+            </button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
