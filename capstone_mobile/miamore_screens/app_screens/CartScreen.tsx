@@ -915,6 +915,7 @@ const CartScreen: React.FC = () => {
                       return;
                     }
 
+                    setFulfillmentMethod(null); 
                     setShowCheckoutTab(true);
                   }}
                 >
@@ -1041,6 +1042,8 @@ const CartScreen: React.FC = () => {
           setAddress={setAddress}
           selectedPayment={selectedPayment}
           setSelectedPayment={setSelectedPayment}
+          fulfillmentMethod={fulfillmentMethod}              
+          setFulfillmentMethod={setFulfillmentMethod}  
           handleCheckout={handleCheckout}
           subtotal={cartItems
             .filter((item) => selectedItems.includes(item.id))

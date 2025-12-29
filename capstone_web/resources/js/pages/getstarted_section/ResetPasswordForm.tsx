@@ -1,107 +1,78 @@
 import React, { useState } from 'react';
-import { Link } from '@inertiajs/react';
-import { motion } from 'framer-motion';
+import axios from "axios";
 
 const ResetPasswordForm = () => {
-  const [newPasswordVisible, setNewPasswordVisible] = useState(false);
-  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const email = localStorage.getItem("reset_email") || '';
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<any>({});
+  const [processing, setProcessing] = useState(false);
 
-  const toggleNewPasswordVisibility = () => setNewPasswordVisible(!newPasswordVisible);
-  const toggleConfirmPasswordVisibility = () => setConfirmPasswordVisible(!confirmPasswordVisible);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setProcessing(true);
+    setErrors({});
+
+    try {
+      await axios.post('/api/customer/reset-password', {
+        email,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+      alert("Password reset successfully");
+      window.location.href = "/login";
+    } catch (error: any) {
+      if (error.response?.data?.errors) setErrors(error.response.data.errors);
+      else if (error.response?.data?.message) setErrors({ general: error.response.data.message });
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-200 px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col"
-      >
       
-        <div className="absolute top-5 left-4">
-          <Link href="/" className="text-[#8CB662] hover:text-[#b3ee77]"> 
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
-        </div>
-
-       
-        <div className="absolute top-2 right-8">
-          <img
-            src="/images/MiAmore2.png" 
-            alt="Logo"
-            className="h-15 w-auto object-contain" 
-          />
-        </div>
-
-   
-        <h2 className="text-2xl font-semibold text-[#8CB662] mb-2 mt-8">Reset Password</h2>
-
-        <p className="text-gray-600 text-sm mb-6">
-          Set a new password for your account to regain access and enjoy all features.
-        </p>
-
- 
-        <div className="mb-4">
-          <label htmlFor="new-password" className="block text-gray-700 text-sm font-medium mb-2">
-            New Password
-          </label>
-          <div className="relative">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex justify-between items-center mt-4">
+  <button
+    onClick={() => window.history.back()}
+    className="text-gray-500 hover:text-gray-700 text-sm"
+  >
+    ← Back
+  </button>
+</div>
+        <h2 className="text-2xl font-semibold text-[#8CB662] mb-2 mt-8 text-center">Reset Password</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 text-sm font-medium mb-1">New Password</label>
             <input
-              type={newPasswordVisible ? 'text' : 'password'}
-              id="new-password"
-              className="w-full border border-gray-300 rounded-lg py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#8CB662] transition" 
-              placeholder="Enter new password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
-            <button
-              type="button"
-              onClick={toggleNewPasswordVisibility}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#4A6030] hover:text-[#8CB662] focus:outline-none" 
-            >
-              {newPasswordVisible ? 'Hide' : 'Show'}
-            </button>
+            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
           </div>
-        </div>
-
-       
-        <div className="mb-6">
-          <label htmlFor="confirm-password" className="block text-gray-700 text-sm font-medium mb-2">
-            Confirm Password
-          </label>
-          <div className="relative">
+          <div>
+            <label className="block text-gray-700 text-sm font-medium mb-1">Confirm Password</label>
             <input
-              type={confirmPasswordVisible ? 'text' : 'password'}
-              id="confirm-password"
-              className="w-full border border-gray-300 rounded-lg py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#8CB662] transition"
-              placeholder="Confirm password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
-            <button
-              type="button"
-              onClick={toggleConfirmPasswordVisibility}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#4A6030] hover:text-[#8CB662] focus:outline-none"
-            >
-              {confirmPasswordVisible ? 'Hide' : 'Show'}
-            </button>
+            {errors.password_confirmation && <p className="text-red-500 text-sm">{errors.password_confirmation}</p>}
           </div>
-        </div>
-
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Link
-            href='NextPage' 
-            className="block text-center bg-white text-[#8CB662] border border-[#8CB662] shadow-sm font-bold py-3 rounded-lg
-                       transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#8CB662]
-                       hover:bg-[#8CB662] hover:text-white hover:shadow-md"
+          {errors.general && <p className="text-red-500 text-sm">{errors.general}</p>}
+          <button
+            type="submit"
+            disabled={processing}
+            className="w-full block text-center bg-[#8CB662] text-white font-bold py-2.5 rounded-lg hover:opacity-90 transition"
           >
-            Reset Password
-          </Link>
-        </motion.div>
-      </motion.div>
+            {processing ? 'Resetting...' : 'Reset Password'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

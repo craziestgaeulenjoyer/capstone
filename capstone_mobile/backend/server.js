@@ -218,7 +218,7 @@ app.post('/api/verify-otp', async (req, res) => {
     }
 
     await pool.query(
-      'UPDATE customers SET email_verified = true, otp_code = NULL, otp_token = NULL, otp_expiry = NULL WHERE id = $1',
+      'UPDATE customers SET email_verified = true, otp_code = NULL, otp_token = NULL, otp_expiry = NULL, logged_in_at = NOW() WHERE id = $1',
       [userId]
     );
 
@@ -610,96 +610,147 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
   const userId = req.userId;
   let { cartItems, paymentMethod, totalAmount, address, fulfillmentMethod } = req.body;
 
-  console.log("📦 Raw checkout body:", req.body);
+  const safeFulfillment =
+  fulfillmentMethod === "delivery" || fulfillmentMethod === "pickup"
+    ? fulfillmentMethod
+    : null;
+    
+  console.log("Raw checkout body:", req.body);
 
   try {
-    // Safely handle cartItems (could be JSON string or array)
+    // -----------------------------
+    // Normalize cartItems
+    // -----------------------------
     if (typeof cartItems === "string") {
       try {
         cartItems = JSON.parse(cartItems);
       } catch (err) {
         console.error("❌ Failed to parse cartItems JSON:", err);
-        cartItems = [];
+        return res.status(400).json({ message: "Invalid cartItems format." });
       }
     }
 
     if (!Array.isArray(cartItems)) {
-      console.warn("cartItems is not an array, defaulting to empty array");
-      cartItems = [];
+      return res.status(400).json({ message: "cartItems must be an array." });
     }
 
-    console.log("Parsed cartItems:", cartItems);
-
+    // -----------------------------
     // Fetch user info
+    // -----------------------------
     const userResult = await pool.query(
       "SELECT full_name, email FROM customers WHERE id = $1",
       [userId]
     );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
     const user = userResult.rows[0];
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Create order metadata
+    // -----------------------------
+    // Order metadata
+    // -----------------------------
     const orderCode = "ORD-" + Math.floor(100000 + Math.random() * 900000);
-    let transactionId = null;
-    let orderStatus = "pending";
+    const orderStatus = "pending";
 
+    let transactionId = null;
     if (paymentMethod === "Pay on Pickup") {
       transactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
     }
 
-    // Build item array
+    // -----------------------------
+    // Build items JSON (STRICT)
+    // -----------------------------
     const orderItems = cartItems.map((i) => ({
-      id: i.product_id || i.id,
-      name: i.product_name,
-      size: i.size || null,
+      id: i.product_id ?? i.id,
+      name: i.product_name ?? i.name,
+      size: i.size ?? null,
       quantity: Number(i.quantity),
       price: Number(i.price),
-      is_free: i.is_free || false,
-      image: i.image || null,
-      instructions: i.instructions || "",
+      image: i.image ?? null,
+      instructions: i.instructions ?? "",
+      is_free: Boolean(i.is_free),
     }));
 
-    console.log("🧾 Final orderItems to store:", orderItems);
+    const safeItems = JSON.stringify(orderItems); 
+    const safeFulfillmentMethod = fulfillmentMethod ?? null;
 
-    // Insert into orders (with JSONB)
-    const insertOrder = `
+    console.log("INSERT DEBUG:", {
+      itemsType: typeof safeItems,
+      fulfillmentMethodType: typeof safeFulfillmentMethod,
+      fulfillmentMethod: safeFulfillmentMethod,
+      itemsPreview: orderItems,
+    });
+
+    // -----------------------------
+    // INSERT (LOCKED ORDER)
+    // -----------------------------
+    const insertOrderQuery = `
       INSERT INTO orders (
-        user_id, payment_method, total_amount, status,
-        transaction_id, order_code, customer_name, customer_email,
-        customer_address, items, fulfillment_method, created_at
+        user_id,
+        payment_method,
+        total_amount,
+        status,
+        transaction_id,
+        order_code,
+        customer_name,
+        customer_email,
+        customer_address,
+        items,
+        fulfillment_method,
+        created_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())
+      VALUES (
+        $1,  -- user_id
+        $2,  -- payment_method
+        $3,  -- total_amount
+        $4,  -- status
+        $5,  -- transaction_id
+        $6,  -- order_code
+        $7,  -- customer_name
+        $8,  -- customer_email
+        $9,  -- customer_address
+        $10, -- items (JSONB)
+        $11, -- fulfillment_method
+        NOW()
+      )
       RETURNING *;
     `;
 
-    const orderResult = await pool.query(insertOrder, [
-      userId,
-      paymentMethod,
-      totalAmount,
-      orderStatus,
-      transactionId,
-      orderCode,
-      user.full_name,
-      user.email,
-      address || null,
-      fulfillmentMethod,
-      JSON.stringify(orderItems),
+    const orderResult = await pool.query(insertOrderQuery, [
+      userId,                  // $1
+      paymentMethod,           // $2
+      totalAmount,             // $3
+      orderStatus,             // $4
+      transactionId,           // $5
+      orderCode,               // $6
+      user.full_name,          // $7
+      user.email,              // $8
+      address || null,         // $9
+      safeItems,               // $10 ✅ items
+      safeFulfillmentMethod,   // $11 ✅ fulfillment_method
     ]);
 
-    console.log("✅ Order saved:", orderResult.rows[0]);
+    console.log("✅ Order saved correctly:", orderResult.rows[0]);
 
+    // -----------------------------
+    // Response
+    // -----------------------------
     res.status(200).json({
       message: "Order placed successfully",
       order_code: orderCode,
       transaction_id: transactionId,
-      full_name: user.full_name,
-      email: user.email,
       status: orderStatus,
       items: orderItems,
     });
+
   } catch (err) {
-    console.error("Checkout error:", err);
-    res.status(500).json({ message: "Server error during checkout", error: err.message });
+    console.error("❌ Checkout error:", err);
+    res.status(500).json({
+      message: "Server error during checkout",
+      error: err.message,
+    });
   }
 });
 

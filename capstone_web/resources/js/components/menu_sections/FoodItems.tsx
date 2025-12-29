@@ -34,38 +34,41 @@ const FoodItems: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'All' | FoodItem['category']>('All');
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
+
   const [quantity, setQuantity] = useState(1);
   const [selectedFlavor, setSelectedFlavor] = useState('');
   const [selectedExtra, setSelectedExtra] = useState('');
   const [selectedSize, setSelectedSize] = useState<'regular' | 'large' | ''>('');
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  /* 🔐 CHECK LOGIN (same as CoffeeItems) */
   useEffect(() => {
-    axios
-      .get("/api/menu")
+    const token = localStorage.getItem('customer_token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  /* 📦 FETCH MENU */
+  useEffect(() => {
+    axios.get('/api/menu')
       .then((res) => {
         const data: ApiItem[] = res.data.items || res.data;
 
-        console.log("Fetched menu items from API:", data);
-
-        // Filter items whose subcategories include any of our main food subcategories
         const filtered = data.filter((item) =>
           item.subcategories.some((sub) =>
             SUBCATEGORIES.some((cat) => sub.endsWith(`:${cat}`))
           )
         );
 
-        console.log("🔹 Items after subcategory filter:", filtered);
-
-        // Map into FoodItem[]
         const foodItems: FoodItem[] = filtered.map((item) => {
           const sub = item.subcategories.find((sc) =>
             SUBCATEGORIES.some((cat) => sc.endsWith(`:${cat}`))
           );
 
-          const subcategory = sub ? sub.split(":")[1].trim() : "Snacks"; // default to Snacks
+          const category = sub ? sub.split(':')[1] : 'Snacks';
 
           const { regular, large } = item.price;
-          let formattedPrice = "";
+          let formattedPrice = '';
           if (regular && large) formattedPrice = `₱${regular}/${large}`;
           else if (regular) formattedPrice = `₱${regular}`;
           else if (large) formattedPrice = `₱${large}`;
@@ -74,18 +77,16 @@ const FoodItems: React.FC = () => {
             id: item.id,
             name: item.name,
             description: item.description,
-            category: subcategory as FoodItem['category'],
-            image: `/storage/${item.image_path.replace(/^\//, '')}`,
+            category: category as FoodItem['category'],
+            image: `/storage/${item.image_path}`,
             price: formattedPrice,
             rawPrice: item.price,
           };
         });
 
-        console.log("🍔 Detected Food Items:", foodItems);
-
         setItems(foodItems);
       })
-      .catch((e) => console.error("Error loading food items:", e));
+      .catch(console.error);
   }, []);
 
   const filtered = items.filter((item) => {
@@ -97,65 +98,101 @@ const FoodItems: React.FC = () => {
   const handleDecrease = () => quantity > 1 && setQuantity(quantity - 1);
   const handleIncrease = () => setQuantity(quantity + 1);
 
+  /* 🛒 ADD TO CART (COPIED LOGIC FROM CoffeeItems) */
+  const handleAddToCart = async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token || !selectedItem) {
+      alert('Please log in to add items to cart.');
+      return;
+    }
+
+    const price =
+      selectedSize === 'large'
+        ? selectedItem.rawPrice.large
+        : selectedItem.rawPrice.regular;
+
+    try {
+      await axios.post(
+        '/api/cart/add',
+        {
+          product_id: selectedItem.id,
+          product_name: selectedItem.name,
+          size: selectedSize || null,
+          quantity,
+          instructions: selectedExtra || selectedFlavor || '',
+          price,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      alert('Item added to cart!');
+      setSelectedItem(null);
+      setQuantity(1);
+      setSelectedFlavor('');
+      setSelectedExtra('');
+      setSelectedSize('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add item to cart.');
+    }
+  };
+
   const getOptionsFor = (item: FoodItem) => {
-    const optionsMap: Record<string, { flavors?: string[]; extras?: string[] }> = {
-      'Fries': { flavors: ['Cheese', 'Sour & Cream', 'BBQ', 'Butter Cheese', 'Honey Butter'] },
+    const map: Record<string, { flavors?: string[]; extras?: string[] }> = {
+      Fries: { flavors: ['Cheese', 'BBQ', 'Sour Cream'] },
       'Cheese Sticks': { extras: ['10 pcs', '15 pcs'] },
       'Hash Brown': { extras: ['2 pcs', '3 pcs'] },
-      'Platter #1': { extras: ['Add Extra Nuggets'] },
-      'Platter #2': { extras: ['Add Extra Nuggets'] },
-      'Platter #3': { extras: ['Add Extra Nuggets'] },
-      'Beef Quesadilla': { extras: ['Extra Garlic Sauce'] },
     };
-    return optionsMap[item.name] || {};
+    return map[item.name] || {};
   };
 
   return (
     <div className="px-6 pt-10 pb-16">
-      {/* Tabs and Search */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
+      {/* Tabs & Search */}
+      <div className="flex justify-between items-center mb-10 gap-4">
         <div className="flex flex-wrap gap-3">
           {categories.map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
-              className={`text-sm font-semibold px-5 py-2 rounded-full border ${
+              className={`px-5 py-2 rounded-full border ${
                 activeTab === t
-                  ? 'bg-[#8CB662] text-white border-[#8CB662]'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  ? 'bg-[#8CB662] text-white'
+                  : 'border-gray-300'
               }`}
             >
               {t}
             </button>
           ))}
         </div>
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-2.5 text-gray-700" size={18} />
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-3 top-2.5" size={18} />
           <input
-            type="text"
-            placeholder="Search food..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm text-gray-500 rounded-full border border-gray-400 focus:ring-2 focus:ring-[#8CB662]"
+            placeholder="Search food..."
+            className="w-full pl-10 pr-4 py-2 rounded-full border"
           />
         </div>
       </div>
 
-      {/* Food Grid */}
+      {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {filtered.map((item) => (
           <div
             key={item.id}
             onClick={() => setSelectedItem(item)}
-            className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden bg-white border cursor-pointer"
+            className="cursor-pointer bg-white rounded-xl shadow"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
-              <img src={item.image} alt={item.name} className="w-60 h-60 object-contain rounded-xl" />
+              <img src={item.image} className="w-60 h-60 object-contain" />
             </div>
             <div className="p-4">
-              <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-              <div className="text-right text-lg text-[#76B13A] font-bold">{item.price}</div>
+              <h3 className="font-bold">{item.name}</h3>
+              <p className="text-sm">{item.description}</p>
+              <div className="text-right text-[#76B13A] font-bold">{item.price}</div>
             </div>
           </div>
         ))}
@@ -163,120 +200,32 @@ const FoodItems: React.FC = () => {
 
       {/* Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-4xl rounded-xl p-8 md:p-10 relative">
-            <button
-              onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-black"
-            >
-              <X size={24} />
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
+          <div className="bg-white max-w-4xl w-full p-8 rounded relative">
+            <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4">
+              <X />
             </button>
 
-            <div className="flex flex-col md:flex-row gap-8">
-              <img
-                src={selectedItem.image}
-                alt={selectedItem.name}
-                className="w-full md:w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded-xl"
-              />
-              <div className="flex-1 flex flex-col">
-                <h2 className="text-xl font-bold mb-2 text-gray-900">{selectedItem.name}</h2>
-                <div className="text-[#65B741] font-bold text-xl mb-4">{selectedItem.price}</div>
-                <p className="text-md text-gray-700 mb-4 text-gray-900">{selectedItem.description}</p>
+            <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
 
-                {/* Quantity */}
-                <div className="mb-4">
-                  <label className="text-base block font-semibold text-gray-900">Quantity</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
-                    >
-                      -
-                    </button>
-                    <span className="text-gray-900">{quantity}</span>
-                    <button
-                      onClick={handleIncrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Size Selection (only if both prices exist) */}
-                {(selectedItem.rawPrice.regular && selectedItem.rawPrice.large) && (
-                  <div className="mb-4">
-                    <label className="text-sm font-semibold text-gray-900">Size</label>
-                    <div className="flex gap-2 mt-1">
-                      {['regular', 'large'].map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setSelectedSize(size as 'regular' | 'large')}
-                          className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg text-gray-900 ${
-                            selectedSize === size
-                              ? 'bg-[#8CB662] text-white border-[#8CB662]'
-                              : 'hover:bg-[#8CB662] hover:text-white'
-                          }`}
-                        >
-                          {size === 'regular' ? 'Regular' : 'Large'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Options */}
-                {(() => {
-                  const opts = getOptionsFor(selectedItem);
-                  if (!opts) return null;
-
-                  return (
-                    <>
-                      {opts.flavors && (
-                        <div className="mb-4">
-                          <label className="text-sm font-semibold block mb-1 text-gray-900">Flavors</label>
-                          <select
-                            value={selectedFlavor}
-                            onChange={(e) => setSelectedFlavor(e.target.value)}
-                            className="w-full border border-[#8CB662] rounded px-2 py-1 text-sm text-gray-900"
-                          >
-                            <option value="">Select flavor</option>
-                            {opts.flavors.map((f) => (
-                              <option key={f} value={f}>{f}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {opts.extras && (
-                        <div className="mb-4">
-                          <label className="text-sm font-semibold block mb-1 text-gray-900">Extras</label>
-                          <select
-                            value={selectedExtra}
-                            onChange={(e) => setSelectedExtra(e.target.value)}
-                            className="w-full border border-[#8CB662] rounded px-2 py-1 text-sm text-gray-900"
-                          >
-                            <option value="">Select extra</option>
-                            {opts.extras.map((e) => (
-                              <option key={e} value={e}>{e}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-
-                {/* Buttons */}
-                <div className="flex flex-col md:flex-row gap-4 md:gap-10 mt-6">
-                  <button className="w-full md:w-[150px] border border-[#8CB662] text-[#8CB662] font-semibold py-2 rounded-4xl hover:bg-[#8CB662] hover:text-white">
-                    Add to Cart
-                  </button>
-                  <button className="w-full md:w-[150px] border border-[#8CB662] text-[#8CB662] font-semibold py-2 rounded-4xl hover:bg-[#8CB662] hover:text-white">
-                    Order Now
-                  </button>
-                </div>
-              </div>
+            {/* Quantity */}
+            <div className="flex gap-2 mb-4">
+              <button onClick={handleDecrease}>-</button>
+              <span>{quantity}</span>
+              <button onClick={handleIncrease}>+</button>
             </div>
+
+            {/* Add to Cart */}
+            {isLoggedIn ? (
+              <button
+                onClick={handleAddToCart}
+                className="border px-6 py-2 rounded hover:bg-[#8CB662] hover:text-white"
+              >
+                Add to Cart
+              </button>
+            ) : (
+              <div className="text-red-500 font-semibold">Please log in to order.</div>
+            )}
           </div>
         </div>
       )}

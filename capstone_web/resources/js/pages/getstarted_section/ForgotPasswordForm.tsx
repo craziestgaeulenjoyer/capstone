@@ -1,69 +1,66 @@
 import React, { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import axios from 'axios';
 
 const ForgotPasswordForm = () => {
+  const [email, setEmail] = useState('');
+  const [errors, setErrors] = useState<any>({});
+  const [processing, setProcessing] = useState(false);
+
+  const handleSendCode = async () => {
+    setProcessing(true);
+    setErrors({});
+    try {
+      await axios.post('/api/customer/forgot-password', { email });
+
+      // Store email for next steps
+      localStorage.setItem('reset_email', email);
+      window.location.href = '/verificationcode';
+    } catch (err: any) {
+      setErrors(err.response?.data || {});
+      alert(err.response?.data?.message || "Failed to send code");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="flex justify-center items-center h-screen bg-gray-200 px-4">
-      <div className="relative bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-
-      
-        <div className="absolute top-4 left-4">
-          <Link href="/" className="text-[#8CB662] hover:text-[#b4f177]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
-        </div>
-      
-        <div className="absolute top-2 right-8">
-          <img
-            src="/images/MiAmore2.png" 
-            alt="Logo"
-            className="h-15 w-auto object-contain"
-          />
-        </div>
-
+      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <div className="flex justify-between items-center mt-4">
+  <button
+    onClick={() => window.history.back()}
+    className="text-gray-500 hover:text-gray-700 text-sm"
+  >
+    ← Back
+  </button>
+</div>
         <div className="mb-6 mt-5 flex justify-center">
-          <img
-            src="/images/Forgot password-bro.png"
-            alt="Forgot Password"
-            className="w-50 h-auto object-contain"
-          />
+          <img src="/images/Forgot password-bro.png" className="w-50 h-auto" />
         </div>
-
-        <h2 className="text-2xl font-semibold text-[#8CB662] mb-2 text-center">
-          Forgot password
-        </h2>
-
+        <h2 className="text-2xl font-semibold text-[#8CB662] mb-2 text-center">Forgot password</h2>
         <p className="text-gray-600 mb-6 text-sm text-center px-2">
-          Enter your email for the verification process. We'll send a 4-digit code to your inbox.
+          Enter your email and we will send a 4-digit verification code.
         </p>
-
-        <form className="space-y-4">
+        <div className="space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-gray-700 text-sm font-medium mb-1"
-            >
-              Email
-            </label>
+            <label className="block text-gray-700 text-sm font-medium mb-1">Email</label>
             <input
               type="email"
-              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg shadow"
               placeholder="example@gmail.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-[#8CB662]"
             />
           </div>
-
-          <Link
-            href={route('VerificationCode')}
-            className="w-full block text-center bg-white text-[#8CB662] border-1 border-[#8CB662] font-bold py-2.5 rounded-lg
-                       transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#8CB662]
-                       hover:bg-[#8CB662] hover:text-white hover:shadow-md" 
+          <button
+            type="button"
+            onClick={handleSendCode}
+            disabled={processing}
+            className="w-full mt-2 bg-white text-[#8CB662] border border-[#8CB662] font-bold py-2.5 rounded-lg hover:bg-[#8CB662] hover:text-white"
           >
-            Continue
-          </Link>
-        </form>
+            {processing ? "Sending..." : "Continue"}
+          </button>
+        </div>
       </div>
     </div>
   );

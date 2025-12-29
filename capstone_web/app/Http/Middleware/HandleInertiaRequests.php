@@ -37,14 +37,25 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return array_merge(parent::share($request), [
-            'auth' => [
-                'user' => $request->user('admin') ?? $request->user('super_admin') ? [
-                    'id' => $request->user('admin')?->id ?? $request->user('super_admin')?->id,
-                    'name' => $request->user('admin')?->name ?? $request->user('super_admin')?->name,
-                    'email' => $request->user('admin')?->email ?? $request->user('super_admin')?->email,
-                    'role' => $request->user('admin') ? 'admin' : ($request->user('super_admin') ? 'super_admin' : null),
-                ] : null,
+     return array_merge(parent::share($request), [
+    'auth' => [
+
+        // ADMIN + SUPER ADMIN
+        'user' => ($request->user('admin') ?? $request->user('super_admin')) ? [
+            'id' => $request->user('admin')?->id ?? $request->user('super_admin')?->id,
+            'name' => $request->user('admin')?->name ?? $request->user('super_admin')?->name,
+            'email' => $request->user('admin')?->email ?? $request->user('super_admin')?->email,
+            'role' => $request->user('admin') ? 'admin' : 'super_admin',
+        ] : null,
+
+        // CUSTOMER (FIXED)
+        'customer' => auth()->guard('customer')->user() ? [
+            'id' => auth()->guard('customer')->user()->id,
+            'name' => auth()->guard('customer')->user()->full_name,
+            'email' => auth()->guard('customer')->user()->email,
+            'role' => 'customer',
+        ] : null,
+            
             ],
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),

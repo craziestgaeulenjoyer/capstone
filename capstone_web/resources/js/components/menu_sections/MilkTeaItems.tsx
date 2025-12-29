@@ -1,4 +1,3 @@
-// resources/js/Pages/website_pages/components/MilkTeaItems.tsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, X } from 'lucide-react';
@@ -23,7 +22,6 @@ const MilkTeaItems: React.FC = () => {
   const [selectedFlavor, setSelectedFlavor] = useState('');
   const [selectedAddOn, setSelectedAddOn] = useState('');
 
-  // Fetch milk tea items
   useEffect(() => {
     axios
       .get('/api/menu')
@@ -40,27 +38,23 @@ const MilkTeaItems: React.FC = () => {
     i.subcategories.some((sub) => sub.startsWith('Milktea:'))
   );
 
-  // Tabs: extract subcategories, remove "Milktea:" prefix
   const milkTeaSubcategories = Array.from(
     new Set(
       milkTeaOnly
         .flatMap((i) => i.subcategories)
         .map((sub) => (sub.includes(':') ? sub.split(':')[1] : sub))
-        .filter((sub) => sub !== 'Milktea') // exclude Milktea itself
+        .filter((sub) => sub !== 'Milktea')
     )
   );
 
   const tabs = ['All', ...milkTeaSubcategories];
 
-  // Filtered by tab & search
   const filtered = milkTeaOnly.filter((i) => {
     const subcategoriesCleaned = i.subcategories.map((sub) =>
       sub.includes(':') ? sub.split(':')[1] : sub
     );
-
     const matchTab = activeTab === 'All' || subcategoriesCleaned.includes(activeTab);
     const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
-
     return matchTab && matchSearch;
   });
 
@@ -68,27 +62,35 @@ const MilkTeaItems: React.FC = () => {
   const handleIncrease = () => setQuantity(quantity + 1);
 
   const optionsMap: Record<string, { flavors: string[]; addOns: string[] }> = {
-    Classic: { flavors: [], addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Extra Matcha Shot'] },
-    Special: { flavors: ['Hot', 'Cold'], addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Extra Matcha Shot'] },
+    Classic: {
+      flavors: [],
+      addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Extra Matcha Shot'],
+    },
+    Special: {
+      flavors: ['Hot', 'Cold'],
+      addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Extra Matcha Shot'],
+    },
   };
 
-  const getOptionsFor = (item: MilkTeaItem) => {
-    return optionsMap[item.category] || { flavors: [], addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Extra Matcha Shot'] };
-  };
+  const getOptionsFor = (item: MilkTeaItem) =>
+    optionsMap[item.category] || optionsMap.Classic;
 
-  const formatPrice = (price: { regular: string; large?: string }) => {
-    const values = [
-      price.regular ? `₱${price.regular}` : null,
-      price.large ? `₱${price.large}` : null,
-    ];
-    return values.filter(Boolean).join(' | ');
-  };
+  const formatPrice = (price: { regular: string; large?: string }) =>
+    [`₱${price.regular}`, price.large && `₱${price.large}`].filter(Boolean).join(' | ');
 
   const getAvailableSizes = (price: { regular?: string; large?: string }) => {
     const sizes: string[] = [];
     if (price.regular) sizes.push('16oz');
     if (price.large) sizes.push('22oz');
     return sizes;
+  };
+
+  /* 🔥 NEW: Dynamic price based on selected size */
+  const getPriceForSize = (item: MilkTeaItem) => {
+    if (!selectedSize) return formatPrice(item.price);
+    return selectedSize === '22oz' && item.price.large
+      ? `₱${item.price.large}`
+      : `₱${item.price.regular}`;
   };
 
   return (
@@ -110,6 +112,7 @@ const MilkTeaItems: React.FC = () => {
             </button>
           ))}
         </div>
+
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-2.5 text-gray-700" size={18} />
           <input
@@ -117,7 +120,7 @@ const MilkTeaItems: React.FC = () => {
             placeholder="Search milk tea..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm text-gray-500 rounded-full border border-gray-400 focus:ring-2 focus:ring-[#8CB662]"
+            className="w-full pl-10 pr-4 py-2 text-sm rounded-full border border-gray-400 focus:ring-2 focus:ring-[#8CB662]"
           />
         </div>
       </div>
@@ -130,11 +133,11 @@ const MilkTeaItems: React.FC = () => {
             onClick={() => {
               setSelectedItem(item);
               setQuantity(1);
-              setSelectedSize(null);
+              setSelectedSize('16oz'); // default to 16oz
               setSelectedFlavor('');
               setSelectedAddOn('');
             }}
-            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
+            className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden border bg-white cursor-pointer"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
               <img
@@ -144,7 +147,7 @@ const MilkTeaItems: React.FC = () => {
               />
             </div>
             <div className="p-4">
-              <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
+              <h3 className="text-lg font-bold">{item.name}</h3>
               <p className="text-sm text-gray-600 mb-2">{item.description}</p>
               <div className="text-right text-lg text-[#76B13A] font-bold">
                 {formatPrice(item.price)}
@@ -156,7 +159,7 @@ const MilkTeaItems: React.FC = () => {
 
       {/* Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 overflow-auto p-4">
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-4xl rounded p-10 relative">
             <button
               onClick={() => setSelectedItem(null)}
@@ -164,50 +167,44 @@ const MilkTeaItems: React.FC = () => {
             >
               <X size={24} />
             </button>
+
             <div className="flex flex-col md:flex-row gap-8">
               <img
                 src={`/storage/${selectedItem.image_path}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
               />
+
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-2 text-gray-900">{selectedItem.name}</h2>
-                <div className="text-[#65B741] font-bold text-xl mb-2">{formatPrice(selectedItem.price)}</div>
-                <p className="text-md text-gray-700 mb-4 text-gray-900">{selectedItem.description}</p>
+                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+
+                {/* 🔥 DYNAMIC PRICE */}
+                <div className="text-[#65B741] font-bold text-xl mb-2">
+                  {getPriceForSize(selectedItem)}
+                </div>
+
+                <p className="mb-4">{selectedItem.description}</p>
 
                 {/* Quantity */}
                 <div className="mb-4">
-                  <label className="text-base block font-semibold text-gray-900">Quantity</label>
+                  <label className="font-semibold">Quantity</label>
                   <div className="flex items-center gap-2 mt-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
-                    >
-                      -
-                    </button>
-                    <span className="text-gray-900">{quantity}</span>
-                    <button
-                      onClick={handleIncrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
-                    >
-                      +
-                    </button>
+                    <button onClick={handleDecrease} className="px-3 border rounded-full">-</button>
+                    <span>{quantity}</span>
+                    <button onClick={handleIncrease} className="px-3 border rounded-full">+</button>
                   </div>
                 </div>
 
-                {/* Size */}
+                {/* Sizes */}
                 <div className="mb-6">
-                  <label className="text-sm font-semibold text-gray-900">Cup Size</label>
-                  <div className="h-[2px] bg-[#8CB662] my-2" />
-                  <div className="flex gap-2">
+                  <label className="font-semibold">Cup Size</label>
+                  <div className="flex gap-2 mt-2">
                     {getAvailableSizes(selectedItem.price).map((s) => (
                       <button
                         key={s}
                         onClick={() => setSelectedSize(s)}
-                        className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg text-gray-900 ${
-                          selectedSize === s
-                            ? 'bg-[#8CB662] text-white border-[#8CB662]'
-                            : 'hover:bg-[#8CB662] hover:text-white'
+                        className={`px-6 py-1 border rounded-full ${
+                          selectedSize === s ? 'bg-[#8CB662] text-white' : ''
                         }`}
                       >
                         {s}
@@ -216,55 +213,12 @@ const MilkTeaItems: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Options */}
-                {(() => {
-                  const opts = getOptionsFor(selectedItem);
-                  if (!opts.flavors.length && !opts.addOns.length) return null;
-
-                  return (
-                    <>
-                      {opts.flavors.length > 0 && (
-                        <div className="mb-4">
-                          <label className="text-sm font-semibold text-gray">Options</label>
-                          <div className="h-[2px] bg-[#8CB662] my-2" />
-                          <select
-                            value={selectedFlavor}
-                            onChange={(e) => setSelectedFlavor(e.target.value)}
-                            className="border border-[#8CB662] rounded px-2 py-1 text-sm w-[300px]"
-                          >
-                            <option value="">Select option</option>
-                            {opts.flavors.map((f) => (
-                              <option key={f} value={f}>{f}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {opts.addOns.length > 0 && (
-                        <div className="mb-4">
-                          <label className="text-sm font-semibold text-gray-900">Add-ons</label>
-                          <div className="h-[2px] bg-[#8CB662] my-2" />
-                          <select
-                            value={selectedAddOn}
-                            onChange={(e) => setSelectedAddOn(e.target.value)}
-                            className="border border-[#8CB662] rounded px-2 py-1 text-sm w-[300px] text-gray-900" 
-                          >
-                            <option value="">Select an add-on</option>
-                            {opts.addOns.map((a) => (
-                              <option key={a} value={a}>{a}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-
                 {/* Buttons */}
-                <div className="flex gap-10 mt-6">
-                  <button className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
+                <div className="flex gap-6">
+                  <button className="border px-6 py-2 rounded-full text-[#8CB662] hover:bg-[#8CB662] hover:text-white">
                     Add to Cart
                   </button>
-                  <button className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
+                  <button className="border px-6 py-2 rounded-full text-[#8CB662] hover:bg-[#8CB662] hover:text-white">
                     Order Now
                   </button>
                 </div>

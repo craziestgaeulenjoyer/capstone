@@ -2,16 +2,24 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\CustomerSignupController;
-use App\Http\Controllers\CustomerLoginController;
 
-///SIGN UP CUSTOMER ROUTE////
-Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
-//
-//SIGN IN CUSTOMER ROUTE///
-Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
+// --- CART SECTION ROUTES ---
 
-Route::get('/', fn () => Inertia::render('website_pages/Home_MiAmore'))->name('home');  
+// 1. ShoppingCartPage.tsx
+Route::get('/customer-cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
+    ->name('shopping.cart');
+
+Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'))
+    ->name('payment.cart');
+
+// 2. LoyaltyPointsPage.tsx
+Route::get('/loyalty', fn() => Inertia::render('Cart_section/LoyaltyPage'))
+    ->name('loyalty.cart');
+
+// 3. CheckoutDetailsPage.tsx (Shipping/Billing details)
+Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
+    ->name('checkout.details');
+
 
 /* ---------------- WEBSITE ROUTES ---------------- */
 
