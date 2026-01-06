@@ -9,6 +9,8 @@ use App\Http\Controllers\Administrator_Controllers\MenuController;
 use App\Http\Controllers\Administrator_Controllers\InventoryController;
 use App\Http\Controllers\Administrator_Controllers\CustomerController;
 use App\Http\Controllers\Administrator_Controllers\SalesOrderController;
+use App\Http\Controllers\Administrator_Controllers\AnalyticsController;
+use App\Http\Controllers\Administrator_Controllers\ReportsController;
 use App\Http\Controllers\Home_Controllers\ContactController;
 use App\Http\Controllers\Home_Controllers\EventInquiryController;
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;

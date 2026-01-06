@@ -2,24 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-
-// --- CART SECTION ROUTES ---
-
-// 1. ShoppingCartPage.tsx
-Route::get('/customer-cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
-    ->name('shopping.cart');
-
-Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'))
-    ->name('payment.cart');
-
-// 2. LoyaltyPointsPage.tsx
-Route::get('/loyalty', fn() => Inertia::render('Cart_section/LoyaltyPage'))
-    ->name('loyalty.cart');
-
-// 3. CheckoutDetailsPage.tsx (Shipping/Billing details)
-Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
-    ->name('checkout.details');
-
 use App\Http\Controllers\CustomerSignupController;
 use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
@@ -47,6 +29,23 @@ Route::post('/email-change/confirm', [ProfileController::class, 'finalizeEmailCh
 Route::get('/email-change', function () {
     return Inertia::render('EmailChange');
 });
+
+// --- CART SECTION ROUTES ---
+
+// 1. ShoppingCartPage.tsx
+Route::get('/customer-cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
+    ->name('shopping.cart');
+
+Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'))
+    ->name('payment.cart');
+
+// 2. LoyaltyPointsPage.tsx
+Route::get('/loyalty', fn() => Inertia::render('Cart_section/LoyaltyPage'))
+    ->name('loyalty.cart');
+
+// 3. CheckoutDetailsPage.tsx (Shipping/Billing details)
+Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
+    ->name('checkout.details');
 
 /* ---------------- WEBSITE ROUTES ---------------- */
 

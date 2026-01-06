@@ -49,13 +49,22 @@ interface PieDataItem {
 }
 
 export default function Report() {
-  // State for managing the active tab
-  const [activeTab, setActiveTab] = useState('salesReport');
-  // State for the calendar functionality
+  const [activeTab, setActiveTab] = useState<'salesReport' | 'bestSelling'>('salesReport');
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  
+  const [salesSearch, setSalesSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'az_asc' | 'az_desc' | 'newest' | 'oldest'>('newest');
+  const [filterBy, setFilterBy] = useState({ range: 'day', fulfillment: 'all' });
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [metrics, setMetrics] = useState<Metrics>({
+    dailySales: 0,
+    totalOrders: 0,
+    newCustomers: 0,
+    bestSelling: null,
+    salesItems: [],
+  });
+
   const calendarRef = useRef<HTMLDivElement>(null);
   const role = sessionStorage.getItem('dashboard_role');
   const apiPrefix = role === 'super_admin' ? '/api/superadmin' : '/api/admin';
@@ -169,10 +178,29 @@ export default function Report() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [calendarRef]);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch metrics from API
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    axios.get(`http://127.0.0.1:8000${apiPrefix}/reports/daily`, {
+      params: {
+        date: selectedDate.toLocaleDateString('en-US'),
+        range: filterBy.range,
+        sortBy,
+        fulfillment: filterBy.fulfillment,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    })
+    .then(res => setMetrics(res.data))
+    .catch(err => console.error('Reports API error:', err.response?.data || err));
+  }, [selectedDate, filterBy, sortBy, apiPrefix]);
 
   // Handle month navigation
   const handlePrevMonth = () => {
@@ -237,8 +265,58 @@ export default function Report() {
       {/* Sales Report (Line Chart) - Static SVG Placeholder */}
       <div className="p-6 bg-white rounded-xl shadow-sm lg:col-span-2">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Sales Report</h2>
-        <div className="w-full h-[350px] flex items-center justify-center">
-          <p className="text-gray-500">No data available for sales report.</p>
+
+        <div className="relative mb-4">
+          <input
+            type="text"
+            placeholder="Search"
+            value={salesSearch}
+            onChange={(e) => setSalesSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Product Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Product Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Quantity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Total Amount
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredSalesItems.length > 0 ? (
+                filteredSalesItems.map((item, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 text-sm text-gray-800">{item.product_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800">₱ {Number(item.product_price).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800">{item.quantity}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-800">₱ {Number(item.total_amount).toFixed(2)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No sales data available.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -331,7 +409,7 @@ export default function Report() {
         <div className="relative mb-4">
           <input
             type="text"
-            placeholder="Filter search"
+            placeholder="Search"
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -345,16 +423,29 @@ export default function Report() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sold</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Sold</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Restocked</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Products Sold</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Sold</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              <tr>
-                <td colSpan={7} className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No data available for top selling items.</td>
-              </tr>
+              {(metrics.bestSellingItems || []).length > 0 ? (
+                (metrics.bestSellingItems || []).map((item, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 text-sm text-gray-800">{item.rank}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800">{item.product_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800">{item.category}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800">{item.total_products_sold}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-800">₱ {Number(item.total_amount).toFixed(2)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No data available for top selling items.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -618,7 +709,9 @@ export default function Report() {
               </div>
               <div>
                 <h3 className="text-sm text-gray-500 font-medium">Daily Sales</h3>
-                <p className="text-xl font-bold mt-1 text-gray-800">P 0.00</p>
+                <p className="text-xl font-bold mt-1 text-gray-800">
+                  ₱ {Number(metrics.dailySales).toFixed(2)}
+                </p>
               </div>
             </div>
             <div className={`text-sm font-semibold text-gray-500`}>
@@ -634,7 +727,9 @@ export default function Report() {
               </div>
               <div>
                 <h3 className="text-sm text-gray-500 font-medium">Total Orders</h3>
-                <p className="text-xl font-bold mt-1 text-gray-800">0</p>
+                <p className="text-xl font-bold mt-1 text-gray-800">
+                  {metrics.totalOrders}
+                </p>
               </div>
             </div>
             <div className={`text-sm font-semibold text-gray-500`}>
@@ -650,7 +745,9 @@ export default function Report() {
               </div>
               <div>
                 <h3 className="text-sm text-gray-500 font-medium">New Customers</h3>
-                <p className="text-xl font-bold mt-1 text-gray-800">0</p>
+                <p className="text-xl font-bold mt-1 text-gray-800">
+                  {metrics.newCustomers}
+                </p>
               </div>
             </div>
             <div className={`text-sm font-semibold text-gray-500`}>
@@ -666,7 +763,11 @@ export default function Report() {
               </div>
               <div>
                 <h3 className="text-sm text-gray-500 font-medium">Best-Selling Items</h3>
-                <p className="text-xl font-bold mt-1 text-gray-800">0</p>
+                <p className="text-xl font-bold mt-1 text-gray-800">
+                  {metrics.bestSelling
+                    ? `${metrics.bestSelling.product_name} (${metrics.bestSelling.total_qty})`
+                    : '—'}
+                </p>
               </div>
             </div>
             <div className={`text-sm font-semibold text-gray-500`}>
