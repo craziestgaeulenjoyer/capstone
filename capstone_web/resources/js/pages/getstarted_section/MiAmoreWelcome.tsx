@@ -10,7 +10,16 @@ const MiAmoreWelcome = () => {
         <div className="md:w-[48%] px-8 py-10 flex flex-col justify-between">
 
           {/* Header and Text */}
+          <div className="flex justify-between items-center w-full mb-4">
+  <button
+    onClick={() => window.history.back()}
+    className="text-gray-500 hover:text-gray-700 text-sm"
+  >
+    ← Back
+  </button>
+</div>
           <div>
+            
             <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="h-15 w-auto mb-6" />
             <h2 className="text-2xl font-bold text-[#8CB662] mb-1">GET STARTED</h2>
             <p className="text-sm text-[#4A4A4A] mb-5">Sign up to join or log in to continue.</p>

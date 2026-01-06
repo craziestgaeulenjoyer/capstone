@@ -9,8 +9,76 @@ use App\Http\Controllers\Administrator_Controllers\MenuController;
 use App\Http\Controllers\Administrator_Controllers\InventoryController;
 use App\Http\Controllers\Administrator_Controllers\CustomerController;
 use App\Http\Controllers\Administrator_Controllers\SalesOrderController;
-use App\Http\Controllers\Administrator_Controllers\AnalyticsController;
-use App\Http\Controllers\Administrator_Controllers\ReportsController;
+use App\Http\Controllers\Home_Controllers\ContactController;
+use App\Http\Controllers\Home_Controllers\EventInquiryController;
+use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
+use App\Http\Controllers\Customer_Controllers\CustomerProfileController;
+use App\Http\Controllers\Customer_Controllers\CustomerSocialController;
+use App\Http\Controllers\Customer_Controllers\ForgotPasswordController;
+/* ---------------- CART ROUTES ---------------- */
+
+use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
+use App\Http\Controllers\Cart_Controllers\CartController;
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/cart/add', [CartController::class, 'store']);
+    Route::get('/cart/items', [CartController::class, 'items']);
+    Route::get('/cart/count', [CartController::class, 'count']);
+    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+    Route::post('/order/store', [PlacedOrderController::class, 'store']);
+    Route::post(
+    '/order/confirm',
+    [PlacedOrderController::class, 'confirm']);
+});
+
+
+/* ---------------- PUBLIC ROUTES ---------------- */
+// Event Inquiry
+Route::post('/eventinquiry', [EventInquiryController::class, 'store']);
+
+// Contact form
+Route::post('/contact', [ContactController::class, 'store'])->name('contact_message');
+
+/* ---------------- CUSTOMER SOCIAL LOGIN ---------------- */
+Route::get('/auth/google/redirect', [CustomerSocialController::class, 'googleRedirect']);
+Route::get('/auth/google/callback', [CustomerSocialController::class, 'googleCallback']);
+
+Route::get('/auth/facebook/redirect', [CustomerSocialController::class, 'facebookRedirect']);
+Route::get('/auth/facebook/callback', [CustomerSocialController::class, 'facebookCallback']);
+
+
+/* ---------------- CUSTOMER PASSWORD RESET ---------------- */
+Route::post('customer/forgot-password', [ForgotPasswordController::class, 'sendVerificationCode']);
+Route::post('customer/resend-code', [ForgotPasswordController::class, 'resendCode']);
+Route::post('customer/verify-code', [ForgotPasswordController::class, 'verifyCode']);
+Route::post('customer/reset-password', [ForgotPasswordController::class, 'resetPassword']);
+
+/* ---------------- CUSTOMER SIGNUP & LOGIN ---------------- */
+Route::prefix('customer')->group(function () {
+    // Signup
+    Route::post('/signup', [CustomerAuthController::class, 'signup'])->name('customer.signup.store');
+    Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])->name('customer.signup.verify');
+    Route::post('/signup/resend', [CustomerAuthController::class, 'resendOtp'])->name('customer.signup.resend');
+
+    // Login
+    Route::get('/login', [CustomerAuthController::class, 'showLoginForm'])->name('customer.login.form');
+    Route::post('/login', [CustomerAuthController::class, 'login'])->name('login.authenticate');
+
+    // Signup form after OTP verification
+    Route::get('/signincard', [CustomerAuthController::class, 'showSignupForm'])->name('customer.signup.form');
+});
+
+// Verification screen
+Route::get('/verification', [CustomerAuthController::class, 'showVerification'])->name('customer.verification.email');
+
+/* ---------------- AUTHENTICATED CUSTOMER ROUTES ---------------- */
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/customer/profile', function (Request $request) {
+        return response()->json(['customer' => $request->user()]);
+    });
+});
+
+
 use App\Http\Controllers\Administrator_Controllers\NotificationController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
 
@@ -180,8 +248,14 @@ Route::prefix('admin')->group(function () {
     });
 });
 
+
+/* ---------------- PUBLIC MENU ---------------- */
+
 /* ================= PUBLIC ================= */
 Route::get('/api/menu', [MenuController::class, 'publicMenu']);
+// Public Menu
+
+Route::get('/api/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
 
 /* Upload Profile Picture */
 Route::post('/upload-profile-picture', function (Request $request) {

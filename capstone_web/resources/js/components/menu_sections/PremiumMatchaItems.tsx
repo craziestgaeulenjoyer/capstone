@@ -31,33 +31,25 @@ const PremiumMatcha: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState('16oz');
   const [selectedOption, setSelectedOption] = useState('');
 
-  // ---------------------------
   // FETCH PREMIUM MATCHA ITEMS
-  // ---------------------------
   useEffect(() => {
     const fetchItems = async () => {
       try {
         const res = await axios.get('/api/menu');
         const data: ApiItem[] = res.data.items || res.data || [];
 
-        console.log('Fetched menu items from API:', data);
-
-        // Filter only Premium Matcha category
         const filtered = data.filter((item) =>
           item.categories.includes(CATEGORY)
         );
 
-        console.log('Filtered Premium Matcha items:', filtered);
-
-        // Map into PremiumMatchaItem with price formatting
         const formatted: PremiumMatchaItem[] = filtered.map((item) => {
           const { regular, large } = item.price;
+
           let formattedPrice = '';
           if (regular && large) formattedPrice = `₱${regular}/${large}`;
           else if (regular) formattedPrice = `₱${regular}`;
           else if (large) formattedPrice = `₱${large}`;
 
-          // Fix image URL (remove leading slash if exists)
           const imagePath = item.image_path.startsWith('/')
             ? item.image_path.slice(1)
             : item.image_path;
@@ -67,13 +59,12 @@ const PremiumMatcha: React.FC = () => {
             name: item.name,
             description: item.description,
             category: 'Premium Matcha',
-            image: `/${imagePath}`,
+            image: imagePath,
             price: formattedPrice,
             rawPrice: item.price,
           };
         });
 
-        console.log('🍵 Formatted Premium Matcha items:', formatted);
         setItems(formatted);
       } catch (error) {
         console.error('Error fetching Premium Matcha items:', error);
@@ -95,14 +86,20 @@ const PremiumMatcha: React.FC = () => {
     return ['Hot', 'Cold'];
   };
 
+  // 🔥 NEW: Dynamic price based on selected size
+  const getPriceForSize = (item: PremiumMatchaItem) => {
+    if (!selectedSize) return item.price;
+    return selectedSize === '22oz' && item.rawPrice.large
+      ? `₱${item.rawPrice.large}`
+      : `₱${item.rawPrice.regular}`;
+  };
+
   return (
     <div className="px-6 pt-10 pb-16">
-      {/* Search bar */}
+      {/* Search */}
       <div className="flex justify-end mb-10">
         <div className="relative w-full max-w-md">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <Search size={16} />
-          </span>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
             placeholder="Search premium matcha..."
@@ -123,23 +120,30 @@ const PremiumMatcha: React.FC = () => {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map(item => (
+        {filtered.map((item) => (
           <div
             key={item.id}
             onClick={() => {
               setSelectedItem(item);
               setSelectedOption('');
               setQuantity(1);
+              setSelectedSize('16oz'); // default size
             }}
             className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden bg-white border cursor-pointer"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
-              <img src={`/storage/${item.image}`} alt={item.name} className="w-60 h-60 object-contain rounded-xl" />
+              <img
+                src={`/storage/${item.image}`}
+                alt={item.name}
+                className="w-60 h-60 object-contain rounded-xl"
+              />
             </div>
             <div className="p-4">
               <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
               <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-              <div className="text-right text-lg text-[#76B13A] font-bold">{item.price}</div>
+              <div className="text-right text-lg text-[#76B13A] font-bold">
+                {item.price}
+              </div>
             </div>
           </div>
         ))}
@@ -147,7 +151,7 @@ const PremiumMatcha: React.FC = () => {
 
       {/* Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-4xl rounded p-10 relative">
             <button
               onClick={() => setSelectedItem(null)}
@@ -155,50 +159,44 @@ const PremiumMatcha: React.FC = () => {
             >
               <X size={24} />
             </button>
+
             <div className="flex flex-col md:flex-row gap-8">
               <img
-                src={`/${selectedItem.image}`}
+                src={`/storage/${selectedItem.image}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
               />
+
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-2 text-gray-900">{selectedItem.name}</h2>
-                <div className="text-[#65B741] font-bold text-xl mb-2">{selectedItem.price}</div>
-                <p className="text-md text-gray-700 mb-4 text-gray-900">{selectedItem.description}</p>
+                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+                
+                {/* 🔥 DYNAMIC PRICE */}
+                <div className="text-[#65B741] font-bold text-xl mb-2">
+                  {getPriceForSize(selectedItem)}
+                </div>
+
+                <p className="mb-4">{selectedItem.description}</p>
 
                 {/* Quantity */}
                 <div className="mb-4">
-                  <label className="text-base block font-semibold text-gray-900">Quantity</label>
+                  <label className="font-semibold">Quantity</label>
                   <div className="flex items-center gap-2 mt-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
-                    >
-                      -
-                    </button>
-                    <span className='text-gray-900'>{quantity}</span>
-                    <button
-                      onClick={handleIncrease}
-                      className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white text-gray-900"
-                    >
-                      +
-                    </button>
+                    <button onClick={handleDecrease} className="px-3 border rounded-full">-</button>
+                    <span>{quantity}</span>
+                    <button onClick={handleIncrease} className="px-3 border rounded-full">+</button>
                   </div>
                 </div>
 
-                {/* Cup Size */}
+                {/* Size */}
                 <div className="mb-4">
-                  <label className="text-sm font-semibold text-gray-900">Cup Size</label>
-                  <div className="h-[2px] bg-[#8CB662] my-2" />
-                  <div className="flex gap-2">
-                    {['16oz', '22oz'].map(size => (
+                  <label className="font-semibold">Cup Size</label>
+                  <div className="flex gap-2 mt-2">
+                    {['16oz', '22oz'].map((size) => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg text-gray-900 ${
-                          selectedSize === size
-                            ? 'bg-[#8CB662] text-white border-[#8CB662]'
-                            : 'hover:bg-[#8CB662] hover:text-white'
+                        className={`px-6 py-1 border rounded-full ${
+                          selectedSize === size ? 'bg-[#8CB662] text-white' : ''
                         }`}
                       >
                         {size}
@@ -207,37 +205,34 @@ const PremiumMatcha: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Hot/Cold Option */}
+                {/* Hot / Cold */}
                 <div className="mb-6">
-                  <label className="text-sm font-semibold text-gray-900">Option</label>
-                  <div className="h-[2px] bg-[#8CB662] my-2" />
+                  <label className="font-semibold">Option</label>
                   <select
                     value={selectedOption}
                     onChange={(e) => setSelectedOption(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-2 focus:ring-[#8CB662] text-gray-900"
+                    className="w-full border rounded-md p-2 mt-2"
                   >
                     <option value="" disabled>Select option</option>
-                    {getOptions(selectedItem).map(opt => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
+                    {getOptions(selectedItem).map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
                 </div>
 
                 {/* Buttons */}
-                <div className="flex gap-10 mt-6">
-                  <button className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
+                <div className="flex gap-6">
+                  <button className="border px-6 py-2 rounded-full text-[#8CB662] hover:bg-[#8CB662] hover:text-white">
                     Add to Cart
                   </button>
-                  <button className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
+                  <button className="border px-6 py-2 rounded-full text-[#8CB662] hover:bg-[#8CB662] hover:text-white">
                     Order Now
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        </div> 
+        </div>
       )}
     </div>
   );
