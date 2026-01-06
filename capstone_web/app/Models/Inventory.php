@@ -12,6 +12,7 @@ class Inventory extends Model
     protected $fillable = [
         'name',
         'category',
+        'supplier',
         'quantity',
         'unit',
         'expiry',

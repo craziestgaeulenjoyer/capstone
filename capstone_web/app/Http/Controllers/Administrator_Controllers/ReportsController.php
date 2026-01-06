@@ -94,11 +94,11 @@ class ReportsController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | SALES REPORT TABLE (FLATTENED ITEMS)
+        | SALES REPORT TABLE (CORRECT ITEM AGGREGATION)
         |--------------------------------------------------------------------------
         */
         $salesItems = DB::table('orders')
-            ->select('orders.total_amount', 'orders.items')
+            ->select('orders.items')
             ->where('orders.status', 'completed')
             ->when($range === 'day', function ($q) use ($date) {
                 $q->whereDate('orders.created_at', $date);
@@ -115,14 +115,23 @@ class ReportsController extends Controller
             })
             ->get()
             ->flatMap(function ($order) {
-                return collect(json_decode($order->items, true))->map(function ($item) use ($order) {
+                return collect(json_decode($order->items, true))->map(function ($item) {
                     return [
                         'product_name'  => $item['name'],
-                        'product_price' => $item['price'],
-                        'quantity'      => $item['quantity'],
-                        'total_amount'  => $order->total_amount,
+                        'product_price' => (float) $item['price'],
+                        'quantity'      => (int) $item['quantity'],
+                        'item_total'    => (float) $item['price'] * (int) $item['quantity'],
                     ];
                 });
+            })
+            ->groupBy('product_name')
+            ->map(function ($items) {
+                return [
+                    'product_name'  => $items->first()['product_name'],
+                    'product_price' => $items->first()['product_price'],
+                    'quantity'      => $items->sum('quantity'),
+                    'total_amount'  => number_format($items->sum('item_total'), 2, '.', ''),
+                ];
             })
             ->values();
 

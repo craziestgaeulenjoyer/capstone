@@ -782,6 +782,7 @@ const styles = StyleSheet.create({
 
   // Profile Card
   profileCard: {
+    marginTop: 20,
     flexDirection: "row",
     alignItems: "center",
     padding: 20,

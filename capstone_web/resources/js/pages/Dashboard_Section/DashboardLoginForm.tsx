@@ -37,41 +37,82 @@ const DashboardLoginForm = () => {
     };
   }, [roleFromPropsOrQuery]);
 
+  useEffect(() => {
+    const remembered = localStorage.getItem('remember_me') === 'true';
+
+    if (remembered) {
+      setEmail(localStorage.getItem('remember_email') || '');
+      setPassword(localStorage.getItem('remember_password') || '');
+      setRememberMe(true);
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-        const endpoint = roleFromPropsOrQuery === 'super_admin' ? '/superadmin/login' : '/admin/login';
+      await axiosClient.get('/sanctum/csrf-cookie');
 
-        // Get CSRF cookie
-        await axiosClient.get('/sanctum/csrf-cookie');
+      let response;
 
-        const response = await axiosClient.post(endpoint, { email, password, remember: rememberMe });
+      try {
+        response = await axiosClient.post('/superadmin/login', {
+          email,
+          password,
+          remember: rememberMe,
+        });
+      } catch (err: any) {
+        if (err.response?.status !== 401) throw err;
 
-        if (response.data.token) {
-            localStorage.setItem('token', response.data.token);
-        }
+        response = await axiosClient.post('/admin/login', {
+          email,
+          password,
+          remember: rememberMe,
+        });
+      }
 
-        sessionStorage.setItem("dashboard_role", response.data.role);
-        sessionStorage.setItem("dashboard_user_id", response.data.user?.id);
-        
-        if (!response.data.verified) {
-            // Redirect to email verification page
-            router.visit(response.data.redirect); // e.g., '/dashboardemailverification'
-        } else {
-            // Redirect to proper dashboard
-            const dashboardPath =
-                roleFromPropsOrQuery === 'super_admin' ? '/superadmin/dashboard' : '/admin/dashboard';
-            router.visit(dashboardPath);
-        }
+      /* ---------------- REMEMBER ME ---------------- */
+      if (rememberMe) {
+        localStorage.setItem('remember_me', 'true');
+        localStorage.setItem('remember_email', email);
+        localStorage.setItem('remember_password', password);
+      } else {
+        localStorage.removeItem('remember_me');
+        localStorage.removeItem('remember_email');
+        localStorage.removeItem('remember_password');
+      }
+
+      /* ---------------- AUTH STORAGE ---------------- */
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+      }
+
+      sessionStorage.setItem('dashboard_role', response.data.role);
+      sessionStorage.setItem('dashboard_user_id', response.data.user?.id);
+
+      /* ---------------- REDIRECT ---------------- */
+      if (!response.data.verified) {
+        router.visit(response.data.redirect);
+        return;
+      }
+
+      const dashboardPath =
+        response.data.role === 'super_admin'
+          ? '/superadmin/dashboard'
+          : '/admin/dashboard';
+
+      router.visit(dashboardPath);
 
     } catch (err: any) {
-        if (err.response?.status === 401) setError('Invalid credentials. Please try again.');
-        else setError('Something went wrong. Please try again later.');
+      if (err.response?.status === 401) {
+        setError('Invalid credentials. Please try again.');
+      } else {
+        setError('Something went wrong. Please try again later.');
+      }
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -134,13 +175,51 @@ const DashboardLoginForm = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
                 >
                   {showPassword ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.772 7.173A3.5 3.5 0 0012 15a3.5 3.5 0 00-3.5 3.5c0 1.282.684 2.404 1.705 3.018M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    // Eye OFF (with slash)
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3.98 8.223A10.477 10.477 0 001.934 12
+                          C3.226 16.338 7.244 19.5 12 19.5
+                          c1.99 0 3.87-.54 5.47-1.477M6.228 6.228
+                          A9.956 9.956 0 0112 4.5
+                          c4.756 0 8.773 3.162 10.065 7.498
+                          a10.52 10.52 0 01-4.293 5.774M6.228 6.228
+                          L3 3m3.228 3.228L21 21"
+                      />
                     </svg>
                   ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    // Eye ON
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5
+                          12 5c4.478 0 8.268 2.943
+                          9.542 7-1.274 4.057-5.064
+                          7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
                     </svg>
                   )}
                 </button>
@@ -160,7 +239,7 @@ const DashboardLoginForm = () => {
                   Remember me?
                 </label>
               </div>
-              <Link href="/forgot-password" className="text-[#8CB662] hover:underline">
+              <Link href="/dashboardforgotpassword" className="text-[#8CB662] hover:underline">
                 Forgot password?
               </Link>
             </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import axios, { AxiosInstance } from 'axios';
 import {
   ResponsiveContainer,
@@ -11,6 +11,9 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  LineChart,
+  BarChart,
+  Bar,
 } from 'recharts';
 
 /* ---------- Types (same as your base) ---------- */
@@ -87,14 +90,31 @@ interface AddOnDataItem {
 interface CustomerInsightsData {
   totalRegistered: number;
   activeThisPeriod: number;
-  averageGrowth: string; 
+  averageGrowth: number;
+  averageActiveUsers: number;
+  registrations: Array<{
+    date: string;
+    count: number;
+  }>;
 }
 
 interface CustomerInsightsApi {
-  totalRegistered?: number;
-  activeThisWeek?: number;     
-  activeThisPeriod?: number;   
-  averageGrowth?: string;
+  totalRegistered: number;
+  activeThisPeriod: number;
+  averageGrowth: number;
+  averageActiveUsers: number;
+  registrations: {
+    date: string;
+    count: number;
+  }[];
+}
+
+interface CustomerInsightsWithRegistrations {
+  totalRegistered: number;
+  activeThisPeriod: number;
+  averageGrowth: number;
+  averageActiveUsers?: number;
+  registrations?: { date: string; count: number }[];
 }
 
 type BackendPayload = {
@@ -106,12 +126,31 @@ type BackendPayload = {
   totalCustomersData?: TotalCustomersDataItem[];
   addOnsData?: AddOnDataItem[];
   loyaltyProgram?: number;
-  orders_per_hour?: OrderHour[];
+  verifiedCustomers?: {
+    date: string;    
+    count: number;   
+  }[];
   peak_hours?: { text: string; hours: number[]; max_count?: number };
+  customer_time_intervals?: BackendCustomerIntervals;
+  peak_hours_correct?: BackendPeakHoursCorrect;
   heatmap?: any;
+  productBreakdown?: Record<number, any[]>; 
   totals?: { orders_count: number; revenue_total: number };
   daily_revenue?: { day: string; revenue: number; orders: number; };
+  ordersPerHour: OrderHour[];
 };
+
+interface BackendCustomerIntervals {
+  morning: number;
+  afternoon: number;
+  evening: number;
+  average: number;
+}
+
+interface BackendPeakHoursCorrect {
+  hour: number;
+  count: number;
+}
 
 /* ---------- Helpers ---------- */
 const getStoredToken = (): string | null => {
@@ -139,6 +178,172 @@ function isTruthyString(s: any): s is string {
   return typeof s === 'string' && s.length > 0;
 }
 
+type RegistrationDay = { hour: number; count: number };
+type RegistrationMonth = { day: number; count: number };
+type RegistrationYear = { month: number; count: number };
+
+const buildCustomerGrowthData = (
+  registrations: Array<RegistrationDay | RegistrationMonth | RegistrationYear>,
+  view: 'Per Day' | 'Per Month' | 'Per Year',
+  currentDate: Date
+) => {
+  if (!registrations || registrations.length === 0) return [];
+
+  /* ===============================
+  * PER DAY — hourly (9–22 or 10–22)
+  * =============================== */
+  if (view === 'Per Day') {
+    const isSunday = currentDate.getDay() === 0;
+    const startHour = isSunday ? 9 : 10;
+    const endHour = 22;
+
+    // Build a map from hour → count
+    const hourMap = new Map<number, number>();
+    registrations
+      .filter((r): r is RegistrationDay => 'hour' in r)
+      .forEach(r => {
+        if (r.hour >= startHour && r.hour <= endHour) {
+          hourMap.set(r.hour, r.count ?? 0);
+        }
+      });
+
+    // Fill in missing hours with 0
+    const data = [];
+    for (let h = startHour; h <= endHour; h++) {
+      data.push({
+        label: `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'AM' : 'PM'}`,
+        value: hourMap.get(h) ?? 0,
+      });
+    }
+
+    return data;
+  }
+
+  /* ===============================
+  * PER MONTH — daily (1 → last day)
+  * =============================== */
+  if (view === 'Per Month') {
+    return registrations
+      .filter((r): r is RegistrationMonth => 'day' in r)
+      .map(r => ({
+        label: String(r.day),
+        value: Number(r.count) || 0,
+      }));
+  }
+
+  /* ===============================
+  * PER YEAR — monthly (Jan → Dec)
+  * =============================== */
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  return registrations
+    .filter((r): r is RegistrationYear => 'month' in r)
+    .map(r => ({
+      label: monthNames[r.month - 1],
+      value: Number(r.count) || 0,
+    }));
+};
+
+const buildAverageCustomerData = (
+  registrations: { date: string; count: number }[],
+  view: 'Per Day' | 'Per Month' | 'Per Year',
+  currentDate: Date
+) => {
+  if (!registrations || registrations.length === 0) {
+    return { chartData: [], average: 0 };
+  }
+
+  let chartData: { name: string; value: number }[] = [];
+
+  if (view === 'Per Day') {
+    const dayStr = currentDate.toISOString().split('T')[0];
+
+    const total = registrations.reduce((sum, r) => {
+      if (!r?.date) return sum;
+
+      const d = new Date(r.date);
+      if (isNaN(d.getTime())) return sum;
+
+      return d.toISOString().split('T')[0] === dayStr
+        ? sum + r.count
+        : sum;
+    }, 0);
+
+    chartData = [{ name: dayStr, value: total }];
+  }
+
+  if (view === 'Per Month') {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const map: Record<number, number> = {};
+    registrations.forEach(r => {
+      const d = new Date(r.date);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        map[d.getDate()] = (map[d.getDate()] || 0) + r.count;
+      }
+    });
+
+    chartData = Array.from({ length: daysInMonth }, (_, i) => ({
+      name: `${i + 1}`,
+      value: map[i + 1] || 0,
+    }));
+  }
+
+  if (view === 'Per Year') {
+    const year = currentDate.getFullYear();
+    const map: Record<number, number> = {};
+
+    registrations.forEach(r => {
+      const d = new Date(r.date);
+      if (d.getFullYear() === year) {
+        map[d.getMonth()] = (map[d.getMonth()] || 0) + r.count;
+      }
+    });
+
+    chartData = Array.from({ length: 12 }, (_, i) => ({
+      name: new Date(year, i).toLocaleString('default', { month: 'short' }),
+      value: map[i] || 0,
+    }));
+  }
+
+  const total = chartData.reduce((s, d) => s + d.value, 0);
+
+  const average =
+    view === 'Per Day'
+      ? total
+      : Math.round(total / (chartData.filter(d => d.value > 0).length || 1));
+
+    return { chartData, average };
+};
+
+type HeatmapRow = {
+  day: string;
+  hourCounts: number[];
+  hourLabels: string[];
+  openHour?: number; 
+  closeHour?: number;
+};
+
+type ProductItem = {
+  name: string;
+  total_orders: number;
+};
+
+type BreakdownPopoverProps = {
+  position: { top: number; left: number };
+  items: ProductItem[];
+  onClose: () => void;
+};
+
+type HeatmapMeta = {
+  openHour: number;
+};
+
 /* ---------- Component ---------- */
 const Analytics: React.FC = () => {
   const api = useMemo(() => createApiClient(), []);
@@ -151,11 +356,14 @@ const Analytics: React.FC = () => {
   const [customerPercentage, setCustomerPercentage] = useState<number>(0);
 
   const [customerInsightsData, setCustomerInsightsData] =
-  useState<CustomerInsightsData>({
+  useState<CustomerInsightsWithRegistrations>({
     totalRegistered: 0,
     activeThisPeriod: 0,
-    averageGrowth: '',
+    averageGrowth: 0,
+    averageActiveUsers: 0,
+    registrations: [],
   });
+
   const [customerFeedback, setCustomerFeedback] = useState<CustomerFeedbackApi>({
     averageRating: 0,
     totalReviews: 0,
@@ -173,11 +381,37 @@ const Analytics: React.FC = () => {
   const [totals, setTotals] = useState<{ orders_count: number; revenue_total: number }>({ orders_count: 0, revenue_total: 0 });
 
   // UI controls
-  const [activeTab, setActiveTab] = useState<'Sales Hub' | 'Customer Analytics'>('Sales Hub');
+  const [activeTab, setActiveTab] = useState<'Sales Hub' | 'Customer Analytics' | 'Forecasting Hub'>('Sales Hub');
   const [view, setView] = useState<'Per Day' | 'Per Month' | 'Per Year'>('Per Day');
   const [showCalendar, setShowCalendar] = useState(false);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date()); // selected anchor date (for day/week/month)
-  const [chartTimeframe, setChartTimeframe] = useState<'Daily' | 'Weekly'>('Daily'); // kept for your existing toggle, still used elsewhere
+  const [currentDate, setCurrentDate] = useState<Date>(new Date()); 
+  const [chartTimeframe, setChartTimeframe] = useState<'Daily' | 'Weekly'>('Daily'); 
+  const [verifiedCustomers, setVerifiedCustomers] = useState<{ date: string; count: number }[]>([]);
+  
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  const [backendProductBreakdown, setBackendProductBreakdown] = useState<Record<number, any[]>>({});
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  const [selectedBreakdown, setSelectedBreakdown] = useState<{
+    hour: number;
+    items: any[];
+  } | null>(null);
+
+  const [customerRegistrations, setCustomerRegistrations] = useState<
+    { date: string; count: number }[]
+  >([]);
+  const [adjustedTimeOfDayCounts, setAdjustedTimeOfDayCounts] = useState({
+    morning: 0,
+    afternoon: 0,
+    evening: 0,
+    morningStart: 10,
+  });
+  const [averageCustomers, setAverageCustomers] = useState<number>(0);
+  const [computedPeakHours, setComputedPeakHours] = useState<{
+    text: string;
+    max_count: number | null;
+  }>({ text: '', max_count: null });
+
+  const heatmapAnchorRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -185,174 +419,84 @@ const Analytics: React.FC = () => {
     return new Date(year, month + 1, 0).getDate();
   };
 
-  const toISODate = (d: Date) =>
-  d.toISOString().split('T')[0];
-
   /* ---------- Calendar helpers ---------- */
-  const averageCustomers = useMemo(() => {
-    if (!ordersPerHour || ordersPerHour.length === 0) return 0;
-
-    switch(view) {
-      case 'Per Day': {
-        const dailyCounts: Record<string, number> = {};
-        ordersPerHour.forEach(h => {
-          const day = h.day || 'unknown';
-          dailyCounts[day] = (dailyCounts[day] || 0) + (h.customers || 0);
-        });
-        const totalDays = Object.keys(dailyCounts).length || 1;
-        return Math.round(Object.values(dailyCounts).reduce((a,b) => a+b, 0) / totalDays);
-      }
-      case 'Per Month': {
-        const dayCounts: Record<string, number> = {};
-        ordersPerHour.forEach(h => {
-          if (!h.day) return;
-          dayCounts[h.day] = (dayCounts[h.day] || 0) + (h.customers ?? 0);
-        });
-        const totalDays = Object.keys(dayCounts).length || 1;
-        return Math.round(
-          Object.values(dayCounts).reduce((a, b) => a + b, 0) / totalDays
-        );
-      }
-      case 'Per Year': {
-        const monthCounts: Record<number, number> = {};
-        ordersPerHour.forEach(h => {
-          const month = h.month ?? 0;
-          monthCounts[month] = (monthCounts[month] || 0) + (h.customers ?? 0);
-        });
-        const totalMonths = Object.keys(monthCounts).length || 1;
-        return Math.round(Object.values(monthCounts).reduce((a,b) => a+b, 0) / totalMonths);
-      }
-      default:
-        return 0;
-    }
-  }, [ordersPerHour, view]);
 
   const heatmapData = useMemo(() => {
-    if (!ordersPerHour || ordersPerHour.length === 0) return [];
+    if (!salesData) return [];
 
-    switch(view) {
-      case 'Per Day': {
-        // create an array of 24 hours
-        const hourCounts = Array.from({ length: 24 }, (_, h) => {
-          // sum orders for the current date and hour
-          return ordersPerHour
-            .filter(o => o.day === toISODate(currentDate) && o.hour === h)
-            .reduce((sum, o) => sum + (o.orders ?? 0), 0);
-        });
+    const isSunday = currentDate.getDay() === 0;
+    const openHour = isSunday ? 9 : 10;
+    const closeHour = 22;
 
-        return [
-          {
-            day: toISODate(currentDate),
-            hourCounts,
-          },
-        ];
-      }
+    // PER DAY — Hourly
+    if (view === "Per Day") {
+      const hourCounts = Array.from(
+        { length: closeHour - openHour + 1 },
+        (_, idx) => {
+          const hour = openHour + idx;
+          const record = ordersPerHour?.find(o => Number(o.hour) === hour);
+          return record?.orders ?? 0;
+        }
+      );
 
-      case 'Per Month': {
-        const daysInMonth = getDaysInMonth(currentDate);
-        const dayCounts = Array.from({ length: daysInMonth }, (_, i) => {
-          const dayStr = toISODate(new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1));
-          return ordersPerHour
-            .filter(o => o.day === dayStr)
-            .reduce((sum, o) => sum + (o.orders ?? 0), 0);
-        });
-
-        return [
-          {
-            day: currentDate.toLocaleString('default', { month: 'long', year: 'numeric' }),
-            hourCounts: dayCounts,
-          },
-        ];
-      }
-
-      case 'Per Year': {
-        return [
-          {
-            day: `${currentDate.getFullYear()}`,
-            hourCounts: salesData.map(s => s.orders ?? 0), 
-          },
-        ];
-      }
-
-      default:
-        return [];
+      return [
+        {
+          label: currentDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric"
+          }),
+          hourCounts,
+          hourLabels: Array.from({ length: closeHour - openHour + 1 }, (_, i) => {
+            const h = openHour + i;
+            const period = h >= 12 ? "PM" : "AM";
+            const display = h % 12 === 0 ? 12 : h % 12;
+            return `${display} ${period}`;
+          }),
+          day: currentDate.toLocaleDateString("en-US", {
+            weekday: "short"
+          })  // ⬅ IMPORTANT — required by heatmap cell display
+        },
+      ];
     }
-  }, [ordersPerHour, view, currentDate]);
 
-  const pieData = useMemo(() => {
-    return ordersPerHour.map(h => ({ name: `${h.hour}h`, value: h.customers }));
-  }, [ordersPerHour]);
+    // PER MONTH — By day
+    if (view === "Per Month") {
+      return [
+        {
+          day: currentDate.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric"
+          }),
+          hourCounts: salesData.map(s => s.orders ?? 0),
+          hourLabels: salesData.map(s => s.name)
+        }
+      ];
+    }
 
-  const COLORS = ['#22C55E', '#10B981', '#34D399', '#6EE7B7', '#D1FAE5'];
+    // PER YEAR — By month
+    if (view === "Per Year") {
+      const monthList = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-  const renderArrowLabel = (props: any) => {
-    const RADIAN = Math.PI / 180;
+      return [
+        {
+          day: currentDate.getFullYear().toString(),
+          hourCounts: monthList.map(m => {
+            const item = salesData.find(s => s.name === m);
+            return item?.orders ?? 0;
+          }),
+          hourLabels: monthList
+        }
+      ];
+    }
 
-    const {
-      cx,
-      cy,
-      midAngle,
-      outerRadius,
-      percent,
-      value,     // ← this is h.customers
-    } = props;
+    return [];
+  }, [salesData, ordersPerHour, view, currentDate]);
 
-    const percentage = `${(percent * 100).toFixed(1)}%`;
-    const customers = `${value} customers`;
-
-    // Slice edge
-    const sx = cx + outerRadius * Math.cos(-midAngle * RADIAN);
-    const sy = cy + outerRadius * Math.sin(-midAngle * RADIAN);
-
-    // Arrow bend
-    const mx = cx + (outerRadius + 14) * Math.cos(-midAngle * RADIAN);
-    const my = cy + (outerRadius + 14) * Math.sin(-midAngle * RADIAN);
-
-    // Horizontal extension
-    const ex = mx + (Math.cos(-midAngle * RADIAN) >= 0 ? 26 : -26);
-    const ey = my;
-
-    const textAnchor = ex > cx ? 'start' : 'end';
-
-    return (
-      <g>
-        {/* arrow */}
-        <path
-          d={`M${sx},${sy} L${mx},${my} L${ex},${ey}`}
-          stroke="#9CA3AF"
-          fill="none"
-          strokeWidth={1}
-        />
-
-        <circle cx={sx} cy={sy} r={2} fill="#9CA3AF" />
-
-        {/* percentage */}
-        <text
-          x={ex + (ex > cx ? 4 : -4)}
-          y={ey - 6}
-          textAnchor={textAnchor}
-          dominantBaseline="central"
-          fontSize={15}
-          fontWeight={600}
-          fill="#374151"
-        >
-          {percentage}
-        </text>
-
-        {/* customer count */}
-        <text
-          x={ex + (ex > cx ? 4 : -4)}
-          y={ey + 10}
-          textAnchor={textAnchor}
-          dominantBaseline="central"
-          fontSize={14}
-          fill="#6B7280"
-        >
-          {customers}
-        </text>
-      </g>
-    );
-  };
+  const filteredPieData = [
+    { name: "Morning", value: adjustedTimeOfDayCounts.morning },
+    { name: "Afternoon", value: adjustedTimeOfDayCounts.afternoon },
+    { name: "Evening", value: adjustedTimeOfDayCounts.evening }
+  ].filter(v => v.value > 0);
 
   const getFirstDayOfMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -382,10 +526,9 @@ const Analytics: React.FC = () => {
       return d;
     });
 
-  // control: when view changes, we close calendar and fetch new data
   useEffect(() => {
     setShowCalendar(false);
-    // ensure fetch occurs via useEffect below (view and currentDate dependency)
+
   }, [view]);
 
   // helper to format date param (YYYY-MM-DD)
@@ -404,7 +547,6 @@ const Analytics: React.FC = () => {
       setCurrentDate(clicked);
       setShowCalendar(false);
     } else if (view === 'Per Month') {
-      // set currentDate to same day but month chosen - the backend uses month start/end
       setCurrentDate(clicked);
       setShowCalendar(false);
     }
@@ -414,6 +556,24 @@ const Analytics: React.FC = () => {
   ...salesData.map(s => s.value),
   10 
   );
+
+  // Only filter revenue chart hours in PER DAY mode
+  const filteredSalesData = useMemo(() => {
+    if (!salesData || salesData.length === 0) return [];
+
+    if (view !== 'Per Day') {
+      return salesData; // ⬅ Leave month/year untouched
+    }
+
+    const isSunday = currentDate.getDay() === 0;
+    const openHour = isSunday ? 9 : 10;
+    const closeHour = 22;
+
+    return salesData.filter(item => {
+      const hour = Number(item.name); // name = hour when Per Day
+      return !isNaN(hour) && hour >= openHour && hour <= closeHour;
+    });
+  }, [salesData, view, currentDate]);
 
   const normalizeDailySales = (data: SalesDataItem[], date: Date): SalesDataItem[] => {
     const daysInMonth = getDaysInMonth(date);
@@ -444,6 +604,43 @@ const Analytics: React.FC = () => {
       };
     });
   };
+
+  const actualGrowthData = useMemo(() => {
+    if (!customerRegistrations || customerRegistrations.length === 0) return [];
+
+    switch(view) {
+      case 'Per Day':
+        // map { date, count } → { hour, count } if needed
+        return buildCustomerGrowthData(
+          customerRegistrations.map(r => ({
+            hour: new Date(r.date).getHours(),
+            count: r.count,
+          })),
+          view,
+          currentDate
+        );
+      case 'Per Month':
+        return buildCustomerGrowthData(
+          customerRegistrations.map(r => ({
+            day: new Date(r.date).getDate(),
+            count: r.count,
+          })),
+          view,
+          currentDate
+        );
+      case 'Per Year':
+        return buildCustomerGrowthData(
+          customerRegistrations.map(r => ({
+            month: new Date(r.date).getMonth() + 1,
+            count: r.count,
+          })),
+          view,
+          currentDate
+        );
+      default:
+        return [];
+    }
+  }, [customerRegistrations, view, currentDate]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -477,10 +674,21 @@ const Analytics: React.FC = () => {
       if (!res) throw lastErr ?? new Error('Failed to fetch analytics');
 
       const data = res.data || {};
+
+      const customerInsights = data.customerInsights as CustomerInsightsWithRegistrations;
+
+      const safeRegistrations = Array.isArray(customerInsights.registrations)
+        ? customerInsights.registrations.map(r => ({
+            date: r.date,
+            count: Number(r.count ?? 0),
+          }))
+        : [];
+
+      setCustomerRegistrations(safeRegistrations);
       
       if (Array.isArray(data.salesData)) {
       let sales: SalesDataItem[] = (data.salesData ?? []).map(s => ({
-        name: isTruthyString(s.name) ? s.name : '',
+        name: s.name !== undefined && s.name !== null ? String(s.name) : '',
         value: typeof s.value === 'number' ? s.value : 0,
         orders: typeof s.orders === 'number' ? s.orders : 0,
         color: s.color || '#34D399',
@@ -524,10 +732,10 @@ const Analytics: React.FC = () => {
       if (data.customerInsights) {
         setCustomerInsightsData({
           totalRegistered: data.customerInsights.totalRegistered ?? 0,
-          activeThisPeriod:
-            data.customerInsights.activeThisPeriod ??
-            data.customerInsights.activeThisWeek ?? 0,
-          averageGrowth: data.customerInsights.averageGrowth ?? '',
+          activeThisPeriod: data.customerInsights.activeThisPeriod ?? 0,
+          averageGrowth: Number(data.customerInsights.averageGrowth ?? 0),
+          averageActiveUsers: Number(data.customerInsights.averageActiveUsers ?? 0),
+          registrations: data.customerInsights.registrations ?? [],
         });
       }
 
@@ -564,25 +772,60 @@ const Analytics: React.FC = () => {
 
       setLoyaltyProgramData(typeof data.loyaltyProgram === 'number' ? data.loyaltyProgram : 0);
 
-      const safeArray = Array.isArray(data.orders_per_hour)
-        ? data.orders_per_hour.map(o => ({
-            hour: Number(o.hour),
-            orders: Number(o.orders ?? 0),
-            customers: Number(o.customers ?? 0),
-            day: typeof o.day === 'string'
-              ? o.day
-              : o.day
-              ? new Date(o.day).toISOString().split('T')[0]
-              : toISODate(currentDate),
-            month: Number(o.month ?? currentDate.getMonth() + 1),
+      const safeVerifiedCustomers = Array.isArray(data.verifiedCustomers)
+        ? data.verifiedCustomers.map(v => ({
+            date: v.date,
+            count: Number(v.count ?? 0),
           }))
         : [];
 
-      setOrdersPerHour(safeArray);
+      const isSunday = currentDate.getDay() === 0;
+      const openHour = isSunday ? 9 : 10;
+      const closeHour = 22;
+
+      setOrdersPerHour([]);
+
+      const safeOrdersPerHour = Array.isArray(data.ordersPerHour)
+        ? data.ordersPerHour
+            .filter(o => o.hour >= openHour && o.hour <= closeHour)
+            .map(o => ({ ...o, orders: o.orders ?? 0, customers: o.customers ?? 0 }))
+        : [];
+
+      setOrdersPerHour(safeOrdersPerHour);
+
+      setVerifiedCustomers(safeVerifiedCustomers); 
 
       setPeakHours(data.peak_hours ?? { text: '', hours: [] });
       setHeatmap(data.heatmap ?? null);
       setTotals(data.totals ?? { orders_count: 0, revenue_total: 0 });
+
+      // New correct customers interval + peak hours logic
+      if (data.customer_time_intervals) {
+        const { morning = 0, afternoon = 0, evening = 0, average = 0 } =
+          data.customer_time_intervals;
+
+        setAdjustedTimeOfDayCounts(prev => ({
+          ...prev,
+          morning,
+          afternoon,
+          evening,
+        }));
+
+        setAverageCustomers(average);
+      }
+
+      if (data.peak_hours_correct) {
+        const hour = data.peak_hours_correct.hour;
+        const hourText =
+          `${hour % 12 === 0 ? 12 : hour % 12}${hour < 12 ? 'AM' : 'PM'}`;
+
+        setComputedPeakHours({
+          text: hourText,
+          max_count: data.peak_hours_correct.count
+        });
+      }
+
+      setBackendProductBreakdown(data.productBreakdown || {});
 
       setLoading(false);
     } catch (err: any) {
@@ -591,14 +834,104 @@ const Analytics: React.FC = () => {
     }
   };
 
-  // initial load & whenever view/currentDate changes
+  const performLinearRegression = (data: number[], futureCount: number) => {
+    if (data.length < 2) return [];
+
+    const n = data.length;
+    const x = data.map((_, i) => i);
+    const y = data;
+
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((a, b, i) => a + b * y[i], 0);
+    const sumXX = x.reduce((a, b) => a + b * b, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX ** 2);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return Array.from({ length: futureCount }, (_, i) => {
+      const nextX = n + i;
+      return Math.max(0, parseFloat((slope * nextX + intercept).toFixed(2)));
+    });
+  };
+
+  const forecastStepsMap = {
+    "Per Day": 7,
+    "Per Month": 7,
+    "Per Year": 3
+  };
+
+  const forecastSteps = forecastStepsMap[view] ?? 7;
+
+  const forecastRevenueData = useMemo(() => {
+    const actual = salesData?.map((d: any) => d.value) ?? [];
+    const forecast = performLinearRegression(actual, forecastSteps);
+
+    return [
+      ...(salesData?.map((d: any) => ({
+        label: d.name,
+        actual: d.value,
+      })) ?? []),
+      ...forecast.map((v, i) => ({
+        label: `+${i + 1}`,
+        forecast: v,
+      })),
+    ];
+  }, [salesData, view]);
+
+  // Customers Forecast Data
+  const forecastCustomerData = useMemo(() => {
+    const actual = customerInsightsData.registrations?.map(r => r.count) ?? [];
+    const forecast = performLinearRegression(actual, forecastSteps);
+
+    return [
+      ...(customerInsightsData.registrations?.map(r => ({
+        label: r.date,
+        actual: r.count,
+      })) ?? []),
+
+      ...forecast.map((v, i) => ({
+        label: `+${i + 1}`,
+        forecast: v,
+      })),
+    ];
+  }, [customerInsightsData, view]);
+
+  // Convert data array into downloadable CSV
+  const exportToCSV = (filename: string, rows: any[]) => {
+    const separator = ",";
+    const keys = Object.keys(rows[0] || {});
+
+    const csvContent =
+      keys.join(separator) +
+      "\n" +
+      rows
+        .map((row) =>
+          keys
+            .map((k) => `"${row[k] ?? ""}"`)
+            .join(separator)
+        )
+        .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  {/* Inside your component */}
+  useEffect(() => {
+    console.log('Actual growth data:', actualGrowthData);
+  }, [actualGrowthData]);
+
   useEffect(() => {
     fetchAnalytics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, currentDate]);
-
-  // UI helpers for hours (we'll show 9am..8pm for the weekly heatmap like your original)
-  const hoursOfDay = ['12am','1am','2am','3am','4am','5am','6am','7am','8am','9am','10am','11am','12pm','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm','9pm','10pm','11pm'];
 
   if (loading) {
     return (
@@ -642,19 +975,103 @@ const Analytics: React.FC = () => {
 
   /* ---------- Render ---------- */
 
-  const isDailyView = view === 'Per Day';
-  const hasPeakData =
-    peakHours &&
-    Array.isArray(peakHours.hours) &&
-    peakHours.hours.length > 0 &&
-    peakHours.max_count && peakHours.max_count > 0;
-
   const yAxisMax = Math.ceil(maxRevenue / 50) * 50; // rounds up to nearest ₱50
   const yTickCount = 5;
 
   const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) =>
     Math.round((yAxisMax / yTickCount) * i)
   );
+  
+  const ratingColors: Record<string, string> = {
+    '1': '#EA4335', 
+    '2': '#FFC107', 
+    '3': '#4285F4',
+    '4': '#A6C561', 
+    '5': '#4CAF50', 
+  };
+
+  const CUSTOMER_COLORS = ['#4ade80', '#60a5fa', '#f97316']; 
+
+  const BreakdownPopover: React.FC<BreakdownPopoverProps> = ({ position, items, onClose }) => {
+    useEffect(() => {
+      const handleClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest(".breakdown-popover")) {
+          onClose();
+        }
+      };
+
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }, [onClose]);
+
+    return (
+      <div
+        className="breakdown-popover absolute z-[9999] bg-white border shadow-lg rounded-lg p-3"
+        style={{
+          top: position.top,
+          left: position.left,
+          transform: "translateX(-50%)",
+        }}
+      >
+        <p className="font-semibold text-gray-700 mb-2">Products Sold</p>
+
+        {items.length === 0 ? (
+          <p className="text-xs text-gray-500">No product data</p>
+        ) : (
+          <ul className="text-xs space-y-1">
+            {items.map((product: ProductItem, i: number) => (
+              <li key={i} className="text-gray-700 font-medium">
+                {product.name} — <span className="font-semibold">{product.total_orders}</span> orders
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  const handleExport = () => {
+    const dateString = currentDate.toISOString().split("T")[0];
+
+    if (activeTab === "Sales Hub") {
+      if (!salesData?.length) return;
+
+      exportToCSV(
+        `analytics_saleshub_${view}_${dateString}.csv`,
+        salesData.map((d) => ({
+          period: d.name,
+          revenue: d.value,
+          orders: d.orders,
+        }))
+      );
+    }
+
+    else if (activeTab === "Customer Analytics") {
+      if (!customerInsightsData?.registrations?.length) return;
+
+      exportToCSV(
+        `analytics_customers_${view}_${dateString}.csv`,
+        customerInsightsData.registrations.map((r: any) => ({
+          date: r.date,
+          count: r.count,
+        }))
+      );
+    }
+
+    else if (activeTab === "Forecasting Hub") {
+      if (!forecastRevenueData?.length) return;
+
+      exportToCSV(
+        `analytics_forecast_${view}_${dateString}.csv`,
+        forecastRevenueData.map((d: any) => ({
+          label: d.label,
+          actual: "actual" in d ? d.actual : "",
+          forecast: "forecast" in d ? d.forecast : "",
+        }))
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] p-4 sm:p-6 md:p-8 font-sans">
@@ -668,6 +1085,7 @@ const Analytics: React.FC = () => {
           >
             Sales Hub
           </button>
+
           <button
             onClick={() => setActiveTab('Customer Analytics')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -676,12 +1094,21 @@ const Analytics: React.FC = () => {
           >
             Customer Analytics
           </button>
+
+          <button
+            onClick={() => setActiveTab('Forecasting Hub')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'Forecasting Hub' ? 'bg-[#8cb662] shadow text-white' : 'text-gray-600 hover:bg-[#8cb662] hover:text-white'
+            }`}
+          >
+            Forecasting Hub
+          </button>
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap justify-center">
           <button
-            onClick={() => window.print()}
-            className="flex items-center space-x-2 px-4 py-2 rounded-full border border-gray-300 text-gray-800 shadow-sm hover:bg-[#8cb662] hover:text-white transition-colors"
+            onClick={handleExport}
+            className="flex items-center cursor-pointer space-x-2 px-4 py-2 rounded-full border border-gray-300 text-gray-800 shadow-sm hover:bg-[#8cb662] hover:text-white transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -809,7 +1236,7 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {activeTab === 'Sales Hub' ? (
+      {activeTab === 'Sales Hub' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue Overview */}
           <div className="bg-white rounded-3xl shadow-lg p-6 h-96">
@@ -833,7 +1260,7 @@ const Analytics: React.FC = () => {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
-                  data={salesData}
+                  data={filteredSalesData}
                   margin={{ top: 10, right: 30, left: 10, bottom: 40 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -842,6 +1269,17 @@ const Analytics: React.FC = () => {
                     dataKey="name"
                     tick={{ fontSize: 12 }}
                     stroke="#6B7280"
+                    tickFormatter={(value: any) => {
+                      if (view !== 'Per Day') return String(value);
+
+                      const hour = Number(value);
+                      if (isNaN(hour)) return String(value);
+
+                      const period = hour >= 12 ? 'PM' : 'AM';
+                      const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+
+                      return `${displayHour} ${period}`;
+                    }}
                   />
 
                   <YAxis
@@ -853,9 +1291,11 @@ const Analytics: React.FC = () => {
                   />
 
                   <Tooltip
-                    formatter={(value: number, name: string, props: any) => {
-                      const orders = props.payload.orders ?? 0;
-                      return [`₱${value.toLocaleString()}`, `${orders} orders`];
+                    formatter={(value, name, props: any) => {
+                      const v = typeof value === "number" ? value : 0;
+                      const orders = props?.payload?.orders ?? 0;
+
+                      return [`₱${v.toLocaleString()}`, `${orders} orders`];
                     }}
                     contentStyle={{ backgroundColor: '#fff', borderRadius: 8, border: '1px solid #E5E7EB' }}
                     labelStyle={{ color: '#111827', fontWeight: 500 }}
@@ -889,36 +1329,48 @@ const Analytics: React.FC = () => {
             <div className="flex items-center justify-center h-64">
               <div className="flex items-center space-x-6">
                 <div className="relative w-72 h-64 flex items-center justify-center">
-                  <PieChart width={420} height={320}>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      dataKey="value"
-                      labelLine={false}
-                      label={renderArrowLabel}
-                    >
-                      {pieData.map((_, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [`${value} customers`, '']} />
-                  </PieChart>
+                  {filteredPieData.length === 0 ? (
+                    <div className="text-gray-400 text-sm">
+                      No customer activity for this period
+                    </div>
+                  ) : (
+                    <PieChart width={420} height={320}>
+                      <Pie
+                        data={filteredPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ percent, value }) =>
+                          `${(typeof percent === 'number' ? percent * 100 : 0).toFixed(1)}% ${value} customers`
+                        }
+                      >
+                        {filteredPieData.map((_, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={CUSTOMER_COLORS[index % CUSTOMER_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number | undefined) => {
+                          return [`${value ?? 0} customers`, ''];
+                        }}
+                      />
+                    </PieChart>
+                  )}
                 </div>
 
                 {/* Peak info to the right side of the donut */}
                 <div className="flex flex-col items-start">
                   <div className="text-sm text-gray-500">Peak hours</div>
                   <div className="text-xl font-semibold text-gray-800">
-                    {peakHours?.text || '—'}
+                    {computedPeakHours.text || '—'}
                   </div>
 
                   <div className="text-xs text-gray-500 mt-2">
-                    Top orders in hour: {peakHours?.max_count ?? '-'}
+                    Top orders in hour: {computedPeakHours.max_count ?? '-'}
                   </div>
 
                   {/* Average percentage */}
@@ -927,35 +1379,13 @@ const Analytics: React.FC = () => {
                     {averageCustomers}
                   </div>
 
-                  {/* Breakdown list */}
-                  {isDailyView && hasPeakData && (
-                    <div className="mt-3 space-y-1 w-full">
-                      {ordersPerHour
-                        .filter(o => peakHours.hours.includes(o.hour))
-                        .map((b, i) => (
-                          <div
-                            key={i}
-                            className="flex justify-between text-xs text-gray-500"
-                          >
-                            <span>
-                              {b.hour % 12 === 0 ? 12 : b.hour % 12}
-                              {b.hour < 12 ? 'AM' : 'PM'}
-                            </span>
-                            <span>{b.customers}</span>
-                          </div>
-                        ))}
+                  <div className="mt-2 text-xs text-gray-500 space-y-1">
+                    <div>
+                      Morning ({adjustedTimeOfDayCounts.morningStart}AM–12PM): {adjustedTimeOfDayCounts.morning}
                     </div>
-                  )}
-
-                  {!hasPeakData && (
-                    <div className="mt-3 text-xs text-gray-400">
-                      No customer activity for this period
-                    </div>
-                  )}
-
-                  <button className="px-3 py-1 mt-4 text-xs font-medium text-gray-600 border border-gray-300 rounded-full hover:bg-[#8cb662] hover:text-white transition-colors">
-                    {view === 'Per Day' ? 'Daily' : 'Monthly'}
-                  </button>
+                    <div>Afternoon (1PM–5PM): {adjustedTimeOfDayCounts.afternoon}</div>
+                    <div>Evening (6PM–10PM): {adjustedTimeOfDayCounts.evening}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -970,65 +1400,103 @@ const Analytics: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-                <table className="w-full text-center">
-                  <thead>
-                    <tr>
-                      <th className="p-2"></th>
-                      {view === 'Per Day' ? (
-                        hoursOfDay.map((hour, i) => (
-                          <th key={i} className="p-2 text-gray-500 text-sm font-normal">{hour}</th>
-                        ))
-                      ) : view === 'Per Month' ? (
-                        Array.from({ length: getDaysInMonth(currentDate) }, (_, i) => i + 1).map((day, i) => (
-                          <th key={i} className="p-2 text-gray-500 text-sm font-normal">{day}</th>
-                        ))
-                      ) : (
-                        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-                          .map((month, i) => (
-                            <th key={i} className="p-2 text-gray-500 text-sm font-normal">{month}</th>
-                          ))
-                      )}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {heatmapData.length === 0 ? (
-                      <tr>
-                        <td colSpan={view === 'Per Day' ? 24 : view === 'Per Month' ? getDaysInMonth(currentDate) : 12} className="p-6 text-sm text-gray-400 text-center">
-                          No data available
-                        </td>
-                      </tr>
-                    ) : (
-                      heatmapData.map((row, i) => (
-                        <tr key={i}>
-                          <td className="pr-4 py-2 text-right text-gray-500 text-sm font-normal">{row.day}</td>
-                          {row.hourCounts.map((count, idx) => {
-                            const maxCount = Math.max(1, ...row.hourCounts);
-
-                            return (
-                              <td key={idx} className="px-1 py-1">
-                                <div
-                                  title={`${count} orders`}
-                                  className="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center text-xs font-medium text-gray-800 transition-all"
-                                  style={{
-                                    background:
-                                      count > 0
-                                        ? `rgba(34,197,94,${Math.max(0.15, count / maxCount)})`
-                                        : '#EEF2FF',
-                                    cursor: count > 0 ? 'pointer' : 'default',
-                                  }}
-                                >
-                                  {count > 0 ? count : ''}
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
+              <table className="w-full text-center">
+                <thead>
+                  <tr>
+                    <th className="p-2"></th>
+                    {view === "Per Day"
+                    ? heatmapData[0]?.hourLabels?.map((label, i) => (
+                        <th key={i} className="p-2 text-gray-500 text-sm font-normal">{label}</th>
                       ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    : view === "Per Month"
+                    ? heatmapData[0]?.hourLabels?.map((label, i) => (
+                        <th key={i} className="p-2 text-gray-500 text-sm font-normal">{label}</th>
+                      ))
+                    : heatmapData[0]?.hourLabels?.map((label, i) => (
+                        <th key={i} className="p-2 text-gray-500 text-sm font-normal">{label}</th>
+                      ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {heatmapData.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={
+                          view === "Per Day"
+                            ? (heatmapData[0]?.hourLabels?.length || 1) + 1
+                            : view === "Per Month"
+                            ? (heatmapData[0]?.hourLabels?.length || getDaysInMonth(currentDate)) + 1
+                            : (heatmapData[0]?.hourLabels?.length || 12) + 1
+                        }
+                        className="p-6 text-sm text-gray-400 text-center"
+                      >
+                        No data available
+                      </td>
+                    </tr>
+                  ) : (
+                    heatmapData.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <td className="p-2 text-xs font-medium text-gray-700 whitespace-nowrap">
+                          {row.day}
+                        </td>
+
+                        {row.hourCounts.map((count, idx) => {
+                          const isSunday = row.day === "Sun"; 
+                          const startHour = isSunday ? 9 : 10;
+                          const hour = startHour + idx;
+
+                          return (
+                            <td key={idx} className="p-1">
+                              <div
+                                ref={(el) => {
+                                  heatmapAnchorRefs.current[hour] = el;
+                                }}
+                                className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-xs font-medium cursor-pointer transition-transform hover:scale-110"
+                                style={{
+                                  background:
+                                    count > 0
+                                      ? `rgba(34,197,94,${Math.max(0.15, count / Math.max(...row.hourCounts, 1))})`
+                                      : "#EEF2FF",
+                                  color: count > 5 ? "#fff" : "#000",
+                                }}
+                                onClick={(e) => {
+                                  if (count > 0) {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const breakdownItems = backendProductBreakdown?.[hour] ?? [];
+
+                                    console.log("Heatmap Clicked:", {
+                                      hour,
+                                      backendProductBreakdown,
+                                      breakdownItemsForHour: backendProductBreakdown?.[hour],
+                                      breakdownItemsResult: breakdownItems,
+                                      heatmapHourCounts: row.hourCounts,
+                                      countOnSquare: count,
+                                    });
+
+                                    // Update dropdown popover position ALWAYS based on clicked square
+                                    setPopoverPosition({
+                                      top: rect.bottom + window.scrollY + 6,
+                                      left: rect.left + window.scrollX + rect.width / 2,
+                                    });
+
+                                    // Must include dayIndex (your type enforces it)
+                                    setSelectedBreakdown({ hour, items: breakdownItems });
+                                    setShowBreakdownModal(true);
+                                  }
+                                }}
+                              >
+                                {count > 0 ? count : ""}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Top Products */}
@@ -1078,7 +1546,9 @@ const Analytics: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : (
+      )} 
+      
+      {activeTab === 'Customer Analytics' && (
         /* Customer analytics (unchanged layout but reads updated data) */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Customer Insights */}
@@ -1098,11 +1568,57 @@ const Analytics: React.FC = () => {
               </div>
 
               <div className="flex flex-col items-center">
-                <h3 className="text-base font-medium text-gray-500">Average Growth</h3>
+                <div className="text-sm text-gray-600 font-medium mb-2">
+                  Average Customer Growth
+                </div>
+
                 <div className="w-full h-40">
-                  <svg viewBox="0 0 100 40" className="w-full h-full">
-                    <path d={customerInsightsData.averageGrowth || 'M0,30 Q25,15 50,20 T100,10'} stroke="#3B82F6" strokeWidth="2" fill="none" />
-                  </svg>
+                  {actualGrowthData.length === 0 ? (
+                    <span className="text-sm text-gray-400">
+                      No growth data for this period
+                    </span>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={160}>
+                      <LineChart
+                        data={actualGrowthData}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                      >
+                        <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#D1D5DB' }}
+                        />
+                        <YAxis
+                          domain={[0, 'dataMax + 1']}
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#D1D5DB' }}
+                          allowDecimals={false}
+                        />
+                        <Tooltip
+                          formatter={(value: number | undefined) => {
+                            return [`${value ?? 0} customers`, ''];
+                          }}
+                          labelStyle={{ color: '#111827', fontWeight: 500 }}
+                          contentStyle={{
+                            backgroundColor: '#fff',
+                            borderRadius: 8,
+                            border: '1px solid #E5E7EB',
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#3B82F6"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             </div>
@@ -1134,51 +1650,60 @@ const Analytics: React.FC = () => {
               <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
             </div>
 
-            <div className="flex text-gray-500 h-52 items-end justify-between space-x-4">
-              {['1', '2', '3', '4', '5'].map((rating) => {
-                const count = customerFeedback.ratingsBreakdown?.[rating] || 0;
-                const label = rating === '1' ? 'Low' :
-                              rating === '2' ? 'Good' :
-                              rating === '3' ? 'Average' :
-                              rating === '4' ? 'High' : 'Excellent';
-                return (
-                  <div key={rating} className="flex-1 text-center">
-                    <div className="h-40 bg-gray-200 rounded-lg relative">
-                      <div
-                        className="bg-green-500 rounded-lg absolute bottom-0 w-full"
-                        style={{ height: `${Math.min(100, count * 10)}%` }}
-                      />
-                    </div>
-                    <div className="mt-1 text-sm font-medium">{label}</div>
-                    <div className="text-xs text-gray-500">{count}</div>
-                  </div>
-                );
-              })}
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={['1','2','3','4','5'].map(rating => ({
+                    rating,
+                    count: customerFeedback.ratingsBreakdown?.[rating] || 0,
+                  }))}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis 
+                    dataKey="rating" 
+                    tickFormatter={(r) => {
+                      switch(r) {
+                        case '1': return 'Low';
+                        case '2': return 'Good';
+                        case '3': return 'Average';
+                        case '4': return 'High';
+                        case '5': return 'Excellent';
+                        default: return r;
+                      }
+                    }} 
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip 
+                    formatter={(value: number | undefined) => {
+                      return [`${value ?? 0} reviews`, ''];
+                    }}
+                  />
+                  <Bar dataKey="count" fill="#8884d8">
+                    {['1','2','3','4','5'].map((rating) => (
+                      <Cell key={rating} fill={ratingColors[rating]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
             <div className="mt-4">
               <h3 className="text-xs text-gray-500 font-semibold mb-2">Legend (Ratings)</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-900 flex items-center space-x-2">
-                  <span className="w-3 h-3 text-gray-900 rounded-full bg-[#EA4335]" />
-                  <span>Low</span>
-                </div>
-                <div className="text-gray-900 flex items-center space-x-2">
-                  <span className="w-3 h-3 text-gray-900 rounded-full bg-[#FFC107]" />
-                  <span>Good</span>
-                </div>
-                <div className="text-gray-900 flex items-center space-x-2">
-                  <span className="w-3 h-3 rounded-full bg-[#4285F4]" />
-                  <span className='text-gray-900'>Average</span>
-                </div>
-                <div className="text-gray-900 flex items-center space-x-2">
-                  <span className="w-3 h-3 rounded-full bg-[#A6C561]" />
-                  <span>High</span>
-                </div>
-                <div className="text-gray-900 flex items-center space-x-2">
-                  <span className="w-3 h-3 rounded-full bg-[#4CAF50]" />
-                  <span>Excellent</span>
-                </div>
+                {['1','2','3','4','5'].map((r) => {
+                  const label = r === '1' ? 'Low' :
+                                r === '2' ? 'Good' :
+                                r === '3' ? 'Average' :
+                                r === '4' ? 'High' : 'Excellent';
+                  return (
+                    <div key={r} className="text-gray-900 flex items-center space-x-2">
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ratingColors[r] }} />
+                      <span>{label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1220,8 +1745,84 @@ const Analytics: React.FC = () => {
           </div>
         </div>
       )}
+
+      {activeTab === 'Forecasting Hub' && (
+        <>
+          {/* Forecast Info Card */}
+          <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">
+              Forecast Range
+            </h3>
+            <p className="text-sm text-gray-600">
+              Forecasting next{" "}
+              {view === "Per Day" && "7 Hours"}
+              {view === "Per Month" && "7 Days"}
+              {view === "Per Year" && "3 Months"}
+              {" "}based on recent performance trends.
+            </p>
+          </div>
+
+          {/* Sales & Revenue Forecast */}
+          <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              Sales & Revenue Forecast
+            </h3>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecastRevenueData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={3} />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#22C55E"
+                  strokeDasharray="5 5"
+                  strokeWidth={3}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Customers Forecast */}
+          <div className="bg-white p-4 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              Customers Forecasting
+            </h3>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecastCustomerData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="actual" stroke="#9333EA" strokeWidth={3} />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#F59E0B"
+                  strokeDasharray="5 5"
+                  strokeWidth={3}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+
+      {showBreakdownModal && selectedBreakdown && (
+        <BreakdownPopover
+          position={popoverPosition}
+          items={selectedBreakdown.items}
+          onClose={() => setShowBreakdownModal(false)}
+        />
+      )}
     </div>
   );
 };
 
 export default Analytics;
+
+

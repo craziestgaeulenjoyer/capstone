@@ -10,6 +10,7 @@ import {
   Modal,
   Alert,
   Linking,
+  Switch,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -51,6 +52,7 @@ const CartScreen: React.FC = () => {
     price: number;
     image?: string;
     category?: string;
+    is_free?: boolean; 
   }
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -89,6 +91,9 @@ const CartScreen: React.FC = () => {
   const [loyaltyRewards, setLoyaltyRewards] = useState(0);
   const [loyaltyProgress, setLoyaltyProgress] = useState(0);
   const [fulfillmentMethod, setFulfillmentMethod] = useState<"delivery" | "pickup" | null>(null);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
+  const [freeDrinkAllowance, setFreeDrinkAllowance] = useState(0);
+  const [freeItems, setFreeItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
     const loadCart = async () => {
@@ -517,6 +522,16 @@ const CartScreen: React.FC = () => {
     }
   };
 
+  const calculateFreeDrinks = (totalDrinks: number) => {
+    const threshold = 10;
+    return Math.floor(totalDrinks / threshold);
+  };
+
+  const displayedCartItems = [
+    ...freeItems,
+    ...cartItems.filter(i => !i.is_free),
+  ];
+
   function setSelectedOrder(order: any) {
     setSelectedOrderState(order);
   }
@@ -554,7 +569,7 @@ const CartScreen: React.FC = () => {
     return null;
   }
 
-  const itemsWithDates = cartItems.map((item: any) => {
+  const itemsWithDates = displayedCartItems.map((item: any) => {
     const parsed = parseBackendTimestamp(item.created_at);
     const ms = parsed && !isNaN(parsed.getTime()) ? parsed.getTime() : 0;
     const formattedDate = parsed
@@ -1008,16 +1023,28 @@ const CartScreen: React.FC = () => {
 
             {/* Still show promo code input */}
             <Text style={styles.sectionTitle}>Apply Promo Code</Text>
-            <View style={styles.promoRow}>
-              <TextInput
-                placeholder="e.g SAVE10"
-                style={styles.input}
-                value={promoCode}
-                onChangeText={setPromoCode}
-              />
-              <TouchableOpacity style={styles.applyBtn}>
-                <Text style={{ color: "#fff", fontWeight: "600" }}>Apply</Text>
-              </TouchableOpacity>
+            <View style={styles.loyaltyCard}>
+              <Text style={styles.title}>Loyalty Reward</Text>
+
+              <View style={styles.switchRow}>
+                <Text>Enable Free Drinks</Text>
+                <Switch
+                  value={loyaltyEnabled}
+                  onValueChange={(value) => {
+                    setLoyaltyEnabled(value);
+
+                    if (!value) {
+                      setFreeItems([]);
+                    }
+                  }}
+                />
+              </View>
+
+              {loyaltyEnabled && (
+                <Text style={styles.subText}>
+                  You can claim up to {freeDrinkAllowance} free drink(s)
+                </Text>
+              )}
             </View>
 
             {/* Points Info (optional, keep your old look) */}
@@ -1481,6 +1508,7 @@ const styles = StyleSheet.create({
   },
 
   toggleContainer: {
+    marginTop: 10,
     flexDirection: "row",
     justifyContent: "space-around",
     borderBottomWidth: 1,
@@ -1518,6 +1546,37 @@ const styles = StyleSheet.create({
   orderStatus: { color: "#76B13A", fontWeight: "600" },
   orderDetail: { color: "#666", fontSize: 13, marginTop: 4 },
   orderDate: { color: "#999", fontSize: 12, marginTop: 2 },
+
+  loyaltyCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    margin: 12,
+    borderRadius: 16,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 6,
+  },
+  subText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  freeCard: {
+    borderColor: "#76B13A",
+    borderWidth: 2,
+  },
+  freeBadge: {
+    position: "absolute",
+    top: 6,
+    alignSelf: "center",
+    backgroundColor: "#76B13A",
+    color: "#fff",
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    fontWeight: "bold",
+  },
 
   checkbox: {
     position: "absolute",

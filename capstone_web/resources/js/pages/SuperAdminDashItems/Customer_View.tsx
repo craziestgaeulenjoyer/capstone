@@ -264,7 +264,6 @@ const Customer_View = () => {
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-lg font-medium text-gray-500">Total Customers</h3>
-            <MoreHorizontal size={20} className="text-gray-400 cursor-pointer" />
           </div>
           <div className="flex justify-between items-end">
             <span className="text-4xl font-bold">{loading ? '...' : metrics.total}</span>
@@ -279,7 +278,6 @@ const Customer_View = () => {
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-lg font-medium text-gray-500">Active Customers</h3>
-            <MoreHorizontal size={20} className="text-gray-400 cursor-pointer" />
           </div>
           <div className="flex justify-between items-end">
             <span className="text-4xl font-bold">{loading ? '...' : metrics.active}</span>
@@ -294,7 +292,6 @@ const Customer_View = () => {
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-lg font-medium text-gray-500">New Customers</h3>
-            <MoreHorizontal size={20} className="text-gray-400 cursor-pointer" />
           </div>
           <div className="flex justify-between items-end">
             <span className="text-4xl font-bold">{loading ? '...' : metrics.new}</span>
@@ -378,12 +375,7 @@ const Customer_View = () => {
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden">
 
             {/* TOP BANNER */}
-            <div className="relative h-32 bg-gray-200">
-              <img
-                src="/images/profile-banner.jpg"
-                className="w-full h-full object-cover opacity-70"
-              />
-            </div>
+            <div className="relative h-32 bg-gray-200" />
 
             {/* AVATAR */}
             <div className="relative flex justify-center -mt-12">
@@ -440,7 +432,8 @@ const Customer_View = () => {
                     <input
                       type="text"
                       defaultValue={profileModal.full_name}
-                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
+                      readOnly
+                      className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -450,7 +443,8 @@ const Customer_View = () => {
                     <input
                       type="email"
                       defaultValue={profileModal.email}
-                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
+                      readOnly
+                      className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -462,7 +456,8 @@ const Customer_View = () => {
                       defaultValue={
                         "@" + profileModal.full_name.replace(/\s+/g, "").toLowerCase()
                       }
-                      className="w-full mt-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-green-300"
+                      readOnly
+                      className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
                 </>
@@ -478,7 +473,8 @@ const Customer_View = () => {
                       <input
                         type="text"
                         defaultValue={profileModal.phone_number}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                      className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
 
@@ -487,7 +483,8 @@ const Customer_View = () => {
                       <input
                         type="text"
                         defaultValue={profileModal.birthday}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                        className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
 
@@ -496,7 +493,8 @@ const Customer_View = () => {
                       <input
                         type="text"
                         defaultValue={profileModal.gender}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                        className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
 
@@ -505,25 +503,28 @@ const Customer_View = () => {
                       <input
                         type="text"
                         defaultValue={profileModal.status}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                        className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Total Orders</label>
+                      <label className="text-sm font-medium">Total Number of Orders</label>
                       <input
                         type="text"
                         defaultValue={profileModal.orders}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                        className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium">Last Order</label>
+                      <label className="text-sm font-medium">Last Date Ordered</label>
                       <input
                         type="text"
                         defaultValue={profileModal.lastOrder}
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                        className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
 
@@ -536,7 +537,8 @@ const Customer_View = () => {
                             ? new Date(profileModal.created_at).toLocaleDateString()
                             : "N/A"
                         }
-                        className="w-full mt-1 px-4 py-2 rounded-lg border"
+                        readOnly
+                        className="mt-1 w-full px-4 py-2 border border-gray-300 shadow-md rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -547,7 +549,7 @@ const Customer_View = () => {
             {/* FOOTER */}
             <div className="flex justify-end px-6 py-4 bg-gray-50">
               <button
-                className="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400 transition"
+                className="cursor-pointer px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-red-500 hover:text-gray-100 transition"
                 onClick={() => setProfileModal(null)}
               >
                 Close

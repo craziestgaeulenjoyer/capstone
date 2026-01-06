@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\CustomerSignupController;
 use App\Http\Controllers\CustomerLoginController;
+use App\Http\Controllers\Administrator_Controllers\ProfileController;
 
 ///SIGN UP CUSTOMER ROUTE////
 Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
@@ -11,7 +12,23 @@ Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup
 //SIGN IN CUSTOMER ROUTE///
 Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
 
-Route::get('/', fn () => Inertia::render('website_pages/Home_MiAmore'))->name('home');  
+Route::get('/', fn() => redirect('/home'));
+
+/* ------- ADMINS & SUPER ADMINS EMAIL VERIFICATION ROUTES ------- */
+
+// Step 2: Deny request (email button)
+Route::post('/email-change/deny', [ProfileController::class, 'denyEmailChange']);
+
+// Step 3: Show change email form (SIGNED / TOKEN-BASED)
+Route::get('/email-change/confirm/{token}', [ProfileController::class, 'verifyEmailChangeToken'])
+    ->name('email-change.confirm');
+
+// Step 4: Finalize email change
+Route::post('/email-change/confirm', [ProfileController::class, 'finalizeEmailChange']);
+
+Route::get('/email-change', function () {
+    return Inertia::render('EmailChange');
+});
 
 /* ---------------- WEBSITE ROUTES ---------------- */
 
@@ -69,6 +86,9 @@ Route::get('/dashboardgetstarted', fn() => Inertia::render('Dashboard_Section/Da
 Route::get('/dashboardloginform', fn() => Inertia::render('Dashboard_Section/DashboardLoginForm'))
     ->name('DashboardLoginForm');
 
+Route::get('/dashboardforgotpassword', fn() => Inertia::render('Dashboard_Section/DashboardForgotPassword'))
+    ->name('DashboardForgotPassword');
+
 Route::get('/dashboardemailverification', fn() => Inertia::render('Dashboard_Section/DashboardEmailVerification'))
     ->name('DashboardEmailVerification');
 
@@ -99,4 +119,3 @@ Route::fallback(fn() => Inertia::render('Errors/NotFound', [
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
-require __DIR__.'/api.php';

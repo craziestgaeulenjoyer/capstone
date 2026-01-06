@@ -5,11 +5,28 @@ namespace App\Http\Controllers\Administrator_Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MenuItem;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class MenuController extends Controller
 {
+    /**
+     * Resolve actor name safely
+     */
+    private function actorName(): string
+    {
+        if (auth('super_admin')->check()) {
+            return auth('super_admin')->user()->name;
+        }
+
+        if (auth('admin')->check()) {
+            return auth('admin')->user()->name;
+        }
+
+        return 'System';
+    }
+
     /**
      * Get all menu items (admin view)
      */
@@ -22,24 +39,16 @@ class MenuController extends Controller
 
     /**
      * Normalize price for food and drinks
-     * - Drinks: always array
-     * - Food: string (single) or array (regular/large)
      */
     private function normalizePrice(Request $request)
     {
         $price = $request->price;
 
         if ($request->type === 'drink') {
-            // Ensure drinks are always stored as array
             return is_array($price) ? $price : [$price];
         }
 
-        // Food
-        if (is_array($price)) {
-            return $price;
-        }
-
-        return (string) $price; // single price as string
+        return is_array($price) ? $price : (string) $price;
     }
 
     /**
@@ -52,7 +61,7 @@ class MenuController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:food,drink',
-            'price' => 'required', // string or array
+            'price' => 'required',
             'categories' => 'required|array|min:1',
             'subcategories' => 'nullable|array',
             'description' => 'nullable|string',
@@ -75,7 +84,15 @@ class MenuController extends Controller
             'image_path' => $path,
         ]);
 
-        Log::info('Menu item stored', ['item' => $item]);
+        Notification::create([
+            'type' => 'menu',
+            'action' => 'Created',
+            'subject' => $item->name,
+            'changed_fields' => $item->only([
+                'type', 'price', 'categories', 'subcategories', 'description'
+            ]),
+            'performed_by' => $this->actorName(),
+        ]);
 
         return response()->json([
             'message' => 'Menu item added successfully.',
@@ -89,6 +106,7 @@ class MenuController extends Controller
     public function update(Request $request, $id)
     {
         $item = MenuItem::findOrFail($id);
+        $before = $item->getOriginal();
 
         Log::info('MenuController@update request received', $request->all());
 
@@ -104,7 +122,6 @@ class MenuController extends Controller
 
         $finalPrice = $this->normalizePrice($request);
 
-        // Handle image
         if ($request->hasFile('image')) {
             if ($item->image_path) {
                 Storage::disk('public')->delete($item->image_path);
@@ -122,7 +139,24 @@ class MenuController extends Controller
             'image_path' => $validated['image_path'] ?? $item->image_path,
         ]);
 
-        Log::info('Menu item updated', ['item' => $item]);
+        // Detect changes
+        $changed = [];
+        foreach ($item->getChanges() as $key => $newValue) {
+            $changed[$key] = [
+                'old' => $before[$key] ?? null,
+                'new' => $newValue,
+            ];
+        }
+
+        if (!empty($changed)) {
+            Notification::create([
+                'type' => 'menu',
+                'action' => 'Updated',
+                'subject' => $item->name,
+                'changed_fields' => $changed,
+                'performed_by' => $this->actorName(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Menu item updated successfully.',
@@ -141,6 +175,14 @@ class MenuController extends Controller
             Storage::disk('public')->delete($item->image_path);
         }
 
+        Notification::create([
+            'type' => 'menu',
+            'action' => 'Deleted',
+            'subject' => $item->name,
+            'changed_fields' => null,
+            'performed_by' => $this->actorName(),
+        ]);
+
         $item->delete();
 
         return response()->json([
@@ -149,7 +191,7 @@ class MenuController extends Controller
     }
 
     /**
-     * Public menu (for website)
+     * Public menu
      */
     public function publicMenu()
     {

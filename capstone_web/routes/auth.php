@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Http\Controllers\Administrator_Controllers\AdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\SuperAdminAuthController;
+use App\Http\Controllers\Administrator_Controllers\ForgotPasswordController;
 use App\Models\Admin;
 use App\Models\SuperAdmin;
 
@@ -17,6 +18,29 @@ use App\Models\SuperAdmin;
 */
 
 Route::middleware(['web'])->group(function () {
+
+    /*
+    |----------------------------------------------------------
+    | FORGOT PASSWORD (ADMIN + SUPER ADMIN)
+    |----------------------------------------------------------
+    | Public routes with CSRF protection.
+    | Handles OTP email, verification, and password reset.
+    */
+
+    Route::prefix('forgot-password')->group(function () {
+
+        // Step 1: Send 6-digit OTP to email
+        Route::post('/send-otp', [ForgotPasswordController::class, 'sendOtp'])
+            ->name('forgot.password.send');
+
+        // Step 2: Verify OTP
+        Route::post('/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
+            ->name('forgot.password.verify');
+
+        // Step 3: Reset password
+        Route::post('/reset', [ForgotPasswordController::class, 'resetPassword'])
+            ->name('forgot.password.reset');
+    });
 
     /* ---------------- ADMIN AUTH ---------------- */
     Route::prefix('admin')->group(function () {
