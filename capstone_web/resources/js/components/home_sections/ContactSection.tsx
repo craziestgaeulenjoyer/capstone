@@ -3,178 +3,176 @@ import { FaPhoneAlt } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";
 import { IoMdArrowForward } from "react-icons/io";
 import { motion } from "framer-motion";
-import { Link } from "@inertiajs/react";
 
 const ContactSection: React.FC = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  };
+
+  const fields = [
+    { id: "name", label: "Full Name", type: "text", placeholder: "Full Name" },
+    { id: "email", label: "Email Address", type: "email", placeholder: "Email Address" },
+    { id: "phone", label: "Phone Number", type: "tel", placeholder: "Phone Number" },
+  ];
+
   return (
     <motion.section
       id="contact"
-      className="bg-[#daffb3] shadow px-4 py-16"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-      viewport={{ once: true, amount: 0.2 }}
+      className="bg-[#d0ebbf] overflow-hidden px-4 py-16 md:py-28 w-full relative"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
     >
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-stretch">
-        {/* Left */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true, amount: 0.4 }}
-          className="md:w-1/2 pl-12 pr-6 flex flex-col justify-center"
-        >
-          <div className="mb-2">
-            <motion.img
-              src="/images/coffee-splash.png"
-              alt="Coffee splash"
-              className="mb-2 w-full max-w-xs"
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true, amount: 0.4 }}
-            />
-            <motion.h2
-              className="text-3xl font-extrabold mb-4 leading-tight text-left"
-              style={{ fontFamily: "'Kalam', cursive" }}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              viewport={{ once: true, amount: 0.4 }}
-            >
-              <span className="text-[#76B13A]">We’d </span>
-              <span className="text-[#B13A3A]">Love </span>
-              <span className="text-[#76B13A]">to </span>
-              <span className="text-[#76B13A]">Hear </span>
-              <span className="text-blue-400">From </span>
-              <span className="text-blue-400">You!</span>
-            </motion.h2>
-            <p className="text-black text-lg mb-6 max-w-md text-left"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
-            >
-              Whether you’re craving a cup, planning a visit, or just want to say hello Mi Amore is here for you.
-            </p>
-          </div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-[#E0A478]/5 rounded-full blur-3xl -mr-32 -mt-32" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#92E3A9]/10 rounded-full blur-3xl -ml-48 -mb-48" />
 
-          {/* Contact Info */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-start gap-3">
-              <MdEmail className="text-[#76B13A] text-2xl mt-1" />
-              <div>
-                <p className="text-lg font-bold text-[#9D7353] mb-1">E-mail</p>
-                <p className="text-md font-bold text-[#1b1b1b]">miamore.cml@gmail.com</p>
+      <div className="w-[92%] max-w-[1300px] mx-auto flex flex-col lg:flex-row gap-16 items-center lg:items-stretch relative z-10">
+        
+        <motion.div
+          className="w-full lg:w-[45%] flex flex-col justify-center text-center lg:text-left"
+          initial={{ opacity: 0, x: -40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <div className="inline-block px-5 py-2 bg-[#a2c57f] text-[#ffffff] rounded-full text-xs font-black tracking-widest uppercase mb-6 w-fit mx-auto lg:mx-0 border border-[#92E3A9]/30 shadow-sm">
+            Keep in Touch
+          </div>
+          
+          <h2 className="text-4xl md:text-6xl font-bold text-[#B47B50] mb-8 leading-[1.1]" style={{ fontFamily: "'Kalam', cursive" }}>
+            Let’s share a <br /> 
+            <span className="text-[#8CB662]">Coffee & Talk.</span>
+          </h2>
+          
+          <p className="text-gray-800 text-lg md:text-xl mb-12 max-w-md leading-relaxed" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            Reach out to <span className="text-[#8CB662] font-bold">Mi Amore</span> for inquiries, collaborations, or just to say hi!
+          </p>
+
+          <div className="grid grid-cols-1 gap-4 w-full max-w-md">
+            {[
+              { icon: <MdEmail />, label: "Email us", val: "miamore.cml@gmail.com", color: "#8CB662", text: "#4c7ba0" },
+              { icon: <FaPhoneAlt className="text-sm" />, label: "Call us", val: "+63 917 892 4125", color: "#8CB662", text: "#6b4d82" }
+            ].map((info, idx) => (
+              <div key={idx} className="flex items-center gap-5 p-5 bg-white/80 backdrop-blur-sm rounded-[2rem] border border-white shadow-sm hover:shadow-md transition-all group">
+                <div 
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg transition-transform group-hover:scale-110"
+                  style={{ backgroundColor: info.color }}
+                >
+                  {info.icon}
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] uppercase tracking-widest font-black" style={{ color: info.text }}>{info.label}</p>
+                  <p className="text-sm md:text-base font-extrabold text-[#4A4A4A]">{info.val}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <FaPhoneAlt className="text-[#76B13A] text-2xl mt-1" />
-              <div>
-                <p className="text-lg font-bold text-[#9D7353] mb-1">Phone Number</p>
-                <p className="text-md font-bold text-[#1b1b1b]">+63 917 892 4125</p>
-              </div>
-            </div>
+            ))}
           </div>
         </motion.div>
 
-        {/* Right */}
-        <div className="md:w-1/2 pr-12">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl border-1 border-[#e0fac7] h-full">
-            <p className="text-[#41E2DA] uppercase text-sm font-bold shadow-2xs mb-2">
-              Contact Us
-            </p>
-            <motion.h2
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              viewport={{ once: true, amount: 0.5 }}
-              className="text-3xl font-bold text-[#9D7353] leading-snug mb-6"
-            >
-              <span className="text-[#76B13A] shadow-2xs ">Reach</span> & Get in Touch With Us!
-            </motion.h2>
+        <motion.div 
+          className="w-full lg:w-[55%] h-full"
+          initial={{ opacity: 0, x: 40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <div className="bg-white p-8 md:p-14 rounded-[3.5rem] shadow-[0_40px_100px_-20px_rgba(224,164,120,0.15)] border border-[#E0A478]/10 flex flex-col h-full relative">
+            
+            <div className="mb-10">
+              <h3 className="text-2xl md:text-3xl font-black text-[#4A4A4A]">Send a Message</h3>
+              <div className="w-12 h-1 bg-[#8CB662] mt-2 rounded-full" />
+            </div>
 
-            {/* Form */}
-            <motion.form
-              className="space-y-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true, amount: 0.4 }}
+            <motion.form 
+              className="flex flex-col gap-5 flex-grow"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
             >
-              {[
-                { id: "name", label: "Name", type: "text" },
-                { id: "email", label: "Email", type: "email" },
-                { id: "phone", label: "Phone Number", type: "text" }
-              ].map(field => (
-                <div key={field.id}>
-                  <label
-                    htmlFor={field.id}
-                    className="block text-md font-medium text-black mb-1"
-                  >
-                    {field.label}
-                  </label>
-                  <input
-                    id={field.id}
-                    type={field.type}
-                    required
-                    className="w-full px-4 py-2 bg-white border border-gray-400 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
-                  />
-                </div>
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {fields.slice(0, 2).map((field) => (
+                  <motion.div key={field.id} variants={itemVariants} className="relative">
+                    <input
+                      id={field.id}
+                      type={field.type}
+                      placeholder=" "
+                      required
+                      className="peer w-full px-6 pt-7 pb-3 bg-[#fdfaf8] border border-gray-100 rounded-2xl outline-none focus:bg-white focus:border-[#90CAF9] focus:ring-4 focus:ring-[#90CAF9]/5 transition-all text-gray-800"
+                    />
+                    <label
+                      htmlFor={field.id}
+                      className="absolute left-6 top-[1.4rem] text-gray-400 text-sm transition-all duration-300 pointer-events-none 
+                        peer-focus:text-xs peer-focus:top-3 peer-focus:text-[#b7e688] peer-focus:font-bold
+                        peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:font-bold"
+                    >
+                      {field.placeholder} *
+                    </label>
+                  </motion.div>
+                ))}
+              </div>
 
-              <div>
+              <motion.div variants={itemVariants} className="relative">
+                <input
+                  id={fields[2].id}
+                  type={fields[2].type}
+                  placeholder=" "
+                  className="peer w-full px-6 pt-7 pb-3 bg-[#fdfaf8] border border-gray-100 rounded-2xl outline-none focus:bg-white focus:border-[#8E67AC] focus:ring-4 focus:ring-[#8E67AC]/5 transition-all text-gray-800"
+                />
                 <label
-                  htmlFor="message"
-                  className="block text-md  font-medium text-black mb-1"
+                  htmlFor={fields[2].id}
+                  className="absolute left-6 top-[1.4rem] text-gray-400 text-sm transition-all duration-300 pointer-events-none 
+                    peer-focus:text-xs peer-focus:top-3 peer-focus:text-[#8CB662] peer-focus:font-bold
+                    peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:font-bold"
                 >
-                  Enter message
+                  Contact Number (Optional)
                 </label>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="relative flex-grow">
                 <textarea
                   id="message"
                   rows={4}
+                  placeholder=" "
                   required
-                  className="w-full px-4 py-2 bg-white border border-gray-400 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
+                  className="peer w-full px-6 pt-7 pb-3 bg-[#fdfaf8] border border-gray-100 rounded-2xl outline-none focus:bg-white focus:border-[#8CB662] focus:ring-4 focus:ring-[#8CB662]/5 transition-all text-gray-800 resize-none min-h-[150px]"
                 ></textarea>
-              </div>
+                <label
+                  htmlFor="message"
+                  className="absolute left-6 top-[1.4rem] text-gray-400 text-sm transition-all duration-300 pointer-events-none 
+                    peer-focus:text-xs peer-focus:top-3 peer-focus:text-[#8CB662] peer-focus:font-bold
+                    peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:font-bold"
+                >
+                  Your Message *
+                </label>
+              </motion.div>
 
-              {/* Button */}
-              <div className="pt-2">
+              <motion.div variants={itemVariants} className="pt-4">
                 <button
                   type="submit"
-                  className="group bg-[#8CB662] hover:bg-[#7AB44E] text-white font-semibold text-md rounded-full py-2 px-5 flex items-center transition-all duration-300"
+                  className="group w-full bg-[#8CB662] hover:bg-[#7aa154] text-white font-black text-lg rounded-2xl py-5 px-8 flex items-center justify-center transition-all duration-500 shadow-xl shadow-[#8CB662]/30 active:scale-[0.98]"
                 >
                   <span>Send Message</span>
-                  <span className="ml-3 bg-white text-[#8CB662] p-1 rounded-full transition-transform duration-300 group-hover:translate-x-1">
-                    <IoMdArrowForward className="text-base" />
-                  </span>
+                  <div className="ml-3 transition-transform duration-300 group-hover:translate-x-2">
+                    <IoMdArrowForward className="text-xl" />
+                  </div>
                 </button>
-              </div>
+              </motion.div>
             </motion.form>
           </div>
-        </div>
+        </motion.div>
       </div>
     </motion.section>
   );
 };
 
 export default ContactSection;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

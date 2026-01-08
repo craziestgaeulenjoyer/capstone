@@ -1,162 +1,154 @@
-import React, { useState } from "react";
-import { motion, useAnimation } from "framer-motion";
+import React from "react";
+import { motion, Variants, TargetAndTransition } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { GiCoffeeBeans, GiTruck, GiSwipeCard } from "react-icons/gi";
 
 const FeaturesSection: React.FC = () => {
-  const [activeIndex, setActiveIndex] = useState<number | null>(1); 
-
-  const [ref, inView] = useInView({ triggerOnce: false, threshold: 0.2 });
-  const controls = useAnimation();
-
-  if (inView) {
-    controls.start("visible");
-  }
+  const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   const cards = [
     {
-      icon: <GiCoffeeBeans className="text-[#7B3F00] text-4xl" />,
+      icon: <GiCoffeeBeans />,
       title: "TYPES OF COFFEE",
-      text: "Crafted with care, our coffee and food are made to comfort. From bold brews to fresh bites, there's love in every sip and every plate.",
+      text: "Crafted with care, our coffee and food are made to comfort. From bold brews to fresh bites, there's love in every sip.",
+      color: "#E0A478", 
+      gradient: "from-[#E0A478] to-[#fdceac]",
     },
     {
-      icon: <GiTruck className="text-[#7B3F00] text-4xl" />,
+      icon: <GiTruck />,
       title: "FAST DELIVERY",
-      text: "Bringing amore to your doorstep! Order your favorites and enjoy fast, reliable delivery perfect for cozy mornings or busy afternoons.",
+      text: "Bringing amore to your doorstep! Order your favorites and enjoy fast, reliable delivery perfect for cozy mornings.",
+      color: "#8CB662", 
+      gradient: "from-[#8CB662] to-[#76a14d]",
     },
     {
-      icon: <GiSwipeCard className="text-[#7B3F00] text-4xl" />,
+      icon: <GiSwipeCard />,
       title: "EARN POINTS",
       text: "Sip, earn, repeat. Collect points with every visit and get rewarded for loving Mi Amore as much as we love serving you.",
+      color: "#8CC0BE", 
+      gradient: "from-[#8CC0BE] to-[#76a14d]",
     },
   ];
 
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 60 },
-    visible: (i: number) => ({
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.2, delayChildren: 0.1 },
+    },
+  };
+
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
       opacity: 1,
       y: 0,
-      transition: { delay: i * 0.2, duration: 0.6, ease: "easeOut" },
-    }),
+      transition: { duration: 0.6, ease: "easeOut" },
+    },
+  };
+
+  const floatingAnimation: TargetAndTransition = {
+    y: [0, -8, 0],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut",
+    },
   };
 
   return (
     <section
       ref={ref}
-      className="relative w-full bg-white py-20 px-6 md:px-12 lg:px-20 text-center"
+      className="relative w-full bg-[#faf7f2] py-24 px-6 md:px-12 lg:px-24 overflow-hidden"
     >
-      {/* Header with scroll animation */}
-      <motion.div
-        initial="hidden"
-        animate={controls}
-        variants={{
-          hidden: { opacity: 0, y: 40 },
-          visible: { opacity: 1, y: 0, transition: { duration: 0.8 } },
-        }}
-        className="max-w-3xl mx-auto mb-14"
-      >
-        <h2
-          className="text-3xl sm:text-4xl font-semibold text-[#2b2b2b] mb-3"
+      <div className="max-w-4xl mx-auto mb-16 text-center">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          className="text-4xl md:text-6xl font-bold text-[#2b2b2b] mb-6 leading-tight"
           style={{ fontFamily: "'Kalam', cursive" }}
         >
-          Discover. Delight.{" "}
-          <span className="text-[#6FC14B] font-semibold">Mi Amore.</span>
-        </h2>
-        <p
-          className="text-gray-700 text-[15px] sm:text-[16px] leading-relaxed"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
-        >
-          Experience the perfect blend of coffee, cuisine, and unforgettable
-          moments at Mi Amore Café.
-        </p>
-      </motion.div>
+          Discover. Delight. <span className="text-[#8CB662]">Mi Amore.</span>
+        </motion.h2>
 
-      {/* Cards with staggered scroll animation */}
-      <div className="flex flex-col md:flex-row justify-center items-center gap-8">
-        {cards.map((card, index) => {
-          const isActive = activeIndex === index;
-          return (
-            <motion.div
-              key={index}
-              custom={index}
-              variants={fadeInUp}
-              initial="hidden"
-              animate={inView ? "visible" : "hidden"}
-              whileHover={{ y: -5 }}
-              onClick={() => setActiveIndex(index)}
-              className={`w-[280px] sm:w-[320px] md:w-[340px] px-6 py-8 rounded-xl cursor-pointer transition-all duration-300 ${
-                isActive
-                  ? "border-2 border-[#6FC14B] shadow-md"
-                  : "border border-transparent"
-              }`}
-            >
-              <div className="flex flex-col items-center">
-                <div
-                  className={`flex items-center justify-center mb-5 text-5xl ${
-                    isActive ? "text-[#6FC14B]" : "text-[#7B3F00]"
-                  }`}
-                >
-                  {card.icon}
-                </div>
-                <h3 className="text-sm font-bold mb-3 text-[#2b2b2b]">
-                  {card.title}
-                </h3>
-                <p className="text-gray-700 text-[13.5px] leading-relaxed">
-                  {card.text}
-                </p>
-              </div>
-            </motion.div>
-          );
-        })}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          className="text-gray-500 text-lg md:text-xl italic max-w-2xl mx-auto"
+          style={{ fontFamily: "'Playfair Display', serif" }}
+        >
+          "Where every blend is a masterpiece and every service is an act of love."
+        </motion.p>
       </div>
 
-      {/* Responsive Adjustments */}
-      <style>
-        {`
-          @media (max-width: 768px) {
-            section {
-              padding: 4rem 2rem;
-            }
-            h2 {
-              font-size: 1.8rem !important;
-            }
-            p {
-              font-size: 14px !important;
-            }
-          }
-          @media (max-width: 480px) {
-            h2 {
-              font-size: 1.5rem !important;
-            }
-            p {
-              font-size: 13px !important;
-            }
-          }
-        `}
-      </style>
+      {/* Cards Grid */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate={inView ? "visible" : "hidden"}
+        className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-12"
+      >
+        {cards.map((card, index) => (
+          <motion.div
+            key={index}
+            variants={cardVariants}
+            whileHover={{ y: -10 }}
+            className="group relative bg-white rounded-[2.5rem] shadow-xl overflow-hidden flex flex-col items-center text-center transition-all duration-500 min-h-[420px]"
+          >
+            <div className="p-10 pt-12 flex flex-col items-center z-10">
+              <motion.div
+                animate={floatingAnimation}
+                className="text-5xl mb-6 transition-transform duration-500 group-hover:scale-110"
+                style={{ color: card.color }}
+              >
+                {card.icon}
+              </motion.div>
+
+              <h3 className="text-xl font-black mb-4 text-[#2b2b2b] tracking-wide uppercase">
+                {card.title}
+              </h3>
+            </div>
+
+            <div className={`relative mt-auto w-full h-56 bg-gradient-to-br ${card.gradient} transition-transform duration-500 group-hover:scale-105`}>
+              
+              <div className="absolute top-0 left-0 w-full overflow-hidden leading-[0] translate-y-[-99%]">
+                <svg
+                  viewBox="0 0 500 150"
+                  preserveAspectRatio="none"
+                  className="h-20 w-full"
+                >
+                  <path
+                    d="M0.00,49.98 C149.99,150.00 349.20,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z"
+                    style={{ stroke: "none", fill: card.color }}
+                  ></path>
+                </svg>
+                <svg
+                  viewBox="0 0 500 150"
+                  preserveAspectRatio="none"
+                  className="h-20 w-full absolute top-0 left-0 opacity-30"
+                >
+                  <path
+                    d="M0.00,49.98 C150.00,150.00 271.49,-50.00 500.00,49.98 L500.00,150.00 L0.00,150.00 Z"
+                    style={{ stroke: "none", fill: "#ffffff" }}
+                  ></path>
+                </svg>
+              </div>
+
+              <div className="relative z-10 p-8 pt-4">
+                <p className="text-white/95 leading-relaxed text-sm md:text-[15px] font-medium">
+                  {card.text}
+                </p>
+                
+                <div className="mt-6 text-white/50 text-2xl group-hover:text-white transition-colors">
+                  <span className="animate-bounce block">↓</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
     </section>
   );
 };
 
 export default FeaturesSection;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

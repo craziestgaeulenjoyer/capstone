@@ -1,103 +1,133 @@
 import React from 'react';
 import { FaFacebookF, FaInstagram, FaTiktok, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 const Footer_MiAmore: React.FC = () => {
 
     const scrollToContact = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
         e.preventDefault();
-        const section = document.getElementById("contact-us");
+        const section = document.getElementById("contact"); 
         section?.scrollIntoView({ behavior: "smooth" });
     };
 
+    const containerVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: { staggerChildren: 0.1, duration: 0.6 }
+        }
+    };
+
+    const navLinkStyle = "group flex items-center justify-center sm:justify-start transition-all duration-300 hover:text-[#a6d37c]";
+
     return (
-        <footer className="bg-[#8e674a] text-white pt-10">
-            <div className="max-w-screen-xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pb-10">
+        <footer className="bg-[#8e674a] text-white pt-16">
+            <motion.div 
+                className="max-w-screen-xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 pb-12 text-center sm:text-left"
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+            >
                 
-                {/* Logo & Description */}
-                <div className="pr-10"> 
-                    <div className="flex items-center space-x-2 mb-4">
-                        <img src="/images/MiAmore2.png" alt="Logo" className="h-15 w-15 rounded-full bg-white p-1" />
+                <motion.div variants={containerVariants} className="flex flex-col items-center sm:items-start"> 
+                    <div className="flex items-center space-x-3 mb-6">
+                        <img src="/images/MiAmore2.png" alt="Logo" className="h-14 w-14 rounded-full bg-white p-1 shadow-lg" />
                         <h1 
-                            className="text-xl font-bold text-[#a6d37c]"
+                            className="text-2xl font-bold text-[#a6d37c]"
                             style={{ fontFamily: "'Kalam', cursive" }}
                         > 
                             Mi Amore
                         </h1>
                     </div>
-                    <p className="text-sm">
+                    <p className="text-gray-200 text-sm leading-relaxed max-w-xs">
                         Welcome to Mi Amore Café, a cozy spot where love meets coffee.
                         Enjoy handcrafted brews & delightful treats in every sip.
                     </p>
-                    <div className="flex space-x-4 mt-4 text-xl">
-                        <a href="#" className="bg-white text-[#4267B2] p-3 rounded-full shadow-md hover:scale-110 transition transform duration-300">
-                            <FaFacebookF />
-                        </a>
-                        <a href="#" className="bg-white text-[#C13584] p-3 rounded-full shadow-md hover:scale-110 transition transform duration-300">
-                            <FaInstagram />
-                        </a>
-                        <a href="#" className="bg-white text-[#000000] p-3 rounded-full shadow-md hover:scale-110 transition transform duration-300">
-                            <FaTiktok />
-                        </a>
-                    </div>
-                </div>
-
-                {/* Our Store */}
-                <div>
-                    <h3 className="font-semibold mb-4">Our Store</h3>
-                    <ul className="space-y-2 text-sm">
-                        <li><a href="/home" className="hover:text-[#8cb662] transition-colors duration-300">Home</a></li>
-                        <li><a href="/menu" className="hover:text-[#8cb662] transition-colors duration-300">Menu</a></li>
-                        <li><a href="/about-us" className="hover:text-[#8cb662] transition-colors duration-300">About Us</a></li>
-                        <li>
-                            <a
-                                href="#contact-us"
-                                onClick={scrollToContact}
-                                className="hover:text-[#8cb662] transition-colors duration-300"
+                    
+                    <div className="flex space-x-4 mt-8">
+                        {[
+                            { icon: <FaFacebookF />, link: "#" },
+                            { icon: <FaInstagram />, link: "#" },
+                            { icon: <FaTiktok />, link: "#" }
+                        ].map((social, index) => (
+                            <motion.a 
+                                key={index}
+                                href={social.link} 
+                                whileHover={{ scale: 1.15, y: -5 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="bg-white text-[#a6d37c] p-3 rounded-full shadow-lg transition-all duration-300 hover:bg-[#a6d37c] hover:text-white"
                             >
-                                Contact
-                            </a>
+                                <span className="text-lg">{social.icon}</span>
+                            </motion.a>
+                        ))}
+                    </div>
+                </motion.div>
+
+                <motion.div variants={containerVariants}>
+                    <h3 className="text-[#a6d37c] font-bold text-lg mb-6 uppercase tracking-wider">Our Store</h3>
+                    <ul className="space-y-3 text-gray-200">
+                        {['Home', 'Menu', 'About Us', 'Contact'].map((item) => (
+                            <li key={item}>
+                                <a 
+                                    href={item === 'Contact' ? "#contact" : `/${item.toLowerCase().replace(' ', '-')}`} 
+                                    onClick={item === 'Contact' ? scrollToContact : undefined}
+                                    className={navLinkStyle}
+                                >
+                                    <span className="transition-transform duration-300 group-hover:translate-x-2">
+                                        {item}
+                                    </span>
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </motion.div>
+
+                <motion.div variants={containerVariants}>
+                    <h3 className="text-[#a6d37c] font-bold text-lg mb-6 uppercase tracking-wider">Further Links</h3>
+                    <ul className="space-y-3 text-gray-200">
+                        {[
+                            { name: 'Terms & Conditions', path: '/termsandcondition' },
+                            { name: 'Privacy Policy', path: '/privacypolicy' },
+                            { name: 'Location', path: '/location' }
+                        ].map((link) => (
+                            <li key={link.name}>
+                                <a href={link.path} className={navLinkStyle}>
+                                    <span className="transition-transform duration-300 group-hover:translate-x-2">
+                                        {link.name}
+                                    </span>
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </motion.div>
+
+                <motion.div variants={containerVariants}>
+                    <h3 className="text-[#a6d37c] font-bold text-lg mb-6 uppercase tracking-wider">Get in Touch</h3>
+                    <ul className="space-y-4 text-gray-200 text-sm">
+                        <li className="flex items-start justify-center sm:justify-start space-x-3 group cursor-pointer">
+                            <FaMapMarkerAlt className="text-[#a6d37c] mt-1 group-hover:scale-125 transition-transform duration-300" />
+                            <span className="group-hover:text-white transition-colors duration-300">JP Rizal St, Poblacion, Tuy, Batangas</span>
+                        </li>
+                        <li className="flex items-center justify-center sm:justify-start space-x-3 group cursor-pointer">
+                            <FaPhoneAlt className="text-[#a6d37c] group-hover:scale-125 transition-transform duration-300" />
+                            <span className="group-hover:text-white transition-colors duration-300">+63 917 892 4125</span>
+                        </li>
+                        <li className="flex items-center justify-center sm:justify-start space-x-3 group cursor-pointer">
+                            <FaEnvelope className="text-[#a6d37c] group-hover:scale-125 transition-transform duration-300" />
+                            <span className="group-hover:text-white transition-colors duration-300">miamore.cml@gmail.com</span>
                         </li>
                     </ul>
-                </div>
+                </motion.div>
 
-                {/* Further Links */}
-                <div>
-                    <h3 className="font-semibold mb-4">Further Links</h3>
-                    <ul className="space-y-2 text-sm">
-                        <li><a href="/termsandcondition" className="hover:text-[#8cb662] transition-colors duration-300">Terms & Conditions</a></li>
-                        <li><a href="/privacypolicy" className="hover:text-[#8cb662] transition-colors duration-300">Privacy Policy</a></li>
-                        <li><a href="/location" className="hover:text-[#8cb662] transition-colors duration-300">Location</a></li>
-                    </ul>
-                </div>
+            </motion.div>
 
-                {/* Get in Touch */}
-                <div>
-                    <h3 className="font-semibold mb-4">Get in Touch</h3>
-                    <ul className="space-y-3 text-sm">
-                        <li className="flex items-start space-x-2">
-                            <FaMapMarkerAlt className="text-[#a6d37c] mt-1" />
-                            <span>JP Rizal St, Poblacion, Tuy, Batangas</span>
-                        </li>
-                        <li className="flex items-center space-x-2">
-                            <FaPhoneAlt className="text-[#a6d37c]" />
-                            <span>+63 917 892 4125</span>
-                        </li>
-                        <li className="flex items-center space-x-2">
-                            <FaEnvelope className="text-[#a6d37c]" />
-                            <span>miamore.cml@gmail.com</span>
-                        </li>
-                    </ul>
-                </div>
-
-            </div>
-
-            <div className="bg-[#88B04B] text-center py-3 text-sm font-semibold">
-                © 2025 Mi Amore Café. All rights reserved.
+            <div className="bg-[#8CB662] text-center py-6 text-xs md:text-sm font-bold text-white shadow-inner">
+                <p>© 2025 Mi Amore Café. Crafted with Love. All rights reserved.</p>
             </div>
         </footer>
     );
 };
 
 export default Footer_MiAmore;
-
-
