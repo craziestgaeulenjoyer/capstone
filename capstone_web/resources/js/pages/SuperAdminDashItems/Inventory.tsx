@@ -6,13 +6,11 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Upload,
   SlidersHorizontal,
   Plus,
   X,
 } from "lucide-react";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +19,7 @@ interface InventoryItem {
   id: number;
   name: string;
   category: string;
+  supplier?: string | null;
   quantity: number;
   unit: string;
   expiry: string | null;
@@ -56,6 +55,14 @@ const Inventory: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]); 
   const [selectedSort, setSelectedSort] = useState<string>("");
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+  const [noExpiry, setNoExpiry] = useState(false);
+  const [activity, setActivity] = useState<any[]>([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityTotalPages, setActivityTotalPages] = useState(1);
+
+  const calendarRef = React.useRef<HTMLDivElement>(null);
 
   const itemsPerPage = entriesPerPage;
 
@@ -106,6 +113,44 @@ const Inventory: React.FC = () => {
       setInventory([]);
       setArchivedInventory([]);
       setStableData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch inventory filtered by month & year (updated_at)
+  const fetchFilteredInventory = async (month: number, year: number) => {
+    try {
+      setLoading(true);
+
+      const res = await axiosInstance.get(
+        `${apiPrefix}/inventory`, 
+        {
+          params: {
+            month,
+            year,
+          }
+        }
+      );
+
+      const data: InventoryItem[] = Array.isArray(res.data) ? res.data : [];
+
+      const normalized = data.map((d) => ({
+        ...d,
+        expiry: d.expiry || null,
+        updated_at: d.updated_at || null,
+        archived: !!d.archived,
+      }));
+
+      const currentItems = normalized.filter((i) => !i.archived);
+      const archivedItems = normalized.filter((i) => i.archived);
+
+      setInventory(currentItems);
+      setArchivedInventory(archivedItems);
+      setStableData(activeTab === "current" ? currentItems : archivedItems);
+
+    } catch (err) {
+      console.error("Filter fetch failed:", err);
     } finally {
       setLoading(false);
     }
@@ -188,6 +233,8 @@ const Inventory: React.FC = () => {
       await fetchInventory();
       setModalOpen(false);
       setEditingItem(null);
+
+      window.location.reload();
     } catch (err: any) {
       if (err.response && err.response.status === 401) {
         console.error("Unauthorized: Check your token or session role");
@@ -250,8 +297,10 @@ const Inventory: React.FC = () => {
       tempItems = tempItems.filter((item) => selectedFilters.includes(item.status));
     }
 
-    // Filter by Month-Year (updated_at)
-    if (selectedDate) {
+    // Remove UI month-year filtering if backend fetchFilteredInventory is already doing it
+    if (!filterOpen && !sortOpen && selectedFilters.length === 0 && searchTerm === "") {
+      // do NOT apply month filter again
+    } else if (selectedDate) {
       const selectedMonth = selectedDate.getMonth();
       const selectedYear = selectedDate.getFullYear();
 
@@ -319,6 +368,16 @@ const Inventory: React.FC = () => {
       setForm(editingItem);
     } else {
       setForm({ name: "", category: "", quantity: 0, unit: "pcs", expiry: null, status: "In Stock" });
+    }
+
+    setErrors({});
+  }, [editingItem, modalOpen]);
+
+  useEffect(() => {
+    if (editingItem) {
+      setNoExpiry(!editingItem.expiry);
+    } else {
+      setNoExpiry(false);
     }
   }, [editingItem, modalOpen]);
 
@@ -399,6 +458,99 @@ const Inventory: React.FC = () => {
     );
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMonthChange = (date: Date) => {
+    setCurrentDate(date);
+    fetchFilteredInventory(
+      date.getMonth() + 1,
+      date.getFullYear()
+    );
+  };
+
+  const handleExportCSV = () => {
+    const dataToExport = filteredItems.length > 0 ? filteredItems : stableData;
+
+    if (!dataToExport || dataToExport.length === 0) {
+      alert("No data to export.");
+      return;
+    }
+
+    const headers = ["Product Name", "Category", "Supplier", "Quantity", "Unit", "Expiry Date", "Status", "Last Updated"];
+
+    const rows = dataToExport.map(item => [
+      item.name,
+      item.category,
+      item.supplier || "No Supplier",
+      item.quantity,
+      item.unit,
+      item.expiry ? new Date(item.expiry).toLocaleDateString() : "-",
+      item.status,
+      item.updated_at ? new Date(item.updated_at).toLocaleDateString() : "-"
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.setAttribute("download", `inventory_export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const activeSuppliersCount = useMemo(() => {
+    const supplierSet = new Set(
+      inventory
+        .filter((i) => !i.archived && i.supplier && i.supplier.trim() !== "")
+        .map((i) => i.supplier)
+    );
+    return supplierSet.size;
+  }, [inventory]);
+
+  const supplierStats = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    activeItems.forEach((item) => {
+      if (item.supplier && item.supplier.trim() !== "") {
+        map[item.supplier] = (map[item.supplier] || 0) + 1;
+      }
+    });
+
+    return Object.entries(map).sort((a, b) => b[1] - a[1]); 
+  }, [activeItems]);
+
+  const fetchActivity = async (page = 1) => {
+    const res = await axiosInstance.get(
+      `${apiPrefix}/inventory/logs`,
+      {
+        params: { page }
+      }
+    );
+
+    setActivity(res.data.data);
+    setActivityPage(res.data.current_page);
+    setActivityTotalPages(res.data.last_page);
+  };
+
+  useEffect(() => {
+    fetchActivity();
+  }, []);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans text-gray-800">
       {/* Top Controls */}
@@ -417,7 +569,10 @@ const Inventory: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#6CB74A] text-white rounded-lg shadow hover:bg-[#5aa03f] cursor-pointer transition">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-[#6CB74A] text-white rounded-lg shadow hover:bg-[#5aa03f] cursor-pointer transition"
+          >
             <Upload size={16} /> Export
           </button>
 
@@ -484,19 +639,84 @@ const Inventory: React.FC = () => {
             )}
           </div>
 
-          {/* Calendar */}
-          <div className="flex items-center gap-2 px-4 py-2 text-gray-800 hover:text-white rounded-lg shadow hover:bg-[#6CB74A] cursor-pointer transition">
-            <Calendar size={16} />
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date) => {
-                setSelectedDate(date);
-                setCurrentPage(1);
-              }}
-              dateFormat="MMMM yyyy"
-              showMonthYearPicker
-              className="bg-transparent focus:outline-none text-sm"
+          {/* Calendar Month-Year Only */}
+          <div className="relative group" ref={calendarRef}>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none 
+                  text-gray-800 group-hover:text-white transition-colors">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" />
+              </svg>
+            </span>
+
+            {/* Input */}
+            <input
+              type="text"
+              value={`${currentDate.toLocaleString('en-US', { month: 'long' })} ${currentDate.getFullYear()}`}
+              readOnly
+              onClick={() => setShowCalendar(!showCalendar)}
+              className="pl-10 pr-4 py-2 shadow rounded-lg text-gray-800 font-medium cursor-pointer text-center w-44
+                        focus:outline-none hover:text-white hover:bg-[#6CB74A] 
+                        transition-colors"
             />
+
+            {showCalendar && (
+              <div className="absolute top-full right-0 mt-2 p-4 bg-white rounded-lg shadow-xl z-10 w-64">
+
+                {/* YEAR PICKER HEADER */}
+                <div className="flex justify-between items-center mb-3">
+                  <button
+                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth()))}
+                    className="p-1 rounded-full hover:bg-[#8cb662] text-gray-700"
+                  >
+                    ‹
+                  </button>
+
+                  <span className="font-bold text-lg text-gray-800">
+                    {currentDate.getFullYear()}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth()))}
+                    className="p-1 rounded-full hover:bg-[#8cb662] text-gray-700"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                {/* MONTH BUTTON GRID */}
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 12 }).map((_, idx) => {
+                    const monthDate = new Date(currentDate.getFullYear(), idx);
+                    const isSelected = idx === currentDate.getMonth();
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setCurrentDate(monthDate);
+                          setShowCalendar(false);
+                          handleMonthChange(monthDate);
+                        }}
+                        className={`py-2 rounded-lg text-sm font-medium transition ${
+                          isSelected
+                            ? "bg-[#8cb662] text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-[#8cb662] hover:text-white"
+                        }`}
+                      >
+                        {monthDate.toLocaleString("en-US", { month: "short" })}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -533,45 +753,26 @@ const Inventory: React.FC = () => {
           <span className="text-xs text-gray-400">Archived items</span>
         </div>
 
-        <div className={`bg-white rounded-xl border border-gray-200 shadow-md p-5`}>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5">
           <p className="text-sm text-gray-500">Suppliers Active</p>
-          <h2 className={`text-2xl font-bold text-purple-600 mt-1`}>—</h2>
-          <span className="text-xs text-gray-400">Awaiting data</span>
-        </div>
-      </div>
 
-      {/* Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4">
-          <h3 className="font-bold text-lg mb-3 text-[#6CB74A]">Upcoming Expiry / Restock</h3>
-          <div className="space-y-2 text-sm">
-            {upcomingExpiry.length === 0 ? (
-              <p className="text-gray-500">No upcoming expiry/restock data.</p>
-            ) : (
-              upcomingExpiry.map((u) => (
-                <div key={u.id} className="flex justify-between">
-                  <span className="text-gray-700">{u.name}</span>
-                  <span className={`${new Date(u.expiry!).getTime() <= in7days.getTime() ? "text-orange-600" : "text-emerald-600"}`}>{u.expiry ? `Expiring - ${new Date(u.expiry!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "-"}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4">
-          <h3 className="font-bold text-lg mb-3 text-[#6CB74A]">Recent Inventory Activities</h3>
-          <ul className="space-y-3 text-sm">
-            {recentActivities.length === 0 ? (
-              <p className="text-gray-500">No recent activities.</p>
-            ) : (
-              recentActivities.map((r, i) => (
-                <li key={i}>
-                  <p className="text-gray-800 font-medium">{r.title}</p>
-                  <span className="text-xs text-gray-500">{r.date}</span>
+          {supplierStats.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-xl">
+              {supplierStats.map(([name, count], i) => (
+                <li key={i} className="font-semibold text-purple-700">
+                  {name} <span className="text-gray-500">({count})</span>
                 </li>
-              ))
-            )}
-          </ul>
+              ))}
+            </ul>
+          ) : (
+            <h2 className="text-2xl font-bold text-purple-600 mt-1">—</h2>
+          )}
+
+          <span className="text-xs text-gray-400">
+            {supplierStats.length > 0
+              ? `Tracking ${supplierStats.length} supplier${supplierStats.length > 1 ? "s" : ""}`
+              : "Awaiting data"}
+          </span>
         </div>
       </div>
 
@@ -667,7 +868,7 @@ const Inventory: React.FC = () => {
             >
               <thead className="bg-blue-100 text-gray-700">
                 <tr>
-                  {["Product Name", "Category", "Quantity", "Unit", "Expiry Date", "Status", "Last Updated", "Action"].map((h) => (
+                  {["Product Name", "Category", "Supplier", "Quantity", "Unit", "Expiry Date", "Status", "Last Updated", "Action"].map((h) => (
                     <th key={h} className="px-4 py-3 font-medium border-b border-gray-200">{h}</th>
                   ))}
                 </tr>
@@ -699,11 +900,16 @@ const Inventory: React.FC = () => {
                     >
                       <td className="px-4 py-3">{p.name}</td>
                       <td className="px-4 py-3">{p.category}</td>
+                      <td className="px-4 py-3">
+                        <span className={`${p.supplier ? 'text-gray-900' : 'text-gray-400 italic'}`}>
+                          {p.supplier || "No Supplier"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">{p.quantity}</td>
                       <td className="px-4 py-3">{p.unit}</td>
                       <td className="px-4 py-3">{p.expiry ? formatDate(p.expiry) : "-"}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${statusColors[p.status]}`}>
+                        <span className={`px-2 py-1 text-sm rounded-full font-medium ${statusColors[p.status]}`}>
                           {p.status}
                         </span>
                       </td>
@@ -792,6 +998,132 @@ const Inventory: React.FC = () => {
         </div>
       </div>
 
+      {/* Widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4">
+          <h3 className="font-bold text-lg mb-3 text-[#6CB74A]">Upcoming Expiry / Restock</h3>
+          <div className="space-y-3 text-sm">
+
+            {activeItems.length === 0 ? (
+              <p className="text-gray-500">No data.</p>
+            ) : (
+              activeItems
+                .filter((item) => item.expiry) // must have expiry date
+                .sort((a, b) => new Date(a.expiry!).getTime() - new Date(b.expiry!).getTime())
+                .slice(0, 5) // still show only 5 items
+                .map((item) => {
+                  const expiryDate = new Date(item.expiry!);
+                  const isExpired = expiryDate < new Date();
+                  const formatted = expiryDate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric"
+                  });
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex justify-between p-2 rounded-md ${
+                        isExpired
+                          ? "bg-red-100 text-red-700 font-semibold"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      <span>{item.name}</span>
+                      <span>
+                        {isExpired
+                          ? `Expired — Available for Restock`
+                          : `Expiring: ${formatted}`}
+                      </span>
+                    </div>
+                  );
+                })
+            )}
+
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4">
+          <h3 className="font-bold text-lg mb-3 text-[#6CB74A]">Recent Inventory Activities</h3>
+          <ul className="space-y-3 text-sm">
+            {activity.length === 0 ? (
+              <p className="text-gray-500">No activity.</p>
+            ) : (
+              activity.map((log, i) => (
+                <li key={i}>
+                  <p className="text-gray-900 font-semibold capitalize">
+                    {log.action} — {log.inventory?.name || "Deleted Item"}
+                    {" — "}
+                    <span className="text-blue-600">
+                      {log.performed_by || "Unknown"}
+                    </span>
+                  </p>
+
+                  {log.changed_fields && (
+                    <div className="mt-1 text-xs text-gray-600 italic space-y-1">
+                      <p>Modified:</p>
+                      <ul className="ml-4 list-disc">
+                        {Object.entries(log.changed_fields).map(
+                          ([field, values]: any) => (
+                            <li key={field}>
+                              <span className="capitalize">{field}</span>:{" "}
+                              <span className="text-gray-800">
+                                {values.old ?? "none"}
+                              </span>{" "}
+                              →{" "}
+                              <span className="text-gray-800">
+                                {values.new ?? "none"}
+                              </span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                  <span className="text-xs text-gray-500">
+                    {new Date(log.created_at).toLocaleString()}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+
+          <div className="flex justify-between items-center mt-4 text-xs text-gray-600">
+            <button
+              disabled={activityPage === 1}
+              onClick={() => fetchActivity(activityPage - 1)}
+              className="px-3 py-1 rounded-full border border-gray-300 hover:bg-[#6cb74a] hover:text-white disabled:opacity-50"
+            >
+              Prev
+            </button>
+
+            <div className="flex gap-2">
+              {Array.from({ length: activityTotalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => fetchActivity(i + 1)}
+                  className={`px-3 py-1 rounded-full border ${
+                    activityPage === i + 1
+                      ? "bg-[#6cb74a] text-white"
+                      : "border-gray-300"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+
+            <button
+              disabled={activityPage === activityTotalPages}
+              onClick={() => fetchActivity(activityPage + 1)}
+              className="px-3 py-1 rounded-full border border-gray-300 hover:bg-[#6cb74a] hover:text-white disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Add/Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -816,7 +1148,7 @@ const Inventory: React.FC = () => {
                   setModalOpen(false);
                   setEditingItem(null);
                 }}
-                className="p-2 rounded-full hover:bg-gray-100 transition"
+                className="p-2 rounded-full cursor-pointer hover:bg-gray-100 transition"
               >
                 <X className="text-gray-600" />
               </button>
@@ -829,9 +1161,12 @@ const Inventory: React.FC = () => {
                 const payload: Partial<InventoryItem> = {
                   name: (e.target as any).name.value,
                   category: (e.target as any).category.value,
+                  supplier: (e.target as any).supplier.value || null,
                   quantity: parseInt((e.target as any).quantity.value, 10) || 0,
                   unit: (e.target as any).unit.value,
-                  expiry: (e.target as any).expiry.value || null,
+                  expiry: noExpiry
+                    ? null
+                    : (e.target as any).expiry.value || null,
                   status: (e.target as any).status.value,
                 };
 
@@ -848,27 +1183,37 @@ const Inventory: React.FC = () => {
                   name="name"
                   defaultValue={editingItem?.name || ""}
                   placeholder="e.g., Caramel Iced Coffee"
-                  className={`mt-1 w-full border rounded-md p-2 focus:outline-none transition ${
-                    errors.name ? "border-red-500 ring-1 ring-red-500" : "focus:ring-[#8cb662]"
+                  className={`mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm placeholder:text-sm placeholder:text-gray-400 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition ${
+                    errors.name ? "border-red-500 ring-1 ring-red-500" : ""
                   }`}
                 />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
-                <input
-                  type="text"
-                  name="category"
-                  defaultValue={editingItem?.category || ""}
-                  placeholder="e.g., Coffee"
-                  className={`mt-1 w-full border rounded-md p-2 focus:outline-none transition ${
-                    errors.category ? "border-red-500 ring-1 ring-red-500" : "focus:ring-[#8cb662]"
-                  }`}
-                  required
-                />
-                {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Category</label>
+                  <input
+                    type="text"
+                    name="category"
+                    defaultValue={editingItem?.category || ""}
+                    placeholder="e.g., Coffee"
+                    className={`mt-1 w-full border border-gray-300 rounded-lg p-2.5 bg-white shadow focus:ring-[#8cb662] ${errors.category ? "border-red-500" : ""}`}
+                  />
+                  {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Supplier Name</label>
+                  <input
+                    type="text"
+                    name="supplier"
+                    defaultValue={editingItem?.supplier || ""}
+                    placeholder="e.g., Juan Dela Cruz Supplies"
+                    className="mt-1 w-full border border-gray-300 rounded-lg p-2.5 bg-white shadow text-sm placeholder:text-gray-400 focus:ring-[#8cb662]"
+                  />
+                </div>
               </div>
 
               {/* Quantity & Unit */}
@@ -879,8 +1224,8 @@ const Inventory: React.FC = () => {
                     type="number"
                     name="quantity"
                     defaultValue={editingItem?.quantity ?? 0}
-                    className={`mt-1 w-full border rounded-md p-2 focus:outline-none transition ${
-                      errors.quantity ? "border-red-500 ring-1 ring-red-500" : "focus:ring-[#8cb662]"
+                    className={`mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm placeholder:text-sm placeholder:text-gray-400 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition ${
+                      errors.quantity ? "border-red-500 ring-1 ring-red-500" : ""
                     }`}
                     required
                   />
@@ -893,45 +1238,81 @@ const Inventory: React.FC = () => {
                     type="text"
                     name="unit"
                     defaultValue={editingItem?.unit || "pcs"}
-                    className={`mt-1 w-full border rounded-md p-2 focus:outline-none transition ${
-                      errors.unit ? "border-red-500 ring-1 ring-red-500" : "focus:ring-[#8cb662]"
+                    className={`mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm placeholder:text-sm placeholder:text-gray-400 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition ${
+                      errors.unit ? "border-red-500 ring-1 ring-red-500" : ""
                     }`}
                   />
-                  {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit}</p>}
+                  {errors.unit && <p className="text-sm text-red-500 mt-1">{errors.unit}</p>}
                 </div>
               </div>
 
-              {/* Expiry */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
-                <input
-                  type="date"
-                  name="expiry"
-                  defaultValue={editingItem?.expiry ? new Date(editingItem.expiry).toISOString().slice(0, 10) : ""}
-                  className={`mt-1 w-full border rounded-md p-2 focus:outline-none transition ${
-                    errors.expiry ? "border-red-500 ring-1 ring-red-500" : "focus:ring-[#8cb662]"
-                  }`}
-                />
-                {errors.expiry && <p className="text-xs text-red-500 mt-1">{errors.expiry}</p>}
-              </div>
+              {/* Expiry & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Expiry */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Expiry Date</label>
 
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <select
-                  name="status"
-                  defaultValue={editingItem?.status || "In Stock"}
-                  className={`mt-1 w-full border rounded-md p-2 focus:outline-none transition ${
-                    errors.status ? "border-red-500 ring-1 ring-red-500" : "focus:ring-[#8cb662]"
-                  }`}
-                  required
-                >
-                  <option>In Stock</option>
-                  <option>Low</option>
-                  <option>Expired Soon</option>
-                  <option>Expired</option>
-                </select>
-                {errors.status && <p className="text-xs text-red-500 mt-1">{errors.status}</p>}
+                  <input
+                    type="date"
+                    name="expiry"
+                    disabled={noExpiry}
+                    value={
+                      noExpiry
+                        ? ""
+                        : editingItem?.expiry
+                        ? new Date(editingItem.expiry).toISOString().slice(0, 10)
+                        : form.expiry || ""
+                    }
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, expiry: e.target.value }))
+                    }
+                    className={`mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm shadow-md
+                      focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition
+                      ${errors.expiry ? "border-red-500 ring-1 ring-red-500" : ""}
+                    `}
+                  />
+
+                  {/* Checkbox below input */}
+                  <label className="flex gap-2 items-center mt-2 text-xs text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={noExpiry}
+                      onChange={(e) => {
+                        setNoExpiry(e.target.checked);
+                        if (e.target.checked) {
+                          setForm((prev) => ({ ...prev, expiry: null }));
+                        }
+                      }}
+                    />
+                    No Expiry
+                  </label>
+
+                  {errors.expiry && (
+                    <p className="text-sm text-red-500 mt-1">{errors.expiry}</p>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600">Status</label>
+                  <select
+                    name="status"
+                    defaultValue={editingItem?.status || "In Stock"}
+                    className={`mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm shadow-md
+                      focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition
+                      ${errors.status ? "border-red-500 ring-1 ring-red-500" : ""}
+                    `}
+                    required
+                  >
+                    <option>In Stock</option>
+                    <option>Low</option>
+                    <option>Expired Soon</option>
+                    <option>Expired</option>
+                  </select>
+                  {errors.status && (
+                    <p className="text-sm text-red-500 mt-1">{errors.status}</p>
+                  )}
+                </div>
               </div>
 
               {/* Action Buttons */}
@@ -941,12 +1322,13 @@ const Inventory: React.FC = () => {
                   onClick={() => {
                     setModalOpen(false);
                     setEditingItem(null);
+                    setErrors({});
                   }}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+                  className="px-4 py-2 cursor-pointer rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 rounded-lg bg-[#8cb662] text-white hover:bg-[#7ca551] transition">
+                <button type="submit" className="px-4 py-2 cursor-pointer rounded-lg bg-[#8cb662] text-white hover:bg-[#7ca551] transition">
                   {editingItem ? "Update" : "Add"}
                 </button>
               </div>

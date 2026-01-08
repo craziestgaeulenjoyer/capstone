@@ -24,6 +24,8 @@ interface CheckoutTabProps {
   setAddress: (v: string) => void;
   selectedPayment: string;
   setSelectedPayment: (v: string) => void;
+  fulfillmentMethod: "delivery" | "pickup" | null;  
+  setFulfillmentMethod: (v: "delivery" | "pickup") => void;
   handleCheckout: () => void;
   onEditAddress: () => void;
   clearCheckedItems: () => void;
@@ -37,10 +39,13 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
   address,
   selectedPayment,
   setSelectedPayment,
+  fulfillmentMethod,          
+  setFulfillmentMethod,     
   handleCheckout,
   onEditAddress,
   cartItems,
 }) => {
+
   const navigation = useNavigation<any>();
 
   const [step, setStep] = useState(1);
@@ -60,6 +65,11 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
 
   // Step 2 → Handle GCash modal + OTP flow
   const handleProceedPayment = async () => {
+    if (!fulfillmentMethod) {
+      Alert.alert("Select Fulfillment Method", "Please choose delivery or pickup.");
+      return;
+    }
+
     if (selectedPayment === "GCash") {
       setGcashModalVisible(true);
     } else if (selectedPayment === "Pay on Pickup") {
@@ -74,10 +84,13 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
       setGcashError("Please enter a valid 11-digit GCash number.");
       return;
     }
+
     setGcashError("");
     setLoading(true);
+
     try {
       const token = await AsyncStorage.getItem("token");
+
       const res = await fetch("http://10.0.2.2:5000/api/gcash/send-otp", {
         method: "POST",
         headers: {
@@ -86,7 +99,18 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
         },
         body: JSON.stringify({ email: userData?.email }),
       });
-      const data = await res.json();
+
+      const text = await res.text(); // ✅ SAFE
+      let data: any = {};
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error("❌ Non-JSON response from server:", text);
+        Alert.alert("Server Error", "Invalid server response.");
+        return;
+      }
+
       if (res.ok) {
         setGcashModalVisible(false);
         setOtpModalVisible(true);
@@ -95,6 +119,7 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
       }
     } catch (err) {
       console.error("Error sending OTP:", err);
+      Alert.alert("Network Error", "Unable to send OTP.");
     } finally {
       setLoading(false);
     }
@@ -335,6 +360,52 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
             }
             size={22}
             color={selectedPayment === "Pay on Pickup" ? "#76B13A" : "#999"}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.paymentLabel}>Fulfillment Method</Text>
+
+        {/* To Deliver */}
+        <TouchableOpacity
+          style={[
+            styles.paymentOptionRow,
+            fulfillmentMethod === "delivery" && styles.paymentOptionSelected,
+          ]}
+          onPress={() => setFulfillmentMethod("delivery")}
+        >
+          <View style={styles.paymentLeftRow}>
+            <Icon name="bicycle-outline" size={24} color="#76B13A" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={styles.paymentName}>To Deliver</Text>
+              <Text style={styles.paymentDesc}>Your order will be delivered to your address.</Text>
+            </View>
+          </View>
+          <Icon
+            name={fulfillmentMethod === "delivery" ? "radio-button-on-outline" : "radio-button-off-outline"}
+            size={22}
+            color={fulfillmentMethod === "delivery" ? "#76B13A" : "#999"}
+          />
+        </TouchableOpacity>
+
+        {/* Pickup on Counter */}
+        <TouchableOpacity
+          style={[
+            styles.paymentOptionRow,
+            fulfillmentMethod === "pickup" && styles.paymentOptionSelected,
+          ]}
+          onPress={() => setFulfillmentMethod("pickup")}
+        >
+          <View style={styles.paymentLeftRow}>
+            <Icon name="walk-outline" size={24} color="#76B13A" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={styles.paymentName}>To Pickup on Counter</Text>
+              <Text style={styles.paymentDesc}>Pick up your order personally at the counter.</Text>
+            </View>
+          </View>
+          <Icon
+            name={fulfillmentMethod === "pickup" ? "radio-button-on-outline" : "radio-button-off-outline"}
+            size={22}
+            color={fulfillmentMethod === "pickup" ? "#76B13A" : "#999"}
           />
         </TouchableOpacity>
 

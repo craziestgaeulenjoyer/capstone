@@ -1,17 +1,104 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, X } from "lucide-react";
+import axios from "axios";
 
 interface InputFieldProps {
   label: string;
-  placeholder: string;
+  placeholder?: string;
+  field: string;
+  type?: string;
+  onChange: (field: string, value: string) => void;
+  error?: string;
 }
+
+const InputField: React.FC<InputFieldProps> = ({ label, placeholder, field, type = "text", onChange, error }) => (
+  <div className="flex flex-col gap-1">
+    <label className="font-medium text-sm sm:text-base">{label}</label>
+    <input
+      type={type}
+      className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-300 outline-none text-sm sm:text-base ${
+        error ? "border-red-500" : "border-gray-300"
+      }`}
+      placeholder={placeholder}
+      onChange={(e) => onChange(field, e.target.value)}
+      min={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
+    />
+    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+  </div>
+);
 
 const BookCartSection: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    event_type: "",
+    event_date: "",
+    estimated_pax: "",
+    event_location: "",
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleChange = (field: string, value: string) => {
+    setForm({ ...form, [field]: value });
+    setErrors({ ...errors, [field]: "" });
+  };
+
+  const submitInquiry = async () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!form.name.trim()) newErrors.name = "Name is required";
+
+    // PHONE VALIDATION
+    if (!form.phone.trim()) newErrors.phone = "Phone number is required";
+    else if (!/^\d{11}$/.test(form.phone))
+      newErrors.phone = "Phone number must be exactly 11 digits";
+
+    if (!form.event_type.trim()) newErrors.event_type = "Event type is required";
+
+    if (!form.event_date.trim()) newErrors.event_date = "Event date is required";
+    else if (new Date(form.event_date) < new Date(new Date().toDateString()))
+      newErrors.event_date = "Event date cannot be in the past";
+
+    if (!form.estimated_pax || Number(form.estimated_pax) <= 0)
+      newErrors.estimated_pax = "Estimated Pax must be a positive number";
+
+    if (!form.event_location.trim()) newErrors.event_location = "Event location is required";
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      await axios.post("/api/eventinquiry", {
+        ...form,
+        estimated_pax: Number(form.estimated_pax),
+      });
+
+      alert("Inquiry submitted successfully!");
+      setIsModalOpen(false);
+      setForm({
+        name: "",
+        phone: "",
+        event_type: "",
+        event_date: "",
+        estimated_pax: "",
+        event_location: "",
+      });
+      setErrors({});
+    } catch (error: any) {
+      console.error("ERROR RESPONSE:", error.response?.data);
+      alert("Failed to submit inquiry");
+    }
+  };
+
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <>
@@ -108,6 +195,7 @@ const BookCartSection: React.FC = () => {
         </div>
       </section>
 
+      {/* MODAL */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
@@ -140,19 +228,56 @@ const BookCartSection: React.FC = () => {
                 Let us help make your special day unforgettable.
               </p>
 
-              {/* Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField label="Name" placeholder="Enter your full name" />
-                <InputField label="Phone Number" placeholder="09XXXXXXXXX" />
-                <InputField label="Type of Event" placeholder="Wedding, Birthday, etc." />
-                <InputField label="Date of Event" placeholder="MM/DD/YYYY" />
-                <InputField label="Estimated Pax" placeholder="Number of guests" />
-                <InputField label="Event Location" placeholder="Venue or address" />
+
+                <InputField label="Name" placeholder="Enter your full name" field="name" onChange={handleChange} error={errors.name} />
+
+                {/* CUSTOM PHONE INPUT WITH COUNTER + AUTO PREFIX + MAX 11 */}
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium text-sm sm:text-base">Phone Number</label>
+
+                  <input
+                    type="text"
+                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-300 outline-none text-sm sm:text-base ${
+                      errors.phone ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="09XXXXXXXXX"
+                    value={form.phone}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, "");
+
+                      // enforce 09 prefix
+                      if (!value.startsWith("09")) {
+                        value = "09" + value.replace(/^0+/, "");
+                      }
+
+                      // restrict to 11 digits max
+                      value = value.slice(0, 11);
+
+                      handleChange("phone", value);
+                    }}
+                  />
+
+                  {/* LIVE COUNTER */}
+                  <p className="text-xs text-gray-600 mt-1">
+                    {form.phone.length} / 11 digits
+                  </p>
+
+                  {errors.phone && (
+                    <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                  )}
+                </div>
+
+                <InputField label="Type of Event" placeholder="Wedding, Birthday, etc." field="event_type" onChange={handleChange} error={errors.event_type} />
+                <InputField label="Date of Event" field="event_date" type="date" onChange={handleChange} error={errors.event_date} />
+                <InputField label="Estimated Pax" placeholder="Number of guests" field="estimated_pax" type="number" onChange={handleChange} error={errors.estimated_pax} />
+                <InputField label="Event Location" placeholder="Venue or address" field="event_location" onChange={handleChange} error={errors.event_location} />
               </div>
 
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.94 }}
+                onClick={submitInquiry}
                 className="w-full bg-[#7fb25d] text-white py-3 rounded-lg font-semibold hover:bg-[#6ea351] transition-all mt-6"
               >
                 Submit Inquiry
@@ -165,15 +290,4 @@ const BookCartSection: React.FC = () => {
   );
 };
 
-const InputField: React.FC<InputFieldProps> = ({ label, placeholder }) => (
-  <div className="flex flex-col gap-1">
-    <label className="font-medium text-sm sm:text-base">{label}</label>
-    <input
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-300 outline-none text-sm sm:text-base"
-      placeholder={placeholder}
-    />
-  </div>
-);
-
 export default BookCartSection;
-

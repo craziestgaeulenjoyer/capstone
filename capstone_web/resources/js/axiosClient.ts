@@ -8,6 +8,14 @@ const axiosClient = axios.create({
     'Accept': 'application/json',
   },
 });
+// Attach token from localStorage automatically
+axiosClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("customer_token");
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 axiosClient.interceptors.request.use(async (config) => {
   if (['post', 'put', 'delete'].includes(config.method || '')) {

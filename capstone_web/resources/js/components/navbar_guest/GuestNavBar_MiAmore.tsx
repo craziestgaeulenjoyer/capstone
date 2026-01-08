@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
-import { Menu, X, ShoppingCart, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageProps as InertiaPageProps } from "@inertiajs/core";
 
@@ -14,11 +14,11 @@ interface AuthProps {
 
 interface PageProps extends InertiaPageProps {
   auth: AuthProps;
+  [key: string]: any;
 }
 
 const GuestNavBar_MiAmore: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const { auth } = usePage<PageProps>().props;
 
   useEffect(() => {
@@ -36,146 +36,149 @@ const GuestNavBar_MiAmore: React.FC = () => {
     { name: "Contact", href: "/contact-us" },
   ];
 
+  const cartLink = { name: "Cart", href: "/cart" };
+
   return (
-    <nav 
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
-        scrolled 
-          ? "bg-[#6b4d36f2] backdrop-blur-lg shadow-lg py-2" 
-          : "bg-[#8e674acc] backdrop-blur-md py-4"
-      }`}
-    >
-      <div className="max-w-screen-xl mx-auto px-6 md:px-12 flex items-center justify-between">
-        
-        <Link href="/home" className="flex-shrink-0">
-          <motion.img
-            whileHover={{ scale: 1.05 }}
+    <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-[#8e674acc] shadow-md text-white font-sans transition-all duration-300">
+      <div className="max-w-screen-xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center space-x-3 flex-shrink-0">
+          <img
             src="images/MiAmore2.png"
             alt="Mi Amore Logo"
-            className="h-10 md:h-14 object-contain"
+            className="h-11 md:h-14 object-contain select-none"
           />
-        </Link>
+        </div>
 
-        <div className="hidden lg:flex items-center space-x-8">
-          <ul className="flex space-x-6 font-medium text-[0.95rem] tracking-wide">
-            {navLinks.map((link) => (
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center justify-between flex-grow ml-10">
+          <ul className="flex space-x-7 font-semibold text-[0.95rem] tracking-wide">
+            {leftLinks.map((link) => (
               <li key={link.name}>
                 <Link
                   href={link.href}
-                  className="relative group text-white/90 hover:text-white transition-colors duration-300"
+                  className="relative group text-white hover:text-[#8cb662] transition-all duration-300"
                 >
-                  {link.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-[#8cb662] transition-all duration-300 group-hover:w-full" />
+                  <span className="after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-[#8cb662] after:transition-all after:duration-500 group-hover:after:w-full">
+                    {link.name}
+                  </span>
                 </Link>
               </li>
             ))}
           </ul>
 
-          <div className="h-6 w-[1px] bg-white/20 mx-2" />
+          {/* Right Navigation + Auth Buttons */}
+          <div className="flex items-center space-x-6 font-semibold text-[0.95rem] tracking-wide">
+            <ul className="flex space-x-6">
+              {rightLinks.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="relative group text-white hover:text-[#8cb662] transition-all duration-300"
+                  >
+                    <span className="after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-[#8cb662] after:transition-all after:duration-500 group-hover:after:w-full">
+                      {link.name}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
-          <div className="flex items-center space-x-4">
             {auth?.user === null ? (
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href={route("SignIn")}
-                  className="relative overflow-hidden bg-[#88B04B] text-white px-7 py-2.5 rounded-full font-bold shadow-lg flex items-center group"
-                >
-                  <span className="relative z-10">Join Now</span>
-                  <motion.div 
-                    className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/20 opacity-40"
-                    animate={{ left: ["100%", "-100%"] }}
-                    transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                  />
-                </Link>
-              </motion.div>
+              <Link
+                href={route("SignIn")}
+                className="bg-[#88B04B] text-white px-5 py-2 rounded-full font-bold shadow hover:bg-[#7BA642] transition-transform duration-300 hover:scale-105"
+              >
+                Join Now
+              </Link>
             ) : (
-              <div className="flex items-center gap-4">
-                <Link href="/cart" className="text-white hover:text-[#8cb662] transition-colors relative">
-                  <ShoppingCart size={22} />
+              <div className="flex gap-3">
+                <Link
+                  href="/cart"
+                  className="bg-[#88B04B] text-white px-5 py-2 rounded-full font-bold shadow hover:bg-[#7BA642] transition-transform duration-300 hover:scale-105"
+                >
+                  Add to Cart
                 </Link>
-                <Link href="/profile" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-1.5 rounded-full transition-all">
-                  <User size={18} className="text-[#8cb662]" />
-                  <span className="text-sm font-semibold text-white">Profile</span>
+                <Link
+                  href="/profile"
+                  className="bg-white text-[#8e674a] px-5 py-2 rounded-full font-bold shadow hover:bg-gray-200 transition-transform duration-300 hover:scale-105"
+                >
+                  Profile
                 </Link>
               </div>
             )}
           </div>
         </div>
 
-        <div className="lg:hidden flex items-center">
+        {/* Mobile Menu Button */}
+        <div className="flex items-center justify-center md:hidden relative">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="text-white focus:outline-none transition-transform duration-300 hover:scale-110"
+            aria-label="Toggle menu"
           >
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
       </div>
 
+      {/* Mobile Navigation */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm lg:hidden"
-            />
-            
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-screen w-[75%] max-w-[300px] bg-[#7c5b3f] shadow-2xl p-8 flex flex-col lg:hidden"
-            >
-              <div className="flex justify-end mb-8">
-                <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white">
-                  <X size={30} />
-                </button>
-              </div>
-
-              <ul className="flex flex-col space-y-6">
-                {navLinks.map((link, i) => (
-                  <motion.li 
-                    key={link.name}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="md:hidden bg-[#8e674acc] backdrop-blur-md border-t border-[#7c5b3f]"
+          >
+            <ul className="flex flex-col items-center space-y-4 py-5 font-medium text-[1rem]">
+              {[...leftLinks, ...rightLinks].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className="text-white hover:text-[#8cb662] transition-colors duration-300"
                   >
-                    <Link
-                      href={link.href}
-                      onClick={() => setIsOpen(false)}
-                      className="text-xl font-medium text-white/90 hover:text-[#8cb662] block transition-colors"
-                    >
-                      {link.name}
-                    </Link>
-                  </motion.li>
-                ))}
-              </ul>
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
 
-              <div className="mt-auto">
-                {auth?.user === null ? (
+              {auth?.user === null ? (
+                <li>
                   <Link
                     href={route("SignIn")}
                     onClick={() => setIsOpen(false)}
-                    className="w-full bg-[#88B04B] text-white py-4 rounded-2xl font-bold shadow-lg block text-center"
+                    className="bg-[#88B04B] text-white px-10 py-2 rounded-full font-bold shadow hover:bg-[#7BA642] transition-transform duration-300 hover:scale-105"
                   >
                     Join Now
                   </Link>
-                ) : (
-                  <div className="space-y-4">
-                    <Link href="/cart" onClick={() => setIsOpen(false)} className="w-full bg-white/10 text-white py-3 rounded-xl block text-center border border-white/20">
-                      My Cart
+                </li>
+              ) : (
+                <>
+                  <li>
+                    <Link
+                      href="/cart"
+                      onClick={() => setIsOpen(false)}
+                      className="bg-[#88B04B] text-white px-10 py-2 rounded-full font-bold shadow hover:bg-[#7BA642] transition-transform duration-300 hover:scale-105"
+                    >
+                      Add to Cart
                     </Link>
-                    <Link href="/profile" onClick={() => setIsOpen(false)} className="w-full bg-[#88B04B] text-white py-3 rounded-xl block text-center">
-                      Profile Settings
+                  </li>
+                  <li>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="bg-white text-[#8e674a] px-10 py-2 rounded-full font-bold shadow hover:bg-gray-200 transition-transform duration-300 hover:scale-105"
+                    >
+                      Profile
                     </Link>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </>
+                  </li>
+                </>
+              )}
+            </ul>
+          </motion.div>
         )}
       </AnimatePresence>
     </nav>
@@ -183,3 +186,5 @@ const GuestNavBar_MiAmore: React.FC = () => {
 };
 
 export default GuestNavBar_MiAmore;
+
+

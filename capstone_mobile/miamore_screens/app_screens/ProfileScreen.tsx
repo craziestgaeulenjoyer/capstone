@@ -13,10 +13,11 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { launchImageLibrary } from "react-native-image-picker";
+import { launchImageLibrary, ImageLibraryOptions } from "react-native-image-picker";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Header from "../components/Header";
 import { products } from "../data/products";
+import { API_BASE, fixUrl } from "../../config/api";
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,7 +31,7 @@ const ProfileScreen: React.FC = () => {
     phone_number: "",
   });
 
-  const [profileImage, setProfileImage] = useState<any>(require("../../assets/default-profile-icon.png"));
+  const [profileImage, setProfileImage] = useState<{ uri?: string | null }>({});
   const [view, setView] = useState<"main" | "viewProfile" | "editProfile" | "favorites" | "pastOrders">("main");
   const [selectedTab, setSelectedTab] = useState<"completed" | "cancelled">("completed");
   const [completedOrders, setCompletedOrders] = useState<any[]>([]);
@@ -43,6 +44,12 @@ const ProfileScreen: React.FC = () => {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [description, setDescription] = useState("");
 
+  const FIX_URL = (path: string | null | undefined): string | null => {
+    if (!path) return null;
+
+    return path.replace("10.0.2.2:8000", "10.0.2.2:5000");
+  };
+
   const fetchProfile = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -51,30 +58,34 @@ const ProfileScreen: React.FC = () => {
         return;
       }
 
-      const response = await fetch("http://10.0.2.2:5000/api/profile", {
+      const response = await fetch(`${API_BASE}/api/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.log("Non-JSON response:", text);
+
+      if (!response.ok) {
+        console.log("Profile fetch failed:", response.status);
         return;
       }
 
-      if (response.ok) {
-        setProfile(data);
-        setFormData({
-          full_name: data.full_name || "",
-          email: data.email || "",
-          gender: data.gender || "",
-          birthday: data.birthday || "",
-          phone_number: data.phone_number || "",
-        });
-      } else {
-        console.log("Error fetching profile:", data.message || text);
+      const data = await response.json();
+      console.log("PARSED PROFILE DATA:", data);
+
+      setProfile(data);
+
+      setFormData({
+        full_name: data.full_name || "",
+        email: data.email || "",
+        gender: data.gender || "",
+        birthday: data.birthday || "",
+        phone_number: data.phone_number || "",
+      });
+
+      if (data.profile_picture) {
+        console.log("Profile Image Loaded:", data.profile_picture);
+        setProfileImage({ uri: FIX_URL(data.profile_picture) });
+
       }
+
     } catch (err) {
       console.log("Error fetching profile:", err);
     }
@@ -104,28 +115,63 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  
+
   const handleImagePick = () => {
-    const options: any = { mediaType: "photo", quality: 0.8 };
-    launchImageLibrary(options, (response) => {
+    const options: ImageLibraryOptions = {
+      mediaType: "photo",
+      quality: 0.8,
+    };
+
+    launchImageLibrary(options, async (response) => {
       if (response.didCancel) return;
-      if (response.errorMessage)
+      if (response.errorMessage) {
         console.log("ImagePicker Error:", response.errorMessage);
-      else if (response.assets?.length) {
-        const source = { uri: response.assets[0].uri };
-        setProfileImage(source);
+        return;
+      }
+
+      if (response.assets?.length) {
+        const asset = response.assets[0];
+
+        setProfileImage({ uri: asset.uri });
+
+        uploadImage(asset);
       }
     });
   };
 
-  const handleLogout = async () => {
+  const uploadImage = async (asset: any) => {
+    let formData = new FormData();
+    formData.append("image", {
+      uri: asset.uri,
+      name: "profile.jpg",
+      type: asset.type || "image/jpeg",
+    });
+
+    const token = await AsyncStorage.getItem("token");
+
     try {
-      await AsyncStorage.removeItem("token");
-      navigation.navigate("Landing" as never);
-    } catch (err) {
-      console.log("Error logging out:", err);
+      const res = await fetch(`${API_BASE}/api/profile/upload-picture`, {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (data.profile_picture) {
+        setProfileImage({ uri: fixUrl(data.profile_picture) });
+        setProfile((prev: any) => ({
+          ...prev,
+          profile_picture: data.profile_picture,
+        }));
+      }
+    } catch (error) {
+      console.log("Upload failed:", error);
     }
   };
-
+  
   const fetchPastOrders = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -152,6 +198,15 @@ const ProfileScreen: React.FC = () => {
     fetchProfile();
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem("token");
+      navigation.navigate("Landing" as never);
+    } catch (err) {
+      console.log("Error logging out:", err);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -162,7 +217,19 @@ const ProfileScreen: React.FC = () => {
         <ScrollView style={{ flex: 1 }}>
           {/* Profile Info */}
           <View style={styles.profileCard}>
-            <Image source={profileImage} style={styles.avatar} />
+            <Image
+              source={
+                profileImage && profileImage.uri
+                  ? { uri: fixUrl(profileImage.uri) }
+                  : require("../../assets/default-profile-icon.png")
+              }
+              style={styles.avatar}
+              resizeMode="cover"
+              onError={() => {
+                console.log("IMAGE FAILED TO LOAD, USING DEFAULT");
+                setProfileImage({ uri: null });
+              }}
+            />
             <View style={styles.userInfo}>
               <Text style={styles.userName}>
                 {profile?.full_name || "Loading..."}
@@ -239,7 +306,15 @@ const ProfileScreen: React.FC = () => {
               </View>
 
               <View style={{ alignItems: "center", marginVertical: 10 }}>
-                <Image source={profileImage} style={styles.avatarSmall} />
+                <Image
+                  resizeMode="cover"
+                  source={
+                    profileImage && profileImage.uri
+                      ? { uri: fixUrl(profileImage.uri) }
+                      : require("../../assets/default-profile-icon.png")
+                  }
+                  style={styles.avatarSmall}
+                />
               </View>
 
               {[
@@ -297,7 +372,15 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
 
           <View style={{ alignItems: "center", marginTop: 20 }}>
-            <Image source={profileImage} style={styles.avatarLarge} />
+            <Image
+              resizeMode="cover"
+              source={
+                profileImage && profileImage.uri
+                  ? { uri: fixUrl(profileImage.uri) }
+                  : require("../../assets/default-profile-icon.png")
+              }
+              style={styles.avatarLarge}
+            />
             <Text style={styles.userName}>{profile?.full_name}</Text>
             <Text style={styles.userEmail}>{profile?.email}</Text>
           </View>
@@ -345,7 +428,14 @@ const ProfileScreen: React.FC = () => {
           onPress={handleImagePick}
           style={{ alignSelf: "center", marginBottom: 15 }}
         >
-          <Image source={profileImage} style={styles.avatarLarge} />
+          <Image
+            source={
+              profileImage && profileImage.uri
+                ? { uri: fixUrl(profileImage.uri) }
+                : require("../../assets/default-profile-icon.png")
+            }
+            style={styles.avatarLarge}
+          />
           <Text style={{ color: "#73C04D", fontSize: 13, textAlign: "center" }}>
             Change Photo
           </Text>
@@ -692,6 +782,7 @@ const styles = StyleSheet.create({
 
   // Profile Card
   profileCard: {
+    marginTop: 20,
     flexDirection: "row",
     alignItems: "center",
     padding: 20,

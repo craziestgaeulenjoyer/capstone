@@ -5,18 +5,76 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Http\Controllers\Administrator_Controllers\AdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\SuperAdminAuthController;
+use App\Http\Controllers\Administrator_Controllers\ForgotPasswordController;
 use App\Models\Admin;
 use App\Models\SuperAdmin;
-
-/*
-|--------------------------------------------------------------------------
-| AUTH ROUTES (ADMIN + SUPER ADMIN)
-|--------------------------------------------------------------------------
-| Wrapped in 'web' middleware to ensure sessions, CSRF, and cookies work.
-| These routes handle login, email verification, and dashboards.
-*/
+use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
 
 Route::middleware(['web'])->group(function () {
+
+     /* =========================
+       CUSTOMER AUTH ROUTES
+    ==========================*/
+    Route::prefix('customer')->group(function () {
+
+        /* ---- SIGNUP PROCESS ---- */
+        Route::post('/signup', [CustomerAuthController::class, 'signup'])
+            ->name('customer.signup.store');
+
+        Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])
+            ->name('customer.signup.verify');
+
+        Route::post('/signup/resend', [CustomerAuthController::class, 'resendOtp'])
+            ->name('customer.signup.resend');
+
+        // After OTP verification → show form to complete profile
+        Route::get('/signup/form', [CustomerAuthController::class, 'showSignupForm'])
+            ->name('customer.signup.form');
+
+        // Show Verification screen
+        Route::get('/verification', [CustomerAuthController::class, 'showVerification'])
+            ->name('customer.verification');
+
+        /* ---- LOGIN ---- */
+        Route::post('/login', [CustomerAuthController::class, 'login'])
+            ->name('customer.login');
+
+        /* ---- PROTECTED CUSTOMER DASHBOARD ---- */
+        Route::middleware(['auth:customer', 'customer.verified'])->group(function () {
+
+            Route::get('/dashboard', function () {
+                return Inertia::render('CustomerDashboard/Home');
+            })->name('customer.dashboard');
+
+            Route::post('/logout', [CustomerAuthController::class, 'logout'])
+                ->name('customer.logout');
+        });
+
+    });
+
+
+    /*
+    |----------------------------------------------------------
+    | FORGOT PASSWORD (ADMIN + SUPER ADMIN)
+    |----------------------------------------------------------
+    | Public routes with CSRF protection.
+    | Handles OTP email, verification, and password reset.
+    */
+
+    Route::prefix('forgot-password')->group(function () {
+
+        // Step 1: Send 6-digit OTP to email
+        Route::post('/send-otp', [ForgotPasswordController::class, 'sendOtp'])
+            ->name('forgot.password.send');
+
+        // Step 2: Verify OTP
+        Route::post('/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
+            ->name('forgot.password.verify');
+
+        // Step 3: Reset password
+        Route::post('/reset', [ForgotPasswordController::class, 'resetPassword'])
+            ->name('forgot.password.reset');
+    });
 
     /* ---------------- ADMIN AUTH ---------------- */
     Route::prefix('admin')->group(function () {

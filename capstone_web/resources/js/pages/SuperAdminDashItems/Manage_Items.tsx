@@ -546,14 +546,14 @@ const Manage_Items = () => {
           <div className="flex justify-end mt-6 gap-3">
             <button
               onClick={cancelDiscard}
-              className="px-4 py-2 bg-gray-200 rounded-md text-gray-700 hover:bg-gray-300"
+              className="cursor-pointer px-4 py-2 bg-gray-200 rounded-md text-gray-700 hover:bg-gray-300"
             >
               Cancel
             </button>
 
             <button
               onClick={confirmDiscard}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+              className="cursor-pointer px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
             >
               Discard
             </button>
@@ -568,7 +568,7 @@ const Manage_Items = () => {
       <div className="p-6 bg-gray-50 border-b border-gray-200">
         <button
           onClick={handleNewMenuClick}
-          className="flex items-center px-4 py-2 bg-[#8CB662] text-white rounded-full shadow hover:bg-[#7a9d59] transition"
+          className="cursor-pointer flex items-center px-4 py-2 bg-[#8CB662] text-white rounded-full shadow hover:bg-[#7a9d59] transition"
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -785,7 +785,7 @@ const Manage_Items = () => {
                   setFormData(prev => ({ ...prev, image: null }));
                   setErrors(prev => ({ ...prev, image: "Please upload a new image." }));
                 }}
-                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                className="cursor-pointer absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -805,7 +805,7 @@ const Manage_Items = () => {
                   setFormData(prev => ({ ...prev, existingImagePath: null }));
                   setErrors(prev => ({ ...prev, image: "Please upload a new image." }));
                 }}
-                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                className="cursor-pointer absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -884,7 +884,7 @@ const Manage_Items = () => {
                   }}
                   placeholder="e.g., 120"
                   disabled={!regularEnabled}
-                  className={`w-full p-2 border rounded-lg transition
+                  className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
                     ${errors.regularPrice ? "border-red-500" : ""}
                     ${
                       !regularEnabled
@@ -927,7 +927,7 @@ const Manage_Items = () => {
                   }}
                   placeholder="e.g., 150"
                   disabled={!largeEnabled}
-                  className={`w-full p-2 border rounded-lg transition
+                  className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
                     ${errors.largePrice ? "border-red-500" : ""}
                     ${
                       !largeEnabled
@@ -963,7 +963,7 @@ const Manage_Items = () => {
               placeholder="e.g., 150"
               value={formData.price}
               onChange={handleInputChange}
-              className={`mt-1 w-full border rounded-md p-2 text-gray-900 placeholder-gray-400 focus:ring-[#8cb662] ${
+              className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
                 errors.price ? "border-red-500" : ""
               }`}
             />
@@ -1062,7 +1062,7 @@ const Manage_Items = () => {
             type="button"
             onClick={handleDiscardClick}
             disabled={loading}
-            className={`px-4 py-2 rounded-lg ${
+            className={`cursor-pointer px-4 py-2 rounded-lg ${
               loading ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-gray-400 text-white hover:bg-gray-500"
             }`}
           >
@@ -1072,7 +1072,7 @@ const Manage_Items = () => {
           <button
             type="submit"
             disabled={loading}
-            className={`px-4 py-2 rounded-lg ${
+            className={`cursor-pointer px-4 py-2 rounded-lg ${
               loading ? "bg-green-300 text-white cursor-not-allowed" : "bg-[#8CB662] text-white hover:bg-[#7a9d59]"
             } flex items-center justify-center gap-2`}
           >

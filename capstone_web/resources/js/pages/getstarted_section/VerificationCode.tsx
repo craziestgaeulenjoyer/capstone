@@ -1,9 +1,40 @@
-import React, { useRef } from 'react';
-import { Link } from '@inertiajs/react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 
 const VerificationCode = () => {
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const [code, setCode] = useState(["", "", "", ""]);
+  const email = localStorage.getItem("reset_email");
+
+  const handleChange = (value: string, index: number) => {
+    if (/^[0-9]?$/.test(value)) {
+      const newCode = [...code];
+      newCode[index] = value;
+      setCode(newCode);
+      if (value && index < 3) inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!email) return alert("Email not found.");
+    try {
+      await axios.post("/api/customer/verify-code", { email, otp_code: code.join("") });
+      window.location.href = "/resetpasswordform";
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Invalid OTP code");
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email) return alert("Email not found.");
+    try {
+      await axios.post("/api/customer/resend-code", { email });
+      alert("A new code has been sent to your email.");
+    } catch {
+      alert("Failed to resend code");
+    }
+  };
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-200 px-4">
@@ -11,75 +42,42 @@ const VerificationCode = () => {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center"
-      >
-      
-       <Link href="/" className="absolute top-6 left-6 p-2 rounded-full text-[#8CB662] hover:text-[#b5f376] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#8CB662] transition-colors z-10">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </Link>
-
-    
-          <img
-          src="/images/MiAmore2.png" 
-          alt="Mi Amore Cafe Logo (Small)"
-          className="absolute top-6 right-6 h-15 w-auto object-contain hover:scale-110 transition-transform duration-300 z-10"
-        />
-
-      
-       <h2 className="text-2xl font-semibold text-[#8CB662] mb-2 mt-8">Enter 4-Digit Code</h2>
-
-      
+        className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center"
+      > <div className="flex justify-between items-center mt-4">
+  <button
+    onClick={() => window.history.back()}
+    className="text-gray-500 hover:text-gray-700 text-sm"
+  >
+    ← Back
+  </button>
+</div>
+        <h2 className="text-2xl font-semibold text-[#8CB662] mb-3 mt-4">Enter 4-Digit Code</h2>
         <p className="text-gray-600 text-sm text-center mb-6">
-          Enter the 4-digit code that we sent to your email.
+          Enter the verification code we sent to your email.
         </p>
-
-      
-        <motion.div
-          className="flex space-x-3 mb-6"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-        >
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+        
+        <div className="flex space-x-4 mb-5">
+          {code.map((_, i) => (
             <input
               key={i}
-              type="text"
               maxLength={1}
               ref={inputRefs[i]}
-              className="w-14 h-14 rounded-lg border-1 border-gray-500 text-center text-xl font-mono focus:ring-2 focus:ring-green-500 focus:outline-none transition"
+              value={code[i]}
+              onChange={(e) => handleChange(e.target.value, i)}
+              className="w-14 h-14 rounded-lg border text-center text-xl font-mono"
             />
           ))}
-        </motion.div>
-
-       
+        </div>
         <p className="text-sm text-gray-600 mb-6">
-          Didn't receive the code?{" "}
-          <button
-            onClick={() => console.log('Resend clicked')}
-            className="text-red-500 font-medium hover:underline transition"
-          >
-            Resend
-          </button>
+          Didn’t receive the code?{" "}
+          <button onClick={handleResend} className="text-red-500 font-medium hover:underline">Resend</button>
         </p>
-
-     
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className="w-full"
-        >
-         <Link
-          href='resetpasswordform' 
-          className="w-full block text-center py-3 bg-white text-[#8CB662] border-1 border-[#8CB662] font-bold rounded-xl shadow-sm
-                    hover:bg-[#8CB662] hover:text-white hover:shadow-md
-                    transition transform hover:scale-105"
+        <button
+          onClick={handleVerifyCode}
+          className="w-full py-3 bg-white text-[#8CB662] border border-[#8CB662] rounded-xl hover:bg-[#8CB662] hover:text-white"
         >
           Continue
-        </Link>
-        </motion.div>
+        </button>
       </motion.div>
     </div>
   );

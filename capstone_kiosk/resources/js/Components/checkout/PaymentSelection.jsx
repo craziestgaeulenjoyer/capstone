@@ -7,6 +7,8 @@ export default function PaymentSelection() {
   const [language, setLanguage] = useState("EN");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeButton, setActiveButton] = useState(null);
+  const [customerName, setCustomerName] = useState("");
+
 
   const languages = ["EN", "KR", "JP", "CN", "PH"];
 
@@ -127,8 +129,17 @@ export default function PaymentSelection() {
         </div>
       </div>
 
-      {/* Order Summary Section */}
+      {/* Order Summary */}
       <div className="w-full max-w-md">
+        <label className="block text-sm font-medium mb-1">Customer Name</label>
+       <input
+          type="text"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="e.g., Juan Dela Cruz"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#76B13A]"
+        />
+
         <h3 className="text-base font-bold mb-2 border-t pt-4">
           Order Summary
         </h3>

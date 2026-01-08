@@ -1,22 +1,78 @@
-import { Link, useForm } from "@inertiajs/react";
+import { Link } from "@inertiajs/react";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebookF, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState } from "react";
+import axios from "axios";
+
 
 const SignInCard = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<any>({});
+  const [processing, setProcessing] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
-  // ✅ Inertia form
-  const { data, setData, post, processing, errors } = useForm({
-    email: "",
-    password: "",
-  });
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  post(route("login.authenticate"));
+  const handleGoogleLogin = async () => {
+  try {
+    const res = await axios.get("/api/auth/google/redirect");
+    window.location.href = res.data.url; // redirect user to Google login
+  } catch (err) {
+    console.error("Google login failed", err);
+  }
 };
 
+const handleFacebookLogin = async () => {
+  try {
+    const res = await axios.get("/api/auth/facebook/redirect");
+    window.location.href = res.data.url; // redirect user to Facebook login
+  } catch (err) {
+    console.error("Facebook login failed", err);
+  }
+};
+
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setProcessing(true);
+    setErrors({});
+
+    try {
+    const response = await axios.post(
+      'http://127.0.0.1:8000/api/customer/login',
+      {
+        email,
+        password,
+        remember_me: rememberMe, // send checkbox
+      },
+      { withCredentials: true } // send cookies
+    );
+
+    // Save customer token for navbar
+    const { customer_token, customer } = response.data;
+    localStorage.setItem('customer_token', customer_token);
+    localStorage.setItem('customer_info', JSON.stringify(customer));
+    
+
+      // Optionally dispatch event for immediate navbar update
+      window.dispatchEvent(new Event("customer-login"));
+
+      console.log("Login successful");
+      // Redirect to home
+      window.location.href = "/home"; // or router.visit("/") if using Inertia
+
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
+      } else if (error.response?.data?.message) {
+        setErrors({ general: error.response.data.message });
+      } else {
+        console.error(error);
+      }
+    } finally {
+      setProcessing(false);
+    }
+  };
   return (
     <>
       <style>
@@ -29,7 +85,7 @@ const SignInCard = () => {
           <div className="w-full md:w-1/2 px-6 py-10 flex flex-col justify-center">
             {/* Header */}
             <div className="flex justify-between items-center mb-4">
-              <Link href="/" className="text-[#8CB662] hover:text-[#bafc79] transition-colors">
+              <Link href="/signin" className="text-[#8CB662] hover:text-[#bafc79] transition-colors">
                 <button
                   type="button"
                   className="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#8CB662]"
@@ -52,46 +108,48 @@ const SignInCard = () => {
             <form onSubmit={handleSubmit}>
               {/* Email */}
               <div className="mb-4">
-                <label className="text-sm block mb-1 text-gray-700">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={data.email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData("email", e.target.value)}
-                  placeholder="example@gmail.com"
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-[#8CB662] focus:ring-2 focus:ring-[#DFF1D6] outline-none transition"
-                />
-                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-              </div>
+              <label className="text-sm block mb-1 text-gray-700">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="example@gmail.com"
+                className="w-full rounded-md border px-4 py-2"
+              />
+              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+            </div>
 
-              {/* Password */}
-              <div className="mb-4">
-                <label className="text-sm block mb-1 text-gray-700">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={data.password}
-                    onChange={(e) => setData("password", e.target.value)}
-                    placeholder="Enter password"
-                    className="w-full rounded-md border border-gray-300 px-4 py-2 pr-10 focus:border-[#8CB662] focus:ring-2 focus:ring-[#DFF1D6] outline-none transition"
-                  />
-                  <span
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm cursor-pointer"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </span>
-                </div>
-                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+            <div className="mb-4">
+              <label className="text-sm block mb-1 text-gray-700">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full rounded-md border px-4 py-2 pr-10"
+                />
+                <span
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
               </div>
+              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+            </div>
 
               {/* Remember me / Forgot password */}
               <div className="flex justify-between items-center text-sm text-gray-600 mb-5">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" className="form-checkbox text-[#8CB662]" />
-                  Remember me
-                </label>
+                 <label className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      className="form-checkbox text-[#8CB662]"
+      checked={rememberMe}           // ✅ controlled
+      onChange={() => setRememberMe(!rememberMe)} // ✅ toggle state
+    />
+    Remember me
+  </label>
                 <Link href="/forgotpasswordform" className="text-[#8CB662] hover:underline">
                   Forgot your password?
                 </Link>
@@ -118,14 +176,22 @@ const SignInCard = () => {
             </div>
 
             {/* Social Buttons */}
-            <div className="flex flex-col text-gray-700 sm:flex-row gap-3">
-              <button className="flex items-center justify-center w-full border border-gray-300 py-2 rounded-md text-sm hover:bg-gray-50 transition">
-                <FcGoogle className="text-xl mr-2" /> Log in with Google
-              </button>
-              <button className="flex items-center justify-center w-full border border-gray-300 py-2 rounded-md text-sm hover:bg-gray-50 transition">
-                <FaFacebookF className="text-blue-600 text-lg mr-2" /> Sign in with Facebook
-              </button>
-            </div>
+           <div className="flex flex-col text-gray-700 sm:flex-row gap-3">
+  <button
+    onClick={handleGoogleLogin}
+    className="flex items-center justify-center w-full border border-gray-300 py-2 rounded-md text-sm hover:bg-gray-50 transition"
+  >
+    <FcGoogle className="text-xl mr-2" /> Log in with Google
+  </button>
+
+  <button
+    onClick={handleFacebookLogin}
+    className="flex items-center justify-center w-full border border-gray-300 py-2 rounded-md text-sm hover:bg-gray-50 transition"
+  >
+    <FaFacebookF className="text-blue-600 text-lg mr-2" /> Sign in with Facebook
+  </button>
+</div>
+
 
             {/* Footer */}
             <p className="text-center text-sm text-gray-600 mt-6">

@@ -43,12 +43,12 @@ const MenuHeader: React.FC = () => {
           className="relative mx-6 mt-2 rounded-xl overflow-hidden"
         >
           <img
-            src="images/MatchaLatteCover.png"
+            src="images/MENU.png"
             alt="Banner Background"
-            className="w-full object-cover rounded-xl max-h-[450px]"
+            className="w-full object-cover rounded-xl max-h-[80vh] h-[60vh]"
           />
 
-          <div className="absolute top-0 left-0 w-full h-full flex items-center p-6">
+          <div className="absolute top-5 left-6 w-full h-full flex items-center p-6">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -65,7 +65,7 @@ const MenuHeader: React.FC = () => {
               <p className="text-md mb-4">
                 Earthy matcha meets creamy oat milk for a smooth, energizing delight!
               </p>
-              <button className="bg-transparent text-[#8CB662] border-2 border-[#8CB662] px-5 py-2 rounded-full font-extrabold hover:bg-[#8CB662] hover:text-white transition">
+              <button className="cursor-pointer bg-[#8CB662]/50 text-white border-2 border-[#8CB662] px-5 py-2 rounded-full font-extrabold hover:bg-[#8CB662] hover:text-white transition">
                 Order now
               </button>
             </motion.div>

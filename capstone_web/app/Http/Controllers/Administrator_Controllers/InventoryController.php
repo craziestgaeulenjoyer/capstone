@@ -4,68 +4,308 @@ namespace App\Http\Controllers\Administrator_Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inventory;
+use App\Models\InventoryLog;
+use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
-    // Fetch all inventory items, both archived and non-archived
+    /**
+     * Resolve actor name safely (admin / superadmin)
+     */
+    private function actorName(): string
+    {
+        if (auth('super_admin')->check()) {
+            return auth('super_admin')->user()->name;
+        }
+
+        if (auth('admin')->check()) {
+            return auth('admin')->user()->name;
+        }
+
+        return 'System';
+    }
+
+    /**
+     * Create system notification
+     */
+    private function notify(
+        string $action,
+        ?string $subject,
+        $changedFields = null
+    ): void {
+        Notification::create([
+            'type' => 'inventory',
+            'action' => $action,
+            'subject' => $subject,
+            'changed_fields' => $changedFields,
+            'performed_by' => $this->actorName(),
+        ]);
+    }
+
+    /**
+     * Fetch inventory (supports month/year filter)
+     */
     public function index(Request $request)
     {
-        return Inventory::latest()->get(); // No filtering on 'archived' here
+        $month = $request->query('month');
+        $year  = $request->query('year');
+
+        $query = Inventory::query();
+
+        if ($month && $year) {
+            $query->whereMonth('updated_at', $month)
+                  ->whereYear('updated_at', $year);
+        }
+
+        return response()->json(
+            $query->orderBy('updated_at', 'DESC')->get()
+        );
     }
 
+    /**
+     * Store inventory item
+     */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            'category' => 'required|string',
-            'quantity' => 'required|integer',
-            'unit' => 'nullable|string',
-            'expiry' => 'nullable|date',
-            'status' => 'required|in:In Stock,Low,Expired Soon,Expired',
-        ]);
+        DB::beginTransaction();
 
-        $inventory = Inventory::create($data);
+        try {
+            $item = Inventory::create($request->all());
 
-        return response()->json($inventory, 201);
+            InventoryLog::create([
+                'inventory_id' => $item->id,
+                'action' => 'created',
+                'changed_fields' => null,
+                'performed_by' => $this->actorName(),
+            ]);
+
+            Notification::create([
+                'type' => 'inventory',
+                'action' => 'Created',
+                'subject' => $item->name,
+                'changed_fields' => null,
+                'performed_by' => $this->actorName(),
+                'is_read' => false,
+            ]);
+
+            DB::commit();
+
+            return response()->json($item, 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
+    /**
+     * Show single inventory
+     */
     public function show($id)
     {
         return Inventory::findOrFail($id);
     }
 
+    /**
+     * Update inventory item
+     */
     public function update(Request $request, $id)
     {
-        $inventory = Inventory::findOrFail($id);
+        DB::beginTransaction();
 
-        $data = $request->validate([
-            'name' => 'sometimes|required|string',
-            'category' => 'sometimes|required|string',
-            'quantity' => 'sometimes|required|integer',
-            'unit' => 'nullable|string',
-            'expiry' => 'nullable|date',
-            'status' => 'sometimes|required|in:In Stock,Low,Expired Soon,Expired',
-        ]);
+        try {
+            $item = Inventory::findOrFail($id);
 
-        $inventory->update($data);
+            $oldData = $item->only([
+                'name',
+                'category',
+                'supplier',
+                'quantity',
+                'unit',
+                'expiry',
+                'status',
+            ]);
 
-        return response()->json($inventory);
+            $data = $request->validate([
+                'name'     => 'sometimes|string',
+                'category' => 'sometimes|string',
+                'supplier' => 'nullable|string',
+                'quantity' => 'sometimes|integer',
+                'unit'     => 'nullable|string',
+                'expiry'   => 'nullable|date',
+                'status'   => 'sometimes|in:In Stock,Low,Expired Soon,Expired',
+            ]);
+
+            $item->update($data);
+
+            $changedFields = [];
+            foreach ($data as $field => $newValue) {
+                if (($oldData[$field] ?? null) != $newValue) {
+                    $changedFields[$field] = [
+                        'old' => $oldData[$field] ?? null,
+                        'new' => $newValue,
+                    ];
+                }
+            }
+
+            InventoryLog::create([
+                'inventory_id'   => $item->id,
+                'action'         => 'updated',
+                'changed_fields' => $changedFields ?: null,
+                'performed_by'   => $this->actorName(),
+            ]);
+
+            Notification::create([
+                'type'           => 'inventory',
+                'action'         => 'Updated',
+                'subject'        => $item->name,
+                'changed_fields' => $changedFields ?: null,
+                'performed_by'   => $this->actorName(),
+                'is_read'        => false,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Inventory updated successfully',
+                'item' => $item,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Inventory update failed',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
+    /**
+     * Delete inventory
+     */
     public function destroy($id)
     {
-        $inventory = Inventory::findOrFail($id);
-        $inventory->delete();
-        return response()->json(['message' => 'Inventory deleted successfully']);
+        DB::beginTransaction();
+
+        try {
+            $item = Inventory::findOrFail($id);
+            $name = $item->name;
+
+            $item->delete();
+
+            InventoryLog::create([
+                'inventory_id' => null,
+                'action' => 'deleted',
+                'changed_fields' => null,
+                'performed_by' => $this->actorName(),
+            ]);
+
+            Notification::create([
+                'type' => 'inventory',
+                'action' => 'Deleted',
+                'subject' => $name,
+                'changed_fields' => null,
+                'performed_by' => $this->actorName(),
+                'is_read' => false,
+            ]);
+
+            DB::commit();
+
+            return response()->json(['message' => 'Deleted']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
+    /**
+     * Archive inventory
+     */
     public function archive($id)
     {
-        $inventory = Inventory::findOrFail($id);
-        $inventory->archived = true;
-        $inventory->save();
+        DB::beginTransaction();
 
-        return response()->json(['message' => 'Inventory archived successfully']);
+        try {
+            $inventory = Inventory::findOrFail($id);
+
+            $oldValue = $inventory->archived;
+
+            $inventory->update([
+                'archived' => true,
+            ]);
+
+            $changedFields = [
+                'archived' => [
+                    'old' => $oldValue,
+                    'new' => true,
+                ],
+            ];
+
+            // Inventory log
+            InventoryLog::create([
+                'inventory_id'   => $inventory->id,
+                'action'         => 'archived',
+                'changed_fields' => $changedFields,
+                'performed_by'   => $this->actorName(),
+            ]);
+
+            // Notification
+            Notification::create([
+                'type'           => 'inventory',
+                'action'         => 'Archived',
+                'subject'        => $inventory->name,
+                'changed_fields' => $changedFields,
+                'performed_by'   => $this->actorName(),
+                'is_read'        => false,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Inventory archived successfully',
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to archive inventory',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Paginated activity logs
+     */
+    public function logs(Request $request)
+    {
+        $logs = InventoryLog::with('inventory')
+            ->orderBy('created_at', 'DESC')
+            ->paginate(10);
+
+        return response()->json($logs);
+    }
+
+     /**
+     * Fetch notifications (for bell)
+     */
+    public function notifications()
+    {
+        return response()->json(
+            Notification::orderBy('created_at', 'DESC')
+                ->paginate(10)
+        );
+    }
+
+    /**
+     * Mark notification as read
+     */
+    public function markNotificationRead($id)
+    {
+        $notification = Notification::findOrFail($id);
+        $notification->update(['is_read' => true]);
+
+        return response()->json(['message' => 'Notification marked as read']);
     }
 }

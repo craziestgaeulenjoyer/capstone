@@ -1,17 +1,75 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import axios, { AxiosInstance } from 'axios';
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  PieChart,
+  Pie,
+  Cell,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  LineChart,
+  BarChart,
+  Bar,
+} from 'recharts';
 
-// Define the types for the data structures to resolve TypeScript errors
-interface SalesDataItem {
-  value: number;
-  name: string;
-  color: string;
+/* ---------- Types (same as your base) ---------- */
+
+interface OrderHour {
+  hour: number;
+  orders: number;
+  customers: number;
+  day: string;   
+  month: number;
 }
+
+interface CustomerFeedbackApi {
+  averageRating?: number;
+  totalReviews?: number;
+  ratingsBreakdown?: Record<string, number>; 
+}
+
+interface ProductApiItem {
+  name: string;
+  count: number;
+}
+
+interface SalesDataItem {
+  value: number; 
+  name: string;  
+  color?: string;
+  orders?: number; 
+}
+
+const normalizeMonthlySales = (
+  data: SalesDataItem[],
+  date: Date
+): SalesDataItem[] => {
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  const map = new Map(data.map(d => [d.name, d]));
+
+  return months.map((month) => {
+    const monthName = new Date(date.getFullYear(), month - 1, 1).toLocaleString('default', { month: 'short' });
+    const existing = map.get(monthName);
+    return {
+      name: monthName,
+      value: existing?.value ?? 0,
+      orders: existing?.orders ?? 0,
+      color: existing?.color ?? '#34D399',
+    };
+  });
+};  
+
 
 interface ProductDataItem {
   id: number;
   name: string;
-  popularity: number;
-  sales: number;
+  popularity: number; 
+  sales: number;      
 }
 
 interface TotalCustomersSegment {
@@ -26,62 +84,334 @@ interface TotalCustomersDataItem {
 
 interface AddOnDataItem {
   name: string;
-  percentage: number;
+  percentage: number; 
 }
 
 interface CustomerInsightsData {
   totalRegistered: number;
-  activeThisWeek: number;
-  averageGrowth: string;
+  activeThisPeriod: number;
+  averageGrowth: number;
+  averageActiveUsers: number;
+  registrations: Array<{
+    date: string;
+    count: number;
+  }>;
 }
 
-interface CustomerFeedbackData {
-  averageRating: number;
-  totalReviews: number;
+interface CustomerInsightsApi {
+  totalRegistered: number;
+  activeThisPeriod: number;
+  averageGrowth: number;
+  averageActiveUsers: number;
+  registrations: {
+    date: string;
+    count: number;
+  }[];
 }
 
-const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Sales Hub');
-  const [timeframe, setTimeframe] = useState('Day');
-  const [chartTimeframe, setChartTimeframe] = useState('Daily');
-  const [salesTimeframe, setSalesTimeframe] = useState('Last 7 days');
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date());
+interface CustomerInsightsWithRegistrations {
+  totalRegistered: number;
+  activeThisPeriod: number;
+  averageGrowth: number;
+  averageActiveUsers?: number;
+  registrations?: { date: string; count: number }[];
+}
 
-  // Empty data arrays, now explicitly typed to resolve the TypeScript errors
+type BackendPayload = {
+  salesData?: { name: string; value: number; orders?: number; color?: string }[];
+  productData?: ProductApiItem[];
+  customerPercentage?: number;
+  customerInsights?: CustomerInsightsApi;
+  customerFeedback?: CustomerFeedbackApi;
+  totalCustomersData?: TotalCustomersDataItem[];
+  addOnsData?: AddOnDataItem[];
+  loyaltyProgram?: number;
+  verifiedCustomers?: {
+    date: string;    
+    count: number;   
+  }[];
+  peak_hours?: { text: string; hours: number[]; max_count?: number };
+  customer_time_intervals?: BackendCustomerIntervals;
+  peak_hours_correct?: BackendPeakHoursCorrect;
+  heatmap?: any;
+  productBreakdown?: Record<number, any[]>; 
+  totals?: { orders_count: number; revenue_total: number };
+  daily_revenue?: { day: string; revenue: number; orders: number; };
+  ordersPerHour: OrderHour[];
+};
+
+interface BackendCustomerIntervals {
+  morning: number;
+  afternoon: number;
+  evening: number;
+  average: number;
+}
+
+interface BackendPeakHoursCorrect {
+  hour: number;
+  count: number;
+}
+
+/* ---------- Helpers ---------- */
+const getStoredToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token') || null;
+};
+
+const createApiClient = (): AxiosInstance => {
+  const baseURL = "http://127.0.0.1:8000/api";
+  const token = getStoredToken();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  return axios.create({
+    baseURL,
+    headers,
+    withCredentials: !!baseURL,
+    timeout: 15000,
+  });
+};
+
+function isTruthyString(s: any): s is string {
+  return typeof s === 'string' && s.length > 0;
+}
+
+type RegistrationDay = { hour: number; count: number };
+type RegistrationMonth = { day: number; count: number };
+type RegistrationYear = { month: number; count: number };
+
+const buildCustomerGrowthData = (
+  registrations: Array<RegistrationDay | RegistrationMonth | RegistrationYear>,
+  view: 'Per Day' | 'Per Month' | 'Per Year',
+  currentDate: Date
+) => {
+  if (!registrations || registrations.length === 0) return [];
+
+  /* ===============================
+  * PER DAY — hourly (9–22 or 10–22)
+  * =============================== */
+  if (view === 'Per Day') {
+    const isSunday = currentDate.getDay() === 0;
+    const startHour = isSunday ? 9 : 10;
+    const endHour = 22;
+
+    // Build a map from hour → count
+    const hourMap = new Map<number, number>();
+    registrations
+      .filter((r): r is RegistrationDay => 'hour' in r)
+      .forEach(r => {
+        if (r.hour >= startHour && r.hour <= endHour) {
+          hourMap.set(r.hour, r.count ?? 0);
+        }
+      });
+
+    // Fill in missing hours with 0
+    const data = [];
+    for (let h = startHour; h <= endHour; h++) {
+      data.push({
+        label: `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'AM' : 'PM'}`,
+        value: hourMap.get(h) ?? 0,
+      });
+    }
+
+    return data;
+  }
+
+  /* ===============================
+  * PER MONTH — daily (1 → last day)
+  * =============================== */
+  if (view === 'Per Month') {
+    return registrations
+      .filter((r): r is RegistrationMonth => 'day' in r)
+      .map(r => ({
+        label: String(r.day),
+        value: Number(r.count) || 0,
+      }));
+  }
+
+  /* ===============================
+  * PER YEAR — monthly (Jan → Dec)
+  * =============================== */
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  return registrations
+    .filter((r): r is RegistrationYear => 'month' in r)
+    .map(r => ({
+      label: monthNames[r.month - 1],
+      value: Number(r.count) || 0,
+    }));
+};
+
+const buildAverageCustomerData = (
+  registrations: { date: string; count: number }[],
+  view: 'Per Day' | 'Per Month' | 'Per Year',
+  currentDate: Date
+) => {
+  if (!registrations || registrations.length === 0) {
+    return { chartData: [], average: 0 };
+  }
+
+  let chartData: { name: string; value: number }[] = [];
+
+  if (view === 'Per Day') {
+    const dayStr = currentDate.toISOString().split('T')[0];
+
+    const total = registrations.reduce((sum, r) => {
+      if (!r?.date) return sum;
+
+      const d = new Date(r.date);
+      if (isNaN(d.getTime())) return sum;
+
+      return d.toISOString().split('T')[0] === dayStr
+        ? sum + r.count
+        : sum;
+    }, 0);
+
+    chartData = [{ name: dayStr, value: total }];
+  }
+
+  if (view === 'Per Month') {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const map: Record<number, number> = {};
+    registrations.forEach(r => {
+      const d = new Date(r.date);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        map[d.getDate()] = (map[d.getDate()] || 0) + r.count;
+      }
+    });
+
+    chartData = Array.from({ length: daysInMonth }, (_, i) => ({
+      name: `${i + 1}`,
+      value: map[i + 1] || 0,
+    }));
+  }
+
+  if (view === 'Per Year') {
+    const year = currentDate.getFullYear();
+    const map: Record<number, number> = {};
+
+    registrations.forEach(r => {
+      const d = new Date(r.date);
+      if (d.getFullYear() === year) {
+        map[d.getMonth()] = (map[d.getMonth()] || 0) + r.count;
+      }
+    });
+
+    chartData = Array.from({ length: 12 }, (_, i) => ({
+      name: new Date(year, i).toLocaleString('default', { month: 'short' }),
+      value: map[i] || 0,
+    }));
+  }
+
+  const total = chartData.reduce((s, d) => s + d.value, 0);
+
+  const average =
+    view === 'Per Day'
+      ? total
+      : Math.round(total / (chartData.filter(d => d.value > 0).length || 1));
+
+    return { chartData, average };
+};
+
+type HeatmapRow = {
+  day: string;
+  hourCounts: number[];
+  hourLabels: string[];
+  openHour?: number; 
+  closeHour?: number;
+};
+
+type ProductItem = {
+  name: string;
+  total_orders: number;
+};
+
+type BreakdownPopoverProps = {
+  position: { top: number; left: number };
+  items: ProductItem[];
+  onClose: () => void;
+};
+
+type HeatmapMeta = {
+  openHour: number;
+};
+
+/* ---------- Component ---------- */
+const Analytics: React.FC = () => {
+  const api = useMemo(() => createApiClient(), []);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // backend data
   const [salesData, setSalesData] = useState<SalesDataItem[]>([]);
   const [productData, setProductData] = useState<ProductDataItem[]>([]);
-  const [customerPercentage, setCustomerPercentage] = useState(0);
-  const [customerInsightsData, setCustomerInsightsData] = useState<CustomerInsightsData>({
+  const [customerPercentage, setCustomerPercentage] = useState<number>(0);
+
+  const [customerInsightsData, setCustomerInsightsData] =
+  useState<CustomerInsightsWithRegistrations>({
     totalRegistered: 0,
-    activeThisWeek: 0,
-    averageGrowth: '',
+    activeThisPeriod: 0,
+    averageGrowth: 0,
+    averageActiveUsers: 0,
+    registrations: [],
   });
-  const [customerFeedbackData, setCustomerFeedbackData] = useState<CustomerFeedbackData>({
+
+  const [customerFeedback, setCustomerFeedback] = useState<CustomerFeedbackApi>({
     averageRating: 0,
     totalReviews: 0,
+    ratingsBreakdown: {}
   });
+
   const [totalCustomersData, setTotalCustomersData] = useState<TotalCustomersDataItem[]>([]);
   const [addOnsData, setAddOnsData] = useState<AddOnDataItem[]>([]);
-  const [loyaltyProgramData, setLoyaltyProgramData] = useState(0);
+  const [loyaltyProgramData, setLoyaltyProgramData] = useState<number>(0);
 
-  // useEffect for data fetching
-  useEffect(() => {
-    // --- Data fetching logic would go here ---
-    // Example:
-    // fetch('https://api.example.com/dashboard-data')
-    //   .then(response => response.json())
-    //   .then(data => {
-    //     setSalesData(data.sales);
-    //     setProductData(data.products);
-    //     setCustomerPercentage(data.customer_percentage);
-    //     setCustomerInsightsData(data.customer_insights);
-    //     setCustomerFeedbackData(data.customer_feedback);
-    //     setTotalCustomersData(data.total_customers);
-    //     setAddOnsData(data.common_addons);
-    //     setLoyaltyProgramData(data.loyalty_program);
-    //   });
-  }, []);
+  // new backend-provided
+  const [ordersPerHour, setOrdersPerHour] = useState<OrderHour[]>([]);
+  const [peakHours, setPeakHours] = useState<{ text: string; hours: number[]; max_count?: number }>({ text: '', hours: [] });
+  const [heatmap, setHeatmap] = useState<any>(null);
+  const [totals, setTotals] = useState<{ orders_count: number; revenue_total: number }>({ orders_count: 0, revenue_total: 0 });
+
+  // UI controls
+  const [activeTab, setActiveTab] = useState<'Sales Hub' | 'Customer Analytics' | 'Forecasting Hub'>('Sales Hub');
+  const [view, setView] = useState<'Per Day' | 'Per Month' | 'Per Year'>('Per Day');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date()); 
+  const [chartTimeframe, setChartTimeframe] = useState<'Daily' | 'Weekly'>('Daily'); 
+  const [verifiedCustomers, setVerifiedCustomers] = useState<{ date: string; count: number }[]>([]);
+  
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  const [backendProductBreakdown, setBackendProductBreakdown] = useState<Record<number, any[]>>({});
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  const [selectedBreakdown, setSelectedBreakdown] = useState<{
+    hour: number;
+    items: any[];
+  } | null>(null);
+
+  const [customerRegistrations, setCustomerRegistrations] = useState<
+    { date: string; count: number }[]
+  >([]);
+  const [adjustedTimeOfDayCounts, setAdjustedTimeOfDayCounts] = useState({
+    morning: 0,
+    afternoon: 0,
+    evening: 0,
+    morningStart: 10,
+  });
+  const [averageCustomers, setAverageCustomers] = useState<number>(0);
+  const [computedPeakHours, setComputedPeakHours] = useState<{
+    text: string;
+    max_count: number | null;
+  }>({ text: '', max_count: null });
+
+  const heatmapAnchorRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -89,351 +419,659 @@ const App: React.FC = () => {
     return new Date(year, month + 1, 0).getDate();
   };
 
+  /* ---------- Calendar helpers ---------- */
+
+  const heatmapData = useMemo(() => {
+    if (!salesData) return [];
+
+    const isSunday = currentDate.getDay() === 0;
+    const openHour = isSunday ? 9 : 10;
+    const closeHour = 22;
+
+    // PER DAY — Hourly
+    if (view === "Per Day") {
+      const hourCounts = Array.from(
+        { length: closeHour - openHour + 1 },
+        (_, idx) => {
+          const hour = openHour + idx;
+          const record = ordersPerHour?.find(o => Number(o.hour) === hour);
+          return record?.orders ?? 0;
+        }
+      );
+
+      return [
+        {
+          label: currentDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric"
+          }),
+          hourCounts,
+          hourLabels: Array.from({ length: closeHour - openHour + 1 }, (_, i) => {
+            const h = openHour + i;
+            const period = h >= 12 ? "PM" : "AM";
+            const display = h % 12 === 0 ? 12 : h % 12;
+            return `${display} ${period}`;
+          }),
+          day: currentDate.toLocaleDateString("en-US", {
+            weekday: "short"
+          })  // ⬅ IMPORTANT — required by heatmap cell display
+        },
+      ];
+    }
+
+    // PER MONTH — By day
+    if (view === "Per Month") {
+      return [
+        {
+          day: currentDate.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric"
+          }),
+          hourCounts: salesData.map(s => s.orders ?? 0),
+          hourLabels: salesData.map(s => s.name)
+        }
+      ];
+    }
+
+    // PER YEAR — By month
+    if (view === "Per Year") {
+      const monthList = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+      return [
+        {
+          day: currentDate.getFullYear().toString(),
+          hourCounts: monthList.map(m => {
+            const item = salesData.find(s => s.name === m);
+            return item?.orders ?? 0;
+          }),
+          hourLabels: monthList
+        }
+      ];
+    }
+
+    return [];
+  }, [salesData, ordersPerHour, view, currentDate]);
+
+  const filteredPieData = [
+    { name: "Morning", value: adjustedTimeOfDayCounts.morning },
+    { name: "Afternoon", value: adjustedTimeOfDayCounts.afternoon },
+    { name: "Evening", value: adjustedTimeOfDayCounts.evening }
+  ].filter(v => v.value > 0);
+
   const getFirstDayOfMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     return new Date(year, month, 1).getDay();
   };
 
-  const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const calendarDaysOfWeek = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
   const totalDays = getDaysInMonth(currentDate);
   const firstDay = getFirstDayOfMonth(currentDate);
   const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
-  const emptyDays = Array.from({ length: firstDay }, (_, i) => null);
+  const emptyDays = Array.from({ length: firstDay }, () => null as null);
   const combinedDays = [...emptyDays, ...daysArray];
-  
   const formattedMonth = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
   const today = new Date();
 
-  const handleNextMonth = () => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setMonth(newDate.getMonth() + 1);
-      return newDate;
+  // calendar navigation
+  const handleNextMonth = () =>
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + 1);
+      return d;
+    });
+  const handlePrevMonth = () =>
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() - 1);
+      return d;
+    });
+
+  useEffect(() => {
+    setShowCalendar(false);
+
+  }, [view]);
+
+  // helper to format date param (YYYY-MM-DD)
+  const formatDateParam = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  // adjust selected date depending on view when user selects a day in calendar:
+  const handleSelectCalendarDay = (dayNum: number) => {
+    const clicked = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum, 0, 0, 0);
+
+    if (view === 'Per Day') {
+      setCurrentDate(clicked);
+      setShowCalendar(false);
+    } else if (view === 'Per Month') {
+      setCurrentDate(clicked);
+      setShowCalendar(false);
+    }
+  };
+
+  const maxRevenue = Math.max(
+  ...salesData.map(s => s.value),
+  10 
+  );
+
+  // Only filter revenue chart hours in PER DAY mode
+  const filteredSalesData = useMemo(() => {
+    if (!salesData || salesData.length === 0) return [];
+
+    if (view !== 'Per Day') {
+      return salesData; // ⬅ Leave month/year untouched
+    }
+
+    const isSunday = currentDate.getDay() === 0;
+    const openHour = isSunday ? 9 : 10;
+    const closeHour = 22;
+
+    return salesData.filter(item => {
+      const hour = Number(item.name); // name = hour when Per Day
+      return !isNaN(hour) && hour >= openHour && hour <= closeHour;
+    });
+  }, [salesData, view, currentDate]);
+
+  const normalizeDailySales = (data: SalesDataItem[], date: Date): SalesDataItem[] => {
+    const daysInMonth = getDaysInMonth(date);
+
+    // Map day number (1..31) to value
+    const map = new Map<number, SalesDataItem>();
+
+    data.forEach(d => {
+      let dayNum = 0;
+
+      // Try to extract day number from backend format like "Nov 07"
+      const match = d.name.match(/\d+/); // matches the first number in name
+      if (match) dayNum = parseInt(match[0], 10);
+
+      if (dayNum >= 1 && dayNum <= daysInMonth) {
+        map.set(dayNum, d);
+      }
+    });
+
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      const existing = map.get(day);
+      return {
+        name: day.toString(),
+        value: existing?.value ?? 0,
+        orders: existing?.orders ?? 0,
+        color: existing?.color ?? '#34D399',
+      };
     });
   };
 
-  const handlePrevMonth = () => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setMonth(newDate.getMonth() - 1);
-      return newDate;
+  const actualGrowthData = useMemo(() => {
+    if (!customerRegistrations || customerRegistrations.length === 0) return [];
+
+    switch(view) {
+      case 'Per Day':
+        // map { date, count } → { hour, count } if needed
+        return buildCustomerGrowthData(
+          customerRegistrations.map(r => ({
+            hour: new Date(r.date).getHours(),
+            count: r.count,
+          })),
+          view,
+          currentDate
+        );
+      case 'Per Month':
+        return buildCustomerGrowthData(
+          customerRegistrations.map(r => ({
+            day: new Date(r.date).getDate(),
+            count: r.count,
+          })),
+          view,
+          currentDate
+        );
+      case 'Per Year':
+        return buildCustomerGrowthData(
+          customerRegistrations.map(r => ({
+            month: new Date(r.date).getMonth() + 1,
+            count: r.count,
+          })),
+          view,
+          currentDate
+        );
+      default:
+        return [];
+    }
+  }, [customerRegistrations, view, currentDate]);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const viewParam =
+        view === 'Per Day' ? 'day' :
+        view === 'Per Month' ? 'month' :
+        'year';
+      const dateParam = formatDateParam(currentDate);
+      // try endpoints
+      const endpoints = ['/superadmin/analytics', '/admin/analytics'];
+      let res = null;
+      let lastErr: any = null;
+      for (const ep of endpoints) {
+        try {
+          // calculate params dynamically based on view
+          let params;
+          params = { view: viewParam, date: dateParam };
+
+          res = await api.get<BackendPayload>(ep, { params });
+          break;
+        } catch (err: any) {
+          lastErr = err;
+          const status = err?.response?.status;
+          if (status === 401 || status === 403) {
+            throw new Error('Unauthorized. Please sign in again (api returned 401/403).');
+          }
+        }
+      }
+      if (!res) throw lastErr ?? new Error('Failed to fetch analytics');
+
+      const data = res.data || {};
+
+      const customerInsights = data.customerInsights as CustomerInsightsWithRegistrations;
+
+      const safeRegistrations = Array.isArray(customerInsights.registrations)
+        ? customerInsights.registrations.map(r => ({
+            date: r.date,
+            count: Number(r.count ?? 0),
+          }))
+        : [];
+
+      setCustomerRegistrations(safeRegistrations);
+      
+      if (Array.isArray(data.salesData)) {
+      let sales: SalesDataItem[] = (data.salesData ?? []).map(s => ({
+        name: s.name !== undefined && s.name !== null ? String(s.name) : '',
+        value: typeof s.value === 'number' ? s.value : 0,
+        orders: typeof s.orders === 'number' ? s.orders : 0,
+        color: s.color || '#34D399',
+      }));
+
+      if (view === 'Per Month') {
+        sales = normalizeDailySales(sales, currentDate); 
+      } else if (view === 'Per Year') {
+        sales = normalizeMonthlySales(sales, currentDate);
+      }
+
+      setSalesData(sales); 
+    } else {
+      setSalesData([]);
+    }
+      
+      const apiProducts = Array.isArray(data.productData)
+        ? data.productData
+        : [];
+
+      const totalCount = apiProducts.reduce(
+        (sum, p) => sum + (p.count || 0),
+        0
+      );
+
+      setProductData(
+        apiProducts.map((p, i) => ({
+          id: i + 1,
+          name: p.name,
+          popularity: totalCount
+            ? Math.round((p.count / totalCount) * 100)
+            : 0,
+          sales: totalCount
+            ? Math.round((p.count / totalCount) * 100)
+            : 0,
+        }))
+      );
+
+      setCustomerPercentage(typeof data.customerPercentage === 'number' ? Math.round(data.customerPercentage) : 0);
+
+      if (data.customerInsights) {
+        setCustomerInsightsData({
+          totalRegistered: data.customerInsights.totalRegistered ?? 0,
+          activeThisPeriod: data.customerInsights.activeThisPeriod ?? 0,
+          averageGrowth: Number(data.customerInsights.averageGrowth ?? 0),
+          averageActiveUsers: Number(data.customerInsights.averageActiveUsers ?? 0),
+          registrations: data.customerInsights.registrations ?? [],
+        });
+      }
+
+      if (data.customerFeedback) {
+        setCustomerFeedback({
+          averageRating: data.customerFeedback.averageRating ?? 0,
+          totalReviews: data.customerFeedback.totalReviews ?? 0,
+          ratingsBreakdown: data.customerFeedback.ratingsBreakdown ?? {}
+        });
+      } else {
+        setCustomerFeedback({ 
+          averageRating: 0, 
+          totalReviews: 0, 
+          ratingsBreakdown: {} 
+        });
+      }
+
+      if (Array.isArray(data.totalCustomersData)) {
+        setTotalCustomersData(
+          data.totalCustomersData.map((d) => ({
+            day: d.day,
+            segments: Array.isArray(d.segments)
+              ? d.segments.map((s) => ({ height: Math.max(0, Math.min(100, s.height)), color: s.color || '#A6C561' }))
+              : [],
+          }))
+        );
+      }
+
+      if (Array.isArray(data.addOnsData)) {
+        setAddOnsData(data.addOnsData.map((a) => ({ name: a.name, percentage: Math.max(0, Math.min(100, a.percentage)) })));
+      } else {
+        setAddOnsData([]);
+      }
+
+      setLoyaltyProgramData(typeof data.loyaltyProgram === 'number' ? data.loyaltyProgram : 0);
+
+      const safeVerifiedCustomers = Array.isArray(data.verifiedCustomers)
+        ? data.verifiedCustomers.map(v => ({
+            date: v.date,
+            count: Number(v.count ?? 0),
+          }))
+        : [];
+
+      const isSunday = currentDate.getDay() === 0;
+      const openHour = isSunday ? 9 : 10;
+      const closeHour = 22;
+
+      setOrdersPerHour([]);
+
+      const safeOrdersPerHour = Array.isArray(data.ordersPerHour)
+        ? data.ordersPerHour
+            .filter(o => o.hour >= openHour && o.hour <= closeHour)
+            .map(o => ({ ...o, orders: o.orders ?? 0, customers: o.customers ?? 0 }))
+        : [];
+
+      setOrdersPerHour(safeOrdersPerHour);
+
+      setVerifiedCustomers(safeVerifiedCustomers); 
+
+      setPeakHours(data.peak_hours ?? { text: '', hours: [] });
+      setHeatmap(data.heatmap ?? null);
+      setTotals(data.totals ?? { orders_count: 0, revenue_total: 0 });
+
+      // New correct customers interval + peak hours logic
+      if (data.customer_time_intervals) {
+        const { morning = 0, afternoon = 0, evening = 0, average = 0 } =
+          data.customer_time_intervals;
+
+        setAdjustedTimeOfDayCounts(prev => ({
+          ...prev,
+          morning,
+          afternoon,
+          evening,
+        }));
+
+        setAverageCustomers(average);
+      }
+
+      if (data.peak_hours_correct) {
+        const hour = data.peak_hours_correct.hour;
+        const hourText =
+          `${hour % 12 === 0 ? 12 : hour % 12}${hour < 12 ? 'AM' : 'PM'}`;
+
+        setComputedPeakHours({
+          text: hourText,
+          max_count: data.peak_hours_correct.count
+        });
+      }
+
+      setBackendProductBreakdown(data.productBreakdown || {});
+
+      setLoading(false);
+    } catch (err: any) {
+      setLoading(false);
+      setError(err?.message || 'Failed to fetch analytics.');
+    }
+  };
+
+  const performLinearRegression = (data: number[], futureCount: number) => {
+    if (data.length < 2) return [];
+
+    const n = data.length;
+    const x = data.map((_, i) => i);
+    const y = data;
+
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((a, b, i) => a + b * y[i], 0);
+    const sumXX = x.reduce((a, b) => a + b * b, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX ** 2);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return Array.from({ length: futureCount }, (_, i) => {
+      const nextX = n + i;
+      return Math.max(0, parseFloat((slope * nextX + intercept).toFixed(2)));
     });
   };
 
+  const forecastStepsMap = {
+    "Per Day": 7,
+    "Per Month": 7,
+    "Per Year": 3
+  };
 
-  const hoursOfDay = ['12pm', '1pm', '2pm', '3pm', '4pm', '5pm', '6pm', '7pm', '8pm'];
-  
-  const renderSalesHub = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Revenue Overview Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Revenue Overview</h2>
-          <div className="flex bg-gray-200 p-1 rounded-full space-x-1">
-            {['Day', 'Week', 'Month', 'Year'].map((item) => (
-              <button
-                key={item}
-                onClick={() => setTimeframe(item)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  timeframe === item ? 'bg-[#8cb662] shadow text-white' : 'text-gray-600 hover:bg-[#8cb662] hover:text-white'
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="relative h-64 flex items-end justify-between px-2">
-          {/* Y-axis labels and lines */}
-          <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-xs text-gray-400 h-full py-1">
-            <span className="relative -top-1">100</span>
-            <span className="relative -top-1">80</span>
-            <span className="relative -top-1">60</span>
-            <span className="relative -top-1">40</span>
-            <span className="relative -top-1">20</span>
-            <span className="relative -top-1">0</span>
-          </div>
-          <div className="absolute inset-y-0 w-full left-0 right-0 h-full">
-            <div className="relative h-full border-l border-gray-300 ml-4 pl-4">
-              <div className="absolute inset-x-0 top-0 h-1 border-b border-gray-200"></div>
-              <div className="absolute inset-x-0 top-1/5 h-1 border-b border-gray-200"></div>
-              <div className="absolute inset-x-0 top-2/5 h-1 border-b border-gray-200"></div>
-              <div className="absolute inset-x-0 top-3/5 h-1 border-b border-gray-200"></div>
-              <div className="absolute inset-x-0 top-4/5 h-1 border-b border-gray-200"></div>
-              <div className="absolute inset-x-0 bottom-0 h-1 border-b border-gray-200"></div>
-            </div>
-          </div>
-          {/* Bar chart bars */}
-          <div className="relative flex flex-1 items-end h-full justify-around pl-4">
-              {salesData.map((data, index) => (
-                  <div key={index} className="flex flex-col items-center z-10 w-8 mx-1">
-                      <div
-                      className={`w-full rounded-t-lg transition-all duration-300 ease-in-out ${data.color}`}
-                      style={{ height: `${data.value}%` }}
-                      ></div>
-                      <span className="mt-2 text-xs text-gray-500">{data.name}</span>
-                  </div>
-              ))}
-          </div>
+  const forecastSteps = forecastStepsMap[view] ?? 7;
+
+  const forecastRevenueData = useMemo(() => {
+    const actual = salesData?.map((d: any) => d.value) ?? [];
+    const forecast = performLinearRegression(actual, forecastSteps);
+
+    return [
+      ...(salesData?.map((d: any) => ({
+        label: d.name,
+        actual: d.value,
+      })) ?? []),
+      ...forecast.map((v, i) => ({
+        label: `+${i + 1}`,
+        forecast: v,
+      })),
+    ];
+  }, [salesData, view]);
+
+  // Customers Forecast Data
+  const forecastCustomerData = useMemo(() => {
+    const actual = customerInsightsData.registrations?.map(r => r.count) ?? [];
+    const forecast = performLinearRegression(actual, forecastSteps);
+
+    return [
+      ...(customerInsightsData.registrations?.map(r => ({
+        label: r.date,
+        actual: r.count,
+      })) ?? []),
+
+      ...forecast.map((v, i) => ({
+        label: `+${i + 1}`,
+        forecast: v,
+      })),
+    ];
+  }, [customerInsightsData, view]);
+
+  // Convert data array into downloadable CSV
+  const exportToCSV = (filename: string, rows: any[]) => {
+    const separator = ",";
+    const keys = Object.keys(rows[0] || {});
+
+    const csvContent =
+      keys.join(separator) +
+      "\n" +
+      rows
+        .map((row) =>
+          keys
+            .map((k) => `"${row[k] ?? ""}"`)
+            .join(separator)
+        )
+        .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  {/* Inside your component */}
+  useEffect(() => {
+    console.log('Actual growth data:', actualGrowthData);
+  }, [actualGrowthData]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [view, currentDate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-2">Loading analytics…</div>
+          <div className="animate-pulse text-sm text-gray-500">Fetching data from API</div>
         </div>
       </div>
+    );
+  }
 
-      {/* Average Customers Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Average Customers</h2>
-          <button
-            onClick={() => setChartTimeframe(chartTimeframe === 'Daily' ? 'Weekly' : 'Daily')}
-            className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-[#8cb662] hover:text-white transition-colors rounded-full"
-          >
-            Daily
-          </button>
-        </div>
-        <div className="relative flex flex-col justify-center items-center h-64">
-          <div className="relative w-48 h-48 rounded-full flex items-center justify-center">
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(#22C55E ${customerPercentage}%, #E5E7EB ${customerPercentage}%)`,
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white p-6 rounded-lg shadow text-center max-w-lg">
+          <h3 className="text-lg text-gray-900 font-semibold mb-2">Analytics — Error</h3>
+          <p className="text-sm text-gray-600 mb-4">{error}</p>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => {
+                setError(null);
+                fetchAnalytics();
               }}
-            ></div>
-            <div className="absolute w-36 h-36 rounded-full bg-white flex items-center justify-center">
-              <span className="text-4xl font-bold text-gray-800">{customerPercentage}%</span>
-            </div>
-          </div>
-          <div className="absolute bottom-4 text-center">
-            <p className="text-xs text-gray-500">Peak hours: 11AM - 2PM</p>
-            <button className="px-3 py-1 mt-1 text-xs font-medium text-gray-600 border border-gray-300 rounded-full hover:bg-[#8cb662] hover:text-white transition-colors">
-              Daily
+              className="px-4 py-2 bg-green-500 text-white rounded-full"
+            >
+              Retry
             </button>
           </div>
         </div>
       </div>
-      
-      {/* Sales per week Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Sales per week</h2>
-          <div className="relative">
-            <select className="appearance-none bg-white border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <option>Last 7 days</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M5.5 8.5L10 13l4.5-4.5z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-center">
-            <thead>
-              <tr>
-                <th className="p-2"></th>
-                {daysOfWeek.map((day, index) => (
-                  <th key={index} className="p-2 text-gray-500 text-sm font-normal">
-                    {day}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {hoursOfDay.map((hour, index) => (
-                <tr key={index}>
-                  <td className="pr-4 py-2 text-right text-gray-500 text-sm font-normal whitespace-nowrap">{hour}</td>
-                  {daysOfWeek.map((day, index) => (
-                    <td key={index} className="px-2 py-2">
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-blue-100"></div>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    );
+  }
 
-      {/* Top Products Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Top Products</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr>
-                <th className="p-2 font-normal text-gray-500 text-sm">#</th>
-                <th className="p-2 font-normal text-gray-500 text-sm">Name</th>
-                <th className="p-2 font-normal text-gray-500 text-sm">Popularity</th>
-                <th className="p-2 font-normal text-gray-500 text-sm">Sales</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productData.map((product) => (
-                <tr key={product.id} className="border-t border-gray-100">
-                  <td className="p-2 text-sm font-medium text-gray-600">{product.id}</td>
-                  <td className="p-2 text-sm font-medium text-gray-800">{product.name}</td>
-                  <td className="p-2">
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${product.popularity}%`,
-                          background: `linear-gradient(to right, #FFC107, #FF9800)`
-                        }}
-                      ></div>
-                    </div>
-                  </td>
-                  <td className="p-2 text-sm font-medium text-gray-600 text-right">
-                    <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-green-400"
-                          style={{ width: `${product.sales}%` }}
-                        ></div>
-                        <span className="absolute right-0 top-1/2 -translate-y-1/2 text-xs px-1 text-gray-600">{product.sales}%</span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  const salesHeatmapTitle =
+  view === 'Per Day'
+    ? 'Sales per hour'
+    : view === 'Per Month'
+    ? 'Sales per day'
+    : 'Sales per month';
+
+  /* ---------- Render ---------- */
+
+  const yAxisMax = Math.ceil(maxRevenue / 50) * 50; // rounds up to nearest ₱50
+  const yTickCount = 5;
+
+  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) =>
+    Math.round((yAxisMax / yTickCount) * i)
   );
+  
+  const ratingColors: Record<string, string> = {
+    '1': '#EA4335', 
+    '2': '#FFC107', 
+    '3': '#4285F4',
+    '4': '#A6C561', 
+    '5': '#4CAF50', 
+  };
 
-  const renderCustomerAnalytics = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {/* Customer Insights Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg col-span-1 md:col-span-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Customer Insights</h2>
-          <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">...</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-          <div>
-            <h3 className="text-base font-medium text-gray-500">Total Registered Customers</h3>
-            <p className="text-4xl font-bold text-gray-800">{customerInsightsData.totalRegistered}</p>
-            <h3 className="text-base font-medium text-gray-500 mt-4">Active customers this week</h3>
-            <p className="text-4xl font-bold text-gray-800">{customerInsightsData.activeThisWeek}</p>
-          </div>
-          <div className="flex flex-col items-center">
-            <h3 className="text-base font-medium text-gray-500">Average Growth</h3>
-            <div className="w-full h-40">
-              <svg viewBox="0 0 100 40" className="w-full h-full">
-                <path d={customerInsightsData.averageGrowth} stroke="#3B82F6" strokeWidth="2" fill="none" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
+  const CUSTOMER_COLORS = ['#4ade80', '#60a5fa', '#f97316']; 
 
-      {/* Customer Feedback Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Customer Feedback</h2>
-          <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">...</button>
-        </div>
-        <div>
-          <h3 className="text-base font-medium text-gray-500">Average rating</h3>
-          <p className="text-4xl font-bold text-gray-800">{customerFeedbackData.averageRating}</p>
-          <h3 className="text-base font-medium text-gray-500 mt-4">Total reviews this month</h3>
-          <p className="text-4xl font-bold text-gray-800">{customerFeedbackData.totalReviews}</p>
-        </div>
-      </div>
-      
-      {/* Total Customers Bar Chart Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Total Customers</h2>
-          <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">...</button>
-        </div>
-        <div className="flex h-52 items-end justify-between space-x-2">
-          {totalCustomersData.map((data, index) => (
-            <div key={index} className="flex flex-col items-center">
-              <div className="relative w-8 rounded-t-lg h-full overflow-hidden">
-                {data.segments.map((segment, segIndex) => (
-                  <div
-                    key={segIndex}
-                    className="absolute inset-x-0"
-                    style={{
-                      bottom: `${data.segments.slice(0, segIndex).reduce((sum, s) => sum + s.height, 0)}%`,
-                      height: `${segment.height}%`,
-                      backgroundColor: segment.color,
-                    }}
-                  ></div>
-                ))}
-              </div>
-              <span className="mt-2 text-sm text-gray-500">{data.day}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4">
-          <h3 className="text-xs text-gray-500 font-semibold mb-2">Legend (Customer Status)</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-[#A6C561]"></span>
-              <span>Very Good</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-[#FFC107]"></span>
-              <span>Good</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-[#4285F4]"></span>
-              <span>Moderate</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-[#EA4335]"></span>
-              <span>Low</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-[#FF5722]"></span>
-              <span>Very Low</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Common Add-Ons Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Common Add-Ons</h2>
-          <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">...</button>
-        </div>
-        <div className="space-y-4">
-          {addOnsData.map((item, index) => (
-            <div key={index} className="space-y-1">
-              <p className="text-sm font-medium text-gray-800">{item.name}</p>
-              <div className="h-2 bg-gray-200 rounded-full">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${item.percentage}%`,
-                    background: `linear-gradient(to right, #6EE7B7, #10B981)`,
-                  }}
-                ></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+  const BreakdownPopover: React.FC<BreakdownPopoverProps> = ({ position, items, onClose }) => {
+    useEffect(() => {
+      const handleClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest(".breakdown-popover")) {
+          onClose();
+        }
+      };
 
-      {/* Loyalty Program Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Loyalty Program</h2>
-          <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">...</button>
-        </div>
-        <div className="flex flex-col items-center justify-center h-48">
-          <h3 className="text-base text-gray-500">Rewards redeemed this month</h3>
-          <p className="text-6xl font-bold text-gray-800 mt-2">{loyaltyProgramData}%</p>
-        </div>
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }, [onClose]);
+
+    return (
+      <div
+        className="breakdown-popover absolute z-[9999] bg-white border shadow-lg rounded-lg p-3"
+        style={{
+          top: position.top,
+          left: position.left,
+          transform: "translateX(-50%)",
+        }}
+      >
+        <p className="font-semibold text-gray-700 mb-2">Products Sold</p>
+
+        {items.length === 0 ? (
+          <p className="text-xs text-gray-500">No product data</p>
+        ) : (
+          <ul className="text-xs space-y-1">
+            {items.map((product: ProductItem, i: number) => (
+              <li key={i} className="text-gray-700 font-medium">
+                {product.name} — <span className="font-semibold">{product.total_orders}</span> orders
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
+
+  const handleExport = () => {
+    const dateString = currentDate.toISOString().split("T")[0];
+
+    if (activeTab === "Sales Hub") {
+      if (!salesData?.length) return;
+
+      exportToCSV(
+        `analytics_saleshub_${view}_${dateString}.csv`,
+        salesData.map((d) => ({
+          period: d.name,
+          revenue: d.value,
+          orders: d.orders,
+        }))
+      );
+    }
+
+    else if (activeTab === "Customer Analytics") {
+      if (!customerInsightsData?.registrations?.length) return;
+
+      exportToCSV(
+        `analytics_customers_${view}_${dateString}.csv`,
+        customerInsightsData.registrations.map((r: any) => ({
+          date: r.date,
+          count: r.count,
+        }))
+      );
+    }
+
+    else if (activeTab === "Forecasting Hub") {
+      if (!forecastRevenueData?.length) return;
+
+      exportToCSV(
+        `analytics_forecast_${view}_${dateString}.csv`,
+        forecastRevenueData.map((d: any) => ({
+          label: d.label,
+          actual: "actual" in d ? d.actual : "",
+          forecast: "forecast" in d ? d.forecast : "",
+        }))
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] p-4 sm:p-6 md:p-8 font-sans">
@@ -447,6 +1085,7 @@ const App: React.FC = () => {
           >
             Sales Hub
           </button>
+
           <button
             onClick={() => setActiveTab('Customer Analytics')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -455,89 +1094,735 @@ const App: React.FC = () => {
           >
             Customer Analytics
           </button>
+
+          <button
+            onClick={() => setActiveTab('Forecasting Hub')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'Forecasting Hub' ? 'bg-[#8cb662] shadow text-white' : 'text-gray-600 hover:bg-[#8cb662] hover:text-white'
+            }`}
+          >
+            Forecasting Hub
+          </button>
         </div>
+
         <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap justify-center">
-          <button className="flex items-center space-x-2 px-4 py-2 rounded-full border border-gray-300 text-gray-800 shadow-sm hover:bg-[#8cb662] hover:text-white transition-colors">
+          <button
+            onClick={handleExport}
+            className="flex items-center cursor-pointer space-x-2 px-4 py-2 rounded-full border border-gray-300 text-gray-800 shadow-sm hover:bg-[#8cb662] hover:text-white transition-colors"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
               <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
             </svg>
             <span className="text-sm font-medium hidden sm:block">Export</span>
           </button>
+
+          {/* Top-right timeframe selector (Per Day/Per Week/Per Month) */}
           <div className="relative">
-            <select className="appearance-none bg-white border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <option>Sort By</option>
+            <select
+              value={view}
+              onChange={(e) => setView(e.target.value as 'Per Day' | 'Per Month' | 'Per Year')}
+              className="appearance-none bg-white text-gray-900 border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm"
+            >
+              <option>Per Day</option>
+              <option>Per Month</option>
+              <option>Per Year</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M5.5 8.5L10 13l4.5-4.5z" />
-                </svg>
-            </div>
-          </div>
-          <div className="relative">
-            <select className="appearance-none bg-white border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <option>Filter By</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
                 <path d="M5.5 8.5L10 13l4.5-4.5z" />
               </svg>
             </div>
           </div>
+
+          {/* Calendar dropdown adapted to view */}
           <div className="relative">
             <div
-              onClick={() => setShowCalendar(!showCalendar)}
-              className="flex items-center justify-between bg-white border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm cursor-pointer"
+              onClick={() => setShowCalendar((s) => !s)}
+              className="flex items-center justify-between bg-white text-gray-900 border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm cursor-pointer"
             >
-              <span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <span>
+                {view === 'Per Day' && currentDate.toLocaleDateString()}
+                {view === 'Per Month' && currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                {view === 'Per Year' && (
+                  <span>{currentDate.getFullYear()}</span>
+                )}
+              </span>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-900">
+                <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
                   <path d="M5.5 8.5L10 13l4.5-4.5z" />
                 </svg>
               </div>
             </div>
+
             {showCalendar && (
-              <div className="absolute z-50 mt-2 p-4 bg-white rounded-xl shadow-lg border border-gray-200">
-                <div className="flex justify-between items-center mb-2">
-                  <button onClick={handlePrevMonth} className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                  <span className="font-medium text-gray-800">{formattedMonth}</span>
-                  <button onClick={handleNextMonth} className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-2 text-xs text-center">
-                  {calendarDaysOfWeek.map((day, index) => (
-                    <div key={index} className="font-semibold text-gray-400">{day}</div>
-                  ))}
-                  {combinedDays.map((date, index) => (
-                    <div
-                      key={index}
-                      className={`p-1 rounded-full transition-colors ${
-                        date
-                          ? `cursor-pointer hover:bg-[#8cb662] hover:text-white
-                            ${date === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear() ? 'bg-blue-500 text-white' : ''}`
-                          : ''
-                      }`}
-                    >
-                      {date}
-                    </div>
-                  ))}
-                </div>
+              <div
+                className={`absolute z-50 mt-2 p-4 bg-white text-gray-900 rounded-xl shadow-lg border border-gray-200 min-w-64 ${
+                  view === 'Per Year' ? 'right-0' : 'left-0'
+                }`}
+              >
+                {view === 'Per Year' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {Array.from(
+                      { length: new Date().getFullYear() - 2019 + 1 },
+                      (_, i) => 2019 + i
+                    ).map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => {
+                          const d = new Date(currentDate);
+                          d.setFullYear(year);
+                          d.setMonth(0);
+                          d.setDate(1);
+
+                          setCurrentDate(d);
+                          setShowCalendar(false);
+                        }}
+                        className={`py-2 rounded text-sm font-medium ${
+                          year === currentDate.getFullYear()
+                            ? 'bg-[#8cb662] text-white'
+                            : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {view !== 'Per Year' && (
+                  <div className="flex justify-between items-center mb-2">
+                    <button onClick={handlePrevMonth} className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">
+                      ‹
+                    </button>
+                    <span className="font-medium text-gray-800">{formattedMonth}</span>
+                    <button onClick={handleNextMonth} className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">
+                      ›
+                    </button>
+                  </div>
+                )}
+
+                {view !== 'Per Year' && (
+                  <div className="grid grid-cols-7 gap-2 text-xs text-center">
+                    {['Su','M','Tu','W','Th','F','Sa'].map((d,i) => (
+                      <div key={i} className="font-semibold text-gray-400">{d}</div>
+                    ))}
+
+                    {combinedDays.map((date, i) => (
+                      <div
+                        key={i}
+                        onClick={() => date && handleSelectCalendarDay(date)}
+                        className={`p-1 rounded-full transition-colors ${
+                          date
+                            ? `cursor-pointer hover:bg-[#8cb662] hover:text-white ${
+                                date === today.getDate() &&
+                                currentDate.getMonth() === today.getMonth() &&
+                                currentDate.getFullYear() === today.getFullYear()
+                                  ? 'bg-blue-500 text-white'
+                                  : ''
+                              }`
+                            : ''
+                        }`}
+                      >
+                        {date}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3 text-xs text-gray-500">Pick a date to set {view === 'Per Day' ? 'the day' : 'the month'} for analytics</div>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {activeTab === 'Sales Hub' ? renderSalesHub() : renderCustomerAnalytics()}
+      {activeTab === 'Sales Hub' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Revenue Overview */}
+          <div className="bg-white rounded-3xl shadow-lg p-6 h-96">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Revenue Overview
+              </h2>
+              <span className="text-sm text-gray-500">
+                {view} • {currentDate.toLocaleDateString()}
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                Loading revenue data...
+              </div>
+            ) : salesData.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                No revenue data available
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={filteredSalesData}
+                  margin={{ top: 10, right: 30, left: 10, bottom: 40 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    stroke="#6B7280"
+                    tickFormatter={(value: any) => {
+                      if (view !== 'Per Day') return String(value);
+
+                      const hour = Number(value);
+                      if (isNaN(hour)) return String(value);
+
+                      const period = hour >= 12 ? 'PM' : 'AM';
+                      const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+
+                      return `${displayHour} ${period}`;
+                    }}
+                  />
+
+                  <YAxis
+                    domain={[0, yAxisMax]}
+                    ticks={yTicks}
+                    tick={{ fontSize: 12 }}
+                    stroke="#6B7280"
+                    tickFormatter={(value) => `₱${value.toLocaleString()}`}
+                  />
+
+                  <Tooltip
+                    formatter={(value, name, props: any) => {
+                      const v = typeof value === "number" ? value : 0;
+                      const orders = props?.payload?.orders ?? 0;
+
+                      return [`₱${v.toLocaleString()}`, `${orders} orders`];
+                    }}
+                    contentStyle={{ backgroundColor: '#fff', borderRadius: 8, border: '1px solid #E5E7EB' }}
+                    labelStyle={{ color: '#111827', fontWeight: 500 }}
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#8cb662"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>  
+
+          {/* Average Customers — donut with peak info to the right */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Average Customers</h2>
+              <button
+                onClick={() => setChartTimeframe((t) => (t === 'Daily' ? 'Weekly' : 'Daily'))}
+                className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-[#8cb662] hover:text-white transition-colors rounded-full"
+              >
+                {chartTimeframe}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center h-64">
+              <div className="flex items-center space-x-6">
+                <div className="relative w-72 h-64 flex items-center justify-center">
+                  {filteredPieData.length === 0 ? (
+                    <div className="text-gray-400 text-sm">
+                      No customer activity for this period
+                    </div>
+                  ) : (
+                    <PieChart width={420} height={320}>
+                      <Pie
+                        data={filteredPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ percent, value }) =>
+                          `${(typeof percent === 'number' ? percent * 100 : 0).toFixed(1)}% ${value} customers`
+                        }
+                      >
+                        {filteredPieData.map((_, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={CUSTOMER_COLORS[index % CUSTOMER_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number | undefined) => {
+                          return [`${value ?? 0} customers`, ''];
+                        }}
+                      />
+                    </PieChart>
+                  )}
+                </div>
+
+                {/* Peak info to the right side of the donut */}
+                <div className="flex flex-col items-start">
+                  <div className="text-sm text-gray-500">Peak hours</div>
+                  <div className="text-xl font-semibold text-gray-800">
+                    {computedPeakHours.text || '—'}
+                  </div>
+
+                  <div className="text-xs text-gray-500 mt-2">
+                    Top orders in hour: {computedPeakHours.max_count ?? '-'}
+                  </div>
+
+                  {/* Average percentage */}
+                  <div className="mt-4 text-sm text-gray-500">Average customers</div>
+                  <div className="text-2xl font-bold text-gray-800">
+                    {averageCustomers}
+                  </div>
+
+                  <div className="mt-2 text-xs text-gray-500 space-y-1">
+                    <div>
+                      Morning ({adjustedTimeOfDayCounts.morningStart}AM–12PM): {adjustedTimeOfDayCounts.morning}
+                    </div>
+                    <div>Afternoon (1PM–5PM): {adjustedTimeOfDayCounts.afternoon}</div>
+                    <div>Evening (6PM–10PM): {adjustedTimeOfDayCounts.evening}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sales per week (heatmap) */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {salesHeatmapTitle}
+              </h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-center">
+                <thead>
+                  <tr>
+                    <th className="p-2"></th>
+                    {view === "Per Day"
+                    ? heatmapData[0]?.hourLabels?.map((label, i) => (
+                        <th key={i} className="p-2 text-gray-500 text-sm font-normal">{label}</th>
+                      ))
+                    : view === "Per Month"
+                    ? heatmapData[0]?.hourLabels?.map((label, i) => (
+                        <th key={i} className="p-2 text-gray-500 text-sm font-normal">{label}</th>
+                      ))
+                    : heatmapData[0]?.hourLabels?.map((label, i) => (
+                        <th key={i} className="p-2 text-gray-500 text-sm font-normal">{label}</th>
+                      ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {heatmapData.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={
+                          view === "Per Day"
+                            ? (heatmapData[0]?.hourLabels?.length || 1) + 1
+                            : view === "Per Month"
+                            ? (heatmapData[0]?.hourLabels?.length || getDaysInMonth(currentDate)) + 1
+                            : (heatmapData[0]?.hourLabels?.length || 12) + 1
+                        }
+                        className="p-6 text-sm text-gray-400 text-center"
+                      >
+                        No data available
+                      </td>
+                    </tr>
+                  ) : (
+                    heatmapData.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <td className="p-2 text-xs font-medium text-gray-700 whitespace-nowrap">
+                          {row.day}
+                        </td>
+
+                        {row.hourCounts.map((count, idx) => {
+                          const isSunday = row.day === "Sun"; 
+                          const startHour = isSunday ? 9 : 10;
+                          const hour = startHour + idx;
+
+                          return (
+                            <td key={idx} className="p-1">
+                              <div
+                                ref={(el) => {
+                                  heatmapAnchorRefs.current[hour] = el;
+                                }}
+                                className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-xs font-medium cursor-pointer transition-transform hover:scale-110"
+                                style={{
+                                  background:
+                                    count > 0
+                                      ? `rgba(34,197,94,${Math.max(0.15, count / Math.max(...row.hourCounts, 1))})`
+                                      : "#EEF2FF",
+                                  color: count > 5 ? "#fff" : "#000",
+                                }}
+                                onClick={(e) => {
+                                  if (count > 0) {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const breakdownItems = backendProductBreakdown?.[hour] ?? [];
+
+                                    console.log("Heatmap Clicked:", {
+                                      hour,
+                                      backendProductBreakdown,
+                                      breakdownItemsForHour: backendProductBreakdown?.[hour],
+                                      breakdownItemsResult: breakdownItems,
+                                      heatmapHourCounts: row.hourCounts,
+                                      countOnSquare: count,
+                                    });
+
+                                    // Update dropdown popover position ALWAYS based on clicked square
+                                    setPopoverPosition({
+                                      top: rect.bottom + window.scrollY + 6,
+                                      left: rect.left + window.scrollX + rect.width / 2,
+                                    });
+
+                                    // Must include dayIndex (your type enforces it)
+                                    setSelectedBreakdown({ hour, items: breakdownItems });
+                                    setShowBreakdownModal(true);
+                                  }
+                                }}
+                              >
+                                {count > 0 ? count : ""}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Top Products */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Top Products</h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr>
+                    <th className="p-2 font-normal text-gray-500 text-sm">#</th>
+                    <th className="p-2 font-normal text-gray-500 text-sm">Name</th>
+                    <th className="p-2 font-normal text-gray-500 text-sm">Popularity</th>
+                    <th className="p-2 font-normal text-gray-500 text-sm">Sales</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productData.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-4 text-center text-sm text-gray-400">
+                        No product data
+                      </td>
+                    </tr>
+                  ) : (
+                    productData.map((p) => (
+                      <tr key={p.id} className="border-t border-gray-100">
+                        <td className="p-2 text-sm font-medium text-gray-600">{p.id}</td>
+                        <td className="p-2 text-sm font-medium text-gray-800">{p.name}</td>
+                        <td className="p-2">
+                          <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${p.popularity}%`, background: 'linear-gradient(to right, #FFC107, #FF9800)' }} />
+                          </div>
+                        </td>
+                        <td className="p-2 text-sm font-medium text-gray-600 text-right">
+                          <div className="relative w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-green-400" style={{ width: `${p.sales}%` }} />
+                            <span className="absolute right-0 top-1/2 -translate-y-1/2 text-xs px-1 text-gray-600">{p.sales}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )} 
+      
+      {activeTab === 'Customer Analytics' && (
+        /* Customer analytics (unchanged layout but reads updated data) */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Customer Insights */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg col-span-1 md:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Customer Insights</h2>
+              <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
+                <h3 className="text-base font-medium text-gray-500">Total Registered Customers</h3>
+                <p className="text-4xl font-bold text-gray-800">{customerInsightsData.totalRegistered}</p>
+
+                <h3 className="text-base font-medium text-gray-500 mt-4">Active customers this week</h3>
+                <p className="text-4xl font-bold text-gray-800">{customerInsightsData.activeThisPeriod}</p>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <div className="text-sm text-gray-600 font-medium mb-2">
+                  Average Customer Growth
+                </div>
+
+                <div className="w-full h-40">
+                  {actualGrowthData.length === 0 ? (
+                    <span className="text-sm text-gray-400">
+                      No growth data for this period
+                    </span>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={160}>
+                      <LineChart
+                        data={actualGrowthData}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                      >
+                        <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#D1D5DB' }}
+                        />
+                        <YAxis
+                          domain={[0, 'dataMax + 1']}
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#D1D5DB' }}
+                          allowDecimals={false}
+                        />
+                        <Tooltip
+                          formatter={(value: number | undefined) => {
+                            return [`${value ?? 0} customers`, ''];
+                          }}
+                          labelStyle={{ color: '#111827', fontWeight: 500 }}
+                          contentStyle={{
+                            backgroundColor: '#fff',
+                            borderRadius: 8,
+                            border: '1px solid #E5E7EB',
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#3B82F6"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Feedback */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Customer Feedback</h2>
+              <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
+            </div>
+            <div>
+              <h3 className="text-base font-medium text-gray-500">Average rating</h3>
+              <p className="text-4xl font-bold text-gray-800">
+                {customerInsightsData.totalRegistered}
+              </p>
+
+              <h3 className="text-base font-medium text-gray-500 mt-4">Total reviews this month</h3>          
+              <p className="text-4xl font-bold text-gray-800">
+                {customerFeedback.totalReviews}
+              </p>
+            </div>
+          </div>
+
+          {/* Total Customers Stacked Bars */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Customer Ratings</h2>
+              <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
+            </div>
+
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={['1','2','3','4','5'].map(rating => ({
+                    rating,
+                    count: customerFeedback.ratingsBreakdown?.[rating] || 0,
+                  }))}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis 
+                    dataKey="rating" 
+                    tickFormatter={(r) => {
+                      switch(r) {
+                        case '1': return 'Low';
+                        case '2': return 'Good';
+                        case '3': return 'Average';
+                        case '4': return 'High';
+                        case '5': return 'Excellent';
+                        default: return r;
+                      }
+                    }} 
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip 
+                    formatter={(value: number | undefined) => {
+                      return [`${value ?? 0} reviews`, ''];
+                    }}
+                  />
+                  <Bar dataKey="count" fill="#8884d8">
+                    {['1','2','3','4','5'].map((rating) => (
+                      <Cell key={rating} fill={ratingColors[rating]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-xs text-gray-500 font-semibold mb-2">Legend (Ratings)</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {['1','2','3','4','5'].map((r) => {
+                  const label = r === '1' ? 'Low' :
+                                r === '2' ? 'Good' :
+                                r === '3' ? 'Average' :
+                                r === '4' ? 'High' : 'Excellent';
+                  return (
+                    <div key={r} className="text-gray-900 flex items-center space-x-2">
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ratingColors[r] }} />
+                      <span>{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Common Add-Ons */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Common Add-Ons</h2>
+              <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
+            </div>
+
+            <div className="space-y-4">
+              {addOnsData.length === 0 ? (
+                <div className="text-sm text-gray-400">No add-on stats</div>
+              ) : (
+                addOnsData.map((a, i) => (
+                  <div key={i} className="space-y-1">
+                    <p className="text-sm font-medium text-gray-800">{a.name}</p>
+                    <div className="h-2 bg-gray-200 rounded-full">
+                      <div className="h-full rounded-full" style={{ width: `${a.percentage}%`, background: 'linear-gradient(to right, #6EE7B7, #10B981)' }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Loyalty Program */}
+          <div className="bg-white p-6 rounded-3xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Loyalty Program</h2>
+              <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
+            </div>
+
+            <div className="flex flex-col items-center justify-center h-48">
+              <h3 className="text-base text-gray-500">Rewards redeemed this month</h3>
+              <p className="text-6xl font-bold text-gray-800 mt-2">{loyaltyProgramData}%</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Forecasting Hub' && (
+        <>
+          {/* Forecast Info Card */}
+          <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100">
+            <h3 className="text-base font-semibold text-gray-800 mb-1">
+              Forecast Range
+            </h3>
+            <p className="text-sm text-gray-600">
+              Forecasting next{" "}
+              {view === "Per Day" && "7 Hours"}
+              {view === "Per Month" && "7 Days"}
+              {view === "Per Year" && "3 Months"}
+              {" "}based on recent performance trends.
+            </p>
+          </div>
+
+          {/* Sales & Revenue Forecast */}
+          <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              Sales & Revenue Forecast
+            </h3>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecastRevenueData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={3} />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#22C55E"
+                  strokeDasharray="5 5"
+                  strokeWidth={3}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Customers Forecast */}
+          <div className="bg-white p-4 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              Customers Forecasting
+            </h3>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecastCustomerData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="actual" stroke="#9333EA" strokeWidth={3} />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#F59E0B"
+                  strokeDasharray="5 5"
+                  strokeWidth={3}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+
+      {showBreakdownModal && selectedBreakdown && (
+        <BreakdownPopover
+          position={popoverPosition}
+          items={selectedBreakdown.items}
+          onClose={() => setShowBreakdownModal(false)}
+        />
+      )}
     </div>
   );
 };
 
-export default App;
+export default Analytics;
+
+
