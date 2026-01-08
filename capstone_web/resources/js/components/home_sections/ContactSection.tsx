@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { FaPhoneAlt } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";
 import { IoMdArrowForward } from "react-icons/io";
 import { motion } from "framer-motion";
-import { Link } from "@inertiajs/react";
 
 const ContactSection: React.FC = () => {
   return (
@@ -16,7 +15,8 @@ const ContactSection: React.FC = () => {
       viewport={{ once: true, amount: 0.2 }}
     >
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-stretch">
-        {/* Left */}
+        
+        {/* Left Side */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -49,9 +49,7 @@ const ContactSection: React.FC = () => {
               <span className="text-blue-400">From </span>
               <span className="text-blue-400">You!</span>
             </motion.h2>
-            <p className="text-black text-lg mb-6 max-w-md text-left"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
-            >
+            <p className="text-black text-lg mb-6 max-w-md text-left" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Whether you’re craving a cup, planning a visit, or just want to say hello Mi Amore is here for you.
             </p>
           </div>
@@ -75,10 +73,10 @@ const ContactSection: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Right */}
+        {/* Right Side - Form */}
         <div className="md:w-1/2 pr-12">
           <div className="bg-white p-8 rounded-3xl shadow-2xl border-1 border-[#e0fac7] h-full">
-            <p className="text-[#41E2DA] uppercase text-sm font-bold shadow-2xs mb-2">
+            <p className="text-[#41E2DA] uppercase text-sm font-bold mb-2">
               Contact Us
             </p>
             <motion.h2
@@ -88,10 +86,9 @@ const ContactSection: React.FC = () => {
               viewport={{ once: true, amount: 0.5 }}
               className="text-3xl font-bold text-[#9D7353] leading-snug mb-6"
             >
-              <span className="text-[#76B13A] shadow-2xs ">Reach</span> & Get in Touch With Us!
+              <span className="text-[#76B13A]">Reach</span> & Get in Touch With Us!
             </motion.h2>
 
-            {/* Form */}
             <motion.form
               className="space-y-4"
               initial={{ opacity: 0, y: 20 }}
@@ -105,10 +102,7 @@ const ContactSection: React.FC = () => {
                 { id: "phone", label: "Phone Number", type: "text" }
               ].map(field => (
                 <div key={field.id}>
-                  <label
-                    htmlFor={field.id}
-                    className="block text-md font-medium text-black mb-1"
-                  >
+                  <label htmlFor={field.id} className="block text-md font-medium text-black mb-1">
                     {field.label}
                   </label>
                   <input
@@ -121,22 +115,17 @@ const ContactSection: React.FC = () => {
               ))}
 
               <div>
-                <label
-                  htmlFor="message"
-                  className="block text-md  font-medium text-black mb-1"
-                >
+                <label htmlFor="message" className="block text-md font-medium text-black mb-1">
                   Enter message
                 </label>
                 <textarea
                   id="message"
                   rows={4}
-                  placeholder=" "
                   required
                   className="w-full px-4 py-2 bg-white border border-gray-400 shadow-sm rounded-md text-sm text-black focus:outline-none focus:ring-1 focus:ring-[#76B13A]"
                 ></textarea>
               </div>
 
-              {/* Button */}
               <div className="pt-2">
                 <button
                   type="submit"
@@ -150,32 +139,11 @@ const ContactSection: React.FC = () => {
               </div>
             </motion.form>
           </div>
-        </motion.div>
-      </div>
+        </div>
+
+      </div> 
     </motion.section>
   );
 };
 
 export default ContactSection;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
