@@ -63,44 +63,62 @@ const CustomerReviewSection: React.FC = () => {
   };
 
   const cardVariants: Variants = {
-    enter: (d: number) => ({ x: d > 0 ? 100 : -100, opacity: 0, scale: 0.9 }),
-    center: { x: 0, opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } },
-    exit: (d: number) => ({ x: d > 0 ? -100 : 100, opacity: 0, scale: 0.9, transition: { duration: 0.3 } })
+    enter: (d: number) => ({ x: d > 0 ? 50 : -50, opacity: 0, scale: 0.95 }),
+    center: { x: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] } },
+    exit: (d: number) => ({ x: d > 0 ? -50 : 50, opacity: 0, scale: 0.95, transition: { duration: 0.4 } })
   };
 
   return (
-    <section className="bg-[#fdf8f3] py-20 md:py-32 relative overflow-hidden w-full">
-      <div className="w-[92%] max-w-[1600px] mx-auto relative">
+    <section className="bg-[#FAF9F6] py-24 md:py-32 relative overflow-hidden w-full">
+      <div 
+        className="absolute inset-0 opacity-[0.02] pointer-events-none mix-blend-multiply"
+        style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }}
+      />
+
+      <div className="w-[90%] max-w-7xl mx-auto relative z-10">
         
-        <div className="text-center mb-16 md:mb-20">
-          <motion.span 
+        <div className="text-center mb-16 md:mb-24">
+          <motion.div 
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
-            className="text-[#9D7353] font-bold tracking-[0.3em] uppercase text-xs mb-4 block"
+            className="flex items-center justify-center gap-4 mb-6"
           >
-            Testimonials
-          </motion.span>
-          <h2 className="text-4xl md:text-6xl font-bold text-[#4a3427]" style={{ fontFamily: "'Kalam', cursive" }}>
-            <span className="text-[#76B13A]">Words</span> from our <span className="text-[#B13A3A]">Coffee</span> Lovers
+            <div className="w-8 h-[1px] bg-[#5C2E0A]/20" />
+            <span className="text-[#8CB662] font-bold tracking-[0.4em] uppercase text-[10px] md:text-xs">
+              Guest Experiences
+            </span>
+            <div className="w-8 h-[1px] bg-[#5C2E0A]/20" />
+          </motion.div>
+
+          <h2 
+            className="text-4xl md:text-6xl font-bold text-[#5C2E0A]"
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            Words from our <br />
+            <span className="italic font-medium text-[#8CB662]">Coffee Lovers</span>
           </h2>
-          <div className="w-24 h-1 bg-[#76B13A] mx-auto mt-6 rounded-full opacity-50" />
         </div>
 
         <div 
-          className="relative px-2 md:px-12"
+          className="relative px-0 md:px-12"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
-          onTouchStart={() => setIsPaused(true)}
         >
-          <button onClick={prevSlide} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/80 backdrop-blur-md p-4 rounded-full shadow-lg text-[#9D7353] hidden md:flex hover:bg-[#9D7353] hover:text-white transition-all">
-            <FaChevronLeft size={20} />
+          <button 
+            onClick={prevSlide} 
+            className="absolute -left-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
+          >
+            <FaChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
           </button>
 
-          <button onClick={nextSlide} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/80 backdrop-blur-md p-4 rounded-full shadow-lg text-[#9D7353] hidden md:flex hover:bg-[#9D7353] hover:text-white transition-all">
-            <FaChevronRight size={20} />
+          <button 
+            onClick={nextSlide} 
+            className="absolute -right-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
+          >
+            <FaChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
           </button>
 
-          <div className="flex justify-center gap-6 md:gap-8 min-h-[400px]">
+          <div className="flex justify-center gap-6 lg:gap-8 min-h-[380px] md:min-h-[420px]">
             <AnimatePresence mode="popLayout" custom={direction} initial={false}>
               {getVisibleReviews().map((review, i) => (
                 <motion.div
@@ -110,41 +128,42 @@ const CustomerReviewSection: React.FC = () => {
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  className="w-full bg-white rounded-[2.5rem] p-8 md:p-10 shadow-[0_20px_50px_rgba(157,115,83,0.1)] border border-gray-50 flex flex-col items-center text-center relative"
+                  className="w-full bg-white rounded-[3rem] p-10 md:p-12 shadow-[0_30px_60px_-15px_rgba(92,46,10,0.08)] border border-[#5C2E0A]/5 flex flex-col items-center text-center relative"
                 >
-                  <div className="text-[#76B13A] mb-6 opacity-20">
-                    <FaQuoteLeft size={40} />
-                  </div>
+                  <FaQuoteLeft className="text-[#8CB662]/20 mb-8" size={32} />
                   
-                  <p className="text-[#5c4a3e] text-lg md:text-xl leading-relaxed font-medium italic mb-8" style={{ fontFamily: "'Comfortaa', sans-serif" }}>
+                  <p 
+                    className="text-[#5C2E0A]/80 text-lg md:text-xl leading-relaxed italic mb-10 flex-grow"
+                    style={{ fontFamily: "'Playfair Display', serif" }}
+                  >
                     "{review.text}"
                   </p>
 
-                  <div className="mt-auto">
-                    <div className="flex gap-1 mb-4 justify-center">
+                  <div className="flex flex-col items-center">
+                    <div className="flex gap-1.5 mb-5 justify-center">
                       {[...Array(5)].map((_, idx) => (
-                        <FaStar key={idx} className={idx < review.rating ? "text-[#FFB800]" : "text-gray-200"} size={18} />
+                        <FaStar key={idx} className={idx < review.rating ? "text-[#D4AF37]" : "text-gray-100"} size={14} />
                       ))}
                     </div>
-                    <h4 className="text-[#4a3427] font-black text-lg uppercase tracking-tighter">{review.name}</h4>
-                    <p className="text-[#76B13A] text-xs font-bold mt-1 uppercase tracking-widest">Verified Guest</p>
+                    <h4 className="text-[#5C2E0A] font-bold text-lg tracking-tight uppercase">{review.name}</h4>
+                    <p className="text-[#8CB662] text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">Verified Guest</p>
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
 
-          <div className="flex md:hidden justify-between mt-8 px-4">
-            <button onClick={prevSlide} className="bg-white p-4 rounded-2xl shadow-md text-[#9D7353] active:scale-90 transition-transform">
-              <FaChevronLeft size={20} />
+          <div className="flex xl:hidden justify-center gap-4 mt-12">
+            <button onClick={prevSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
+              <FaChevronLeft size={18} />
             </button>
-            <button onClick={nextSlide} className="bg-white p-4 rounded-2xl shadow-md text-[#9D7353] active:scale-90 transition-transform">
-              <FaChevronRight size={20} />
+            <button onClick={nextSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
+              <FaChevronRight size={18} />
             </button>
           </div>
         </div>
 
-        <div className="flex justify-center mt-12 gap-3">
+        <div className="flex justify-center mt-16 gap-3">
           {reviews.map((_, index) => (
             <button
               key={index}
@@ -152,10 +171,10 @@ const CustomerReviewSection: React.FC = () => {
                 setDirection(index > currentIndex ? 1 : -1);
                 setCurrentIndex(index);
               }}
-              className={`h-3 rounded-full transition-all duration-300 ${
+              className={`h-1.5 transition-all duration-700 rounded-full ${
                 index === currentIndex 
-                  ? "w-12 bg-[#9D7353]" 
-                  : "w-3 bg-[#9D7353]/20 hover:bg-[#9D7353]/40"
+                  ? "w-10 bg-[#8CB662]" 
+                  : "w-2 bg-[#5C2E0A]/10 hover:bg-[#5C2E0A]/20"
               }`}
             />
           ))}

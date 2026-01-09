@@ -61,8 +61,8 @@ Route::get('/about-us', fn() => Inertia::render('website_pages/AboutUs'))
 Route::get('/event', fn() => Inertia::render('website_pages/Event'))
     ->name('event');
 
-Route::get('/contact-us', fn() => Inertia::render('home_sections/ContactSection'))
-    ->name('contact-us');
+Route::get('/contact-us', fn() => Inertia::render('website_pages/Contact'))
+    ->name('contact');
 
 Route::get('/privacypolicy', fn() => Inertia::render('PrivacyandTerms_section/PrivacyPolicy'))
     ->name('privacypolicy');

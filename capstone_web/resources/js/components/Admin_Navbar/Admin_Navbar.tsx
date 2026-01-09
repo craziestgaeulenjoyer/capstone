@@ -100,7 +100,7 @@ const AccountSettings: React.FC<{
   return (
     <div className="w-full flex flex-col space-y-6">
       {/* HEADER */}
-      <div className="pb-4 border-b border-b-3 border-gray-200">
+      <div className="pb-4 border-b-3 border-gray-200">
         <h2 className="text-2xl font-bold text-gray-800">
           Account Profile and Settings
         </h2>
@@ -138,7 +138,7 @@ const AccountSettings: React.FC<{
           </div>
 
           {/* ACTIONS */}
-          <div className="pt-4 border-t border-t-3 border-gray-200">
+          <div className="pt-4 border-t-3 border-gray-200">
             <span className="inline-block w-full px-2 py-1 mb-2 rounded-md text-sm font-semibold bg-[#8cb662]/80 text-gray-50">
               Account Settings
             </span>
