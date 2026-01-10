@@ -152,6 +152,11 @@ interface BackendPeakHoursCorrect {
   count: number;
 }
 
+interface PeakHour {
+  hour: number;
+  count: number;
+}
+
 /* ---------- Helpers ---------- */
 const getStoredToken = (): string | null => {
   if (typeof window === 'undefined') return null;
@@ -247,88 +252,6 @@ const buildCustomerGrowthData = (
     }));
 };
 
-const buildAverageCustomerData = (
-  registrations: { date: string; count: number }[],
-  view: 'Per Day' | 'Per Month' | 'Per Year',
-  currentDate: Date
-) => {
-  if (!registrations || registrations.length === 0) {
-    return { chartData: [], average: 0 };
-  }
-
-  let chartData: { name: string; value: number }[] = [];
-
-  if (view === 'Per Day') {
-    const dayStr = currentDate.toISOString().split('T')[0];
-
-    const total = registrations.reduce((sum, r) => {
-      if (!r?.date) return sum;
-
-      const d = new Date(r.date);
-      if (isNaN(d.getTime())) return sum;
-
-      return d.toISOString().split('T')[0] === dayStr
-        ? sum + r.count
-        : sum;
-    }, 0);
-
-    chartData = [{ name: dayStr, value: total }];
-  }
-
-  if (view === 'Per Month') {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const map: Record<number, number> = {};
-    registrations.forEach(r => {
-      const d = new Date(r.date);
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        map[d.getDate()] = (map[d.getDate()] || 0) + r.count;
-      }
-    });
-
-    chartData = Array.from({ length: daysInMonth }, (_, i) => ({
-      name: `${i + 1}`,
-      value: map[i + 1] || 0,
-    }));
-  }
-
-  if (view === 'Per Year') {
-    const year = currentDate.getFullYear();
-    const map: Record<number, number> = {};
-
-    registrations.forEach(r => {
-      const d = new Date(r.date);
-      if (d.getFullYear() === year) {
-        map[d.getMonth()] = (map[d.getMonth()] || 0) + r.count;
-      }
-    });
-
-    chartData = Array.from({ length: 12 }, (_, i) => ({
-      name: new Date(year, i).toLocaleString('default', { month: 'short' }),
-      value: map[i] || 0,
-    }));
-  }
-
-  const total = chartData.reduce((s, d) => s + d.value, 0);
-
-  const average =
-    view === 'Per Day'
-      ? total
-      : Math.round(total / (chartData.filter(d => d.value > 0).length || 1));
-
-    return { chartData, average };
-};
-
-type HeatmapRow = {
-  day: string;
-  hourCounts: number[];
-  hourLabels: string[];
-  openHour?: number; 
-  closeHour?: number;
-};
-
 type ProductItem = {
   name: string;
   total_orders: number;
@@ -338,10 +261,6 @@ type BreakdownPopoverProps = {
   position: { top: number; left: number };
   items: ProductItem[];
   onClose: () => void;
-};
-
-type HeatmapMeta = {
-  openHour: number;
 };
 
 /* ---------- Component ---------- */
@@ -395,6 +314,114 @@ const Analytics: React.FC = () => {
     hour: number;
     items: any[];
   } | null>(null);
+
+  const [peakData, setPeakData] = useState<PeakHour[]>([]);
+  const [filter, setFilter] = useState<'day' | 'month' | 'year'>('day');
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+
+  const fetchPeakHours = async () => {
+    try {
+      console.log("FETCH PEAK HOURS STATE", {
+        filter,
+        selectedDate,
+      });
+
+      const role = sessionStorage.getItem("dashboard_role");
+      const apiRole = role === "super_admin" ? "superadmin" : "admin";
+      const token = localStorage.getItem("token");
+
+      const url = `/api/${apiRole}/analytics/peak-hours`;
+
+      const res = await axios.get(url, {
+        params: { filter, date: selectedDate },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Peak Hours API Response:", res.data);
+
+      const normalized: PeakHour[] = Array.isArray(res.data)
+        ? res.data.map((d: any) => ({
+            hour: Number(d.hour),
+            count: Number(d.count),
+          }))
+        : [];
+
+      setPeakData(
+        normalized.sort((a, b) => a.hour - b.hour)
+      );
+    } catch (err) {
+      console.error("Failed to fetch peak hours", err);
+
+      setPeakData([]);
+    }
+  };
+
+  const getOpeningHours = () => {
+    if (filter === 'day') {
+      const isSunday = new Date(selectedDate).getDay() === 0;
+      return {
+        start: isSunday ? 9 : 10,
+        end: 22,
+      };
+    }
+
+    return {
+      start: 9,
+      end: 22,
+    };
+  };
+
+  const { start: startHour, end: endHour } = getOpeningHours();
+
+  const filteredPeakData = Array.from(
+    { length: endHour - startHour + 1 },
+    (_, i) => {
+      const hour = startHour + i;
+      const found = peakData.find((d) => d.hour === hour);
+
+      return {
+        hour,
+        count: found ? found.count : 0,
+      };
+    }
+  );
+
+  const peakMax = Math.max(
+    ...filteredPeakData.map((d) => d.count),
+    1
+  );
+
+  const hasPeakData = filteredPeakData.some((d) => d.count > 0);
+
+  const peakChartKey = `${filter}-${selectedDate}`;
+
+  useEffect(() => {
+    if (!filter || !selectedDate) return;
+
+    setPeakData([]);
+    fetchPeakHours();
+  }, [filter, selectedDate]);
+
+  useEffect(() => {
+    if (filter === 'month') {
+      const firstDayOfMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        1
+      );
+
+      setSelectedDate(formatLocalDate(firstDayOfMonth));
+    }
+
+    if (filter === 'year') {
+      const firstDayOfYear = new Date(currentDate.getFullYear(), 0, 1);
+      setSelectedDate(formatLocalDate(firstDayOfYear));
+    }
+  }, [filter, currentDate]);
 
   const [customerRegistrations, setCustomerRegistrations] = useState<
     { date: string; count: number }[]
@@ -454,12 +481,11 @@ const Analytics: React.FC = () => {
           }),
           day: currentDate.toLocaleDateString("en-US", {
             weekday: "short"
-          })  // ⬅ IMPORTANT — required by heatmap cell display
+          })
         },
       ];
     }
 
-    // PER MONTH — By day
     if (view === "Per Month") {
       return [
         {
@@ -473,7 +499,6 @@ const Analytics: React.FC = () => {
       ];
     }
 
-    // PER YEAR — By month
     if (view === "Per Year") {
       const monthList = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -539,17 +564,44 @@ const Analytics: React.FC = () => {
     return `${y}-${m}-${day}`;
   };
 
-  // adjust selected date depending on view when user selects a day in calendar:
   const handleSelectCalendarDay = (dayNum: number) => {
-    const clicked = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum, 0, 0, 0);
+    const clicked = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      dayNum,
+      0, 0, 0
+    );
 
+    setCurrentDate(clicked);
+    setSelectedDate(formatLocalDate(clicked));
+    setShowCalendar(false);
+  };
+
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getBreakdownKey = (
+    view: 'Per Day' | 'Per Month' | 'Per Year',
+    index: number,
+    currentDate: Date
+  ): number => {
     if (view === 'Per Day') {
-      setCurrentDate(clicked);
-      setShowCalendar(false);
-    } else if (view === 'Per Month') {
-      setCurrentDate(clicked);
-      setShowCalendar(false);
+      // hour key (already correct)
+      const isSunday = currentDate.getDay() === 0;
+      return (isSunday ? 9 : 10) + index;
     }
+
+    if (view === 'Per Month') {
+      // day of month (1–31)
+      return index + 1;
+    }
+
+    // Per Year → month number (1–12)
+    return index + 1;
   };
 
   const maxRevenue = Math.max(
@@ -1121,7 +1173,14 @@ const Analytics: React.FC = () => {
           <div className="relative">
             <select
               value={view}
-              onChange={(e) => setView(e.target.value as 'Per Day' | 'Per Month' | 'Per Year')}
+              onChange={(e) => {
+                const newView = e.target.value as 'Per Day' | 'Per Month' | 'Per Year';
+                setView(newView);
+
+                if (newView === 'Per Day') setFilter('day');
+                if (newView === 'Per Month') setFilter('month');
+                if (newView === 'Per Year') setFilter('year');
+              }}
               className="appearance-none bg-white text-gray-900 border border-gray-300 rounded-full py-2 px-4 text-sm font-medium pr-8 shadow-sm"
             >
               <option>Per Day</option>
@@ -1176,6 +1235,7 @@ const Analytics: React.FC = () => {
                           d.setDate(1);
 
                           setCurrentDate(d);
+                          setSelectedDate(`${year}-01-01`);
                           setShowCalendar(false);
                         }}
                         className={`py-2 rounded text-sm font-medium ${
@@ -1463,15 +1523,14 @@ const Analytics: React.FC = () => {
                                 onClick={(e) => {
                                   if (count > 0) {
                                     const rect = e.currentTarget.getBoundingClientRect();
-                                    const breakdownItems = backendProductBreakdown?.[hour] ?? [];
+                                    const breakdownKey = getBreakdownKey(view, idx, currentDate);
+                                    const breakdownItems = backendProductBreakdown?.[breakdownKey] ?? [];
 
                                     console.log("Heatmap Clicked:", {
-                                      hour,
+                                      view,
+                                      breakdownKey,
                                       backendProductBreakdown,
-                                      breakdownItemsForHour: backendProductBreakdown?.[hour],
-                                      breakdownItemsResult: breakdownItems,
-                                      heatmapHourCounts: row.hourCounts,
-                                      countOnSquare: count,
+                                      breakdownItems,
                                     });
 
                                     // Update dropdown popover position ALWAYS based on clicked square
@@ -1708,27 +1767,60 @@ const Analytics: React.FC = () => {
             </div>
           </div>
 
-          {/* Common Add-Ons */}
-          <div className="bg-white p-6 rounded-3xl shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">Common Add-Ons</h2>
-              <button className="text-gray-600 hover:bg-[#8cb662] hover:text-white p-2 rounded-full">...</button>
-            </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h4 className="text-gray-900 text-lg font-semibold mb-2">Peak Customer Hours</h4>
+            <p className="text-sm text-gray-500 mb-3">
+              Unique customers placing orders per hour based on the selected time range
+            </p>
 
-            <div className="space-y-4">
-              {addOnsData.length === 0 ? (
-                <div className="text-sm text-gray-400">No add-on stats</div>
-              ) : (
-                addOnsData.map((a, i) => (
-                  <div key={i} className="space-y-1">
-                    <p className="text-sm font-medium text-gray-800">{a.name}</p>
-                    <div className="h-2 bg-gray-200 rounded-full">
-                      <div className="h-full rounded-full" style={{ width: `${a.percentage}%`, background: 'linear-gradient(to right, #6EE7B7, #10B981)' }} />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {hasPeakData ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart
+                  key={peakChartKey}
+                  data={filteredPeakData}
+                  margin={{ top: 30, right: 20, left: -30, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+
+                  <XAxis
+                    dataKey="hour"
+                    type="number"
+                    domain={[startHour, endHour]}
+                    ticks={Array.from(
+                      { length: endHour - startHour + 1 },
+                      (_, i) => startHour + i
+                    )}
+                    tickFormatter={(h) => {
+                      const period = h >= 12 ? "PM" : "AM";
+                      const hour = h % 12 === 0 ? 12 : h % 12;
+                      return `${hour}${period}`;
+                    }}
+                  />
+
+                  <YAxis
+                    allowDecimals={false}
+                    domain={[0, peakMax + 1]}   
+                    tickCount={peakMax + 2}
+                  />
+
+                  <Tooltip labelFormatter={(h) => `${h}:00`} />
+
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#16a34a"
+                    strokeWidth={3}
+                    dot={{ r: 6 }}
+                    activeDot={{ r: 8 }}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-sm text-gray-400 text-center py-16">
+                No peak hour data available for this period.
+              </div>
+            )}
           </div>
 
           {/* Loyalty Program */}
