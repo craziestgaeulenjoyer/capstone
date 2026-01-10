@@ -17,10 +17,10 @@ const Home: React.FC = () => {
       
         <NavbarLayout>
           <HeroSection/>
+          <WhyChooseUsSection/>
+          <BestSellerSection/>
           <FeatureSection/>
           <GallerySection />
-          <BestSellerSection/>
-          <WhyChooseUsSection/>
           <ContactSection/>
           <CustomerReviewSection/>
 

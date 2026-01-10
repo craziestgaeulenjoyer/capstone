@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { FaQuoteLeft, FaQuoteRight } from "react-icons/fa";
+import React, { useState, useEffect, useCallback } from "react";
+import { FaQuoteLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { FaStar } from "react-icons/fa6";
-import Leaf from "/public/images/leaf-icon.png";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
 interface Review {
   name: string;
@@ -11,139 +10,173 @@ interface Review {
 }
 
 const reviews: Review[] = [
-  {
-    name: "James Miller",
-    text:
-      "The cozy atmosphere is perfect for unwinding. I love their specialty lattes! The only downside is that it's a bit crowded on weekends.",
-    rating: 4.5,
-  },
-  {
-    name: "Olivia Harris",
-    text:
-      "Best café experience I've had! The cappuccino is rich and smooth, and the staff are always welcoming. It’s my new favorite spot!",
-    rating: 5,
-  },
-  {
-    name: "Noah Scott",
-    text:
-      "Such a great vibe! Their avocado toast and latte are delicious. Perfect spot to meet up with friends or do some work.",
-    rating: 4.6,
-  },
-  {
-    name: "Ava Carter",
-    text:
-      "Loved everything about this place! Their matcha latte is superb and the staff are very attentive. A must-visit!",
-    rating: 4.9,
-  },
-  {
-    name: "Mason Mitchell",
-    text:
-      "Great atmosphere for hanging out or getting work done. The cappuccinos are strong and the pastries are on point.",
-    rating: 4.8,
-  },
-  {
-    name: "Isabella King",
-    text:
-      "A perfect place to relax and sip on their signature brews. They also have amazing gluten-free options!",
-    rating: 5,
-  },
-  {
-    name: "Elijah Turner",
-    text:
-      "Cozy, chill vibes, and delicious coffee. A little on the pricier side, but the quality is worth it.",
-    rating: 4.7,
-  },
-  {
-    name: "Charlotte Moore",
-    text:
-      "Best café in the neighborhood! Their coffee is always fresh, and the staff is friendly and helpful.",
-    rating: 5,
-  },
+  { name: "James Miller", text: "The cozy atmosphere is perfect for unwinding. I love their specialty lattes!", rating: 5 },
+  { name: "Olivia Harris", text: "Best café experience I've had! The cappuccino is rich and smooth, and the staff are always welcoming.", rating: 5 },
+  { name: "Noah Scott", text: "Such a great vibe! Their avocado toast and latte are delicious. Perfect spot to work.", rating: 4 },
+  { name: "Ava Carter", text: "Loved everything about this place! Their matcha latte is superb and the staff are very attentive.", rating: 5 },
+  { name: "Mason Mitchell", text: "Great atmosphere for hanging out or getting work done. The pastries are on point.", rating: 5 },
+  { name: "Isabella King", text: "A perfect place to relax and sip on their signature brews. Amazing options!", rating: 5 },
 ];
 
 const CustomerReviewSection: React.FC = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const cardsPerSlide = 4;
-  const totalSlides = Math.ceil(reviews.length / cardsPerSlide);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [itemsToShow, setItemsToShow] = useState(3);
+  const [isPaused, setIsPaused] = useState(false);
+  const [direction, setDirection] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % totalSlides);
-    }, 5000);
-    return () => clearInterval(interval);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) setItemsToShow(1);     
+      else if (width < 1280) setItemsToShow(2); 
+      else setItemsToShow(3);                   
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const totalSlides = reviews.length;
+
+  const nextSlide = useCallback(() => {
+    setDirection(1);
+    setCurrentIndex((prev) => (prev + 1) % totalSlides);
   }, [totalSlides]);
 
-  const handleDotClick = (index: number) => {
-    setCurrentSlide(index);
+  const prevSlide = () => {
+    setDirection(-1);
+    setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+  };
+
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, [nextSlide, isPaused]);
+
+  const getVisibleReviews = () => {
+    const result = [];
+    for (let i = 0; i < itemsToShow; i++) {
+      result.push(reviews[(currentIndex + i) % totalSlides]);
+    }
+    return result;
+  };
+
+  const cardVariants: Variants = {
+    enter: (d: number) => ({ x: d > 0 ? 50 : -50, opacity: 0, scale: 0.95 }),
+    center: { x: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] } },
+    exit: (d: number) => ({ x: d > 0 ? -50 : 50, opacity: 0, scale: 0.95, transition: { duration: 0.4 } })
   };
 
   return (
-    <section className="bg-[#bfe6f5] py-16 relative">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12 relative">
-          <motion.h2
-            initial={{ opacity: 0, y: 50 }}
+    <section className="bg-[#FAF9F6] py-24 md:py-32 relative overflow-hidden w-full">
+      <div 
+        className="absolute inset-0 opacity-[0.02] pointer-events-none mix-blend-multiply"
+        style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }}
+      />
+
+      <div className="w-[90%] max-w-7xl mx-auto relative z-10">
+        
+        <div className="text-center mb-16 md:mb-24">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            viewport={{ once: false, amount: 0.5 }}
-            className="text-3xl md:text-4xl font-extrabold flex items-center justify-center gap-2"
-            style={{ fontFamily: "'Kalam', cursive" }}
+            className="flex items-center justify-center gap-4 mb-6"
           >
-            <span className="text-[#41E2DA]">What</span>
-            <span className="text-black">our</span>
-            <span className="text-[#76B13A]">Customers</span>
-            <span className="text-black">say!</span>
-            <img
-              src={Leaf}
-              alt="Leaf Icon"
-              className="inline-block w-15 h-15 ml-2 absolute top-[-20px] right-[350px]"
-            />
-          </motion.h2>
+            <div className="w-8 h-[1px] bg-[#5C2E0A]/20" />
+            <span className="text-[#8CB662] font-bold tracking-[0.4em] uppercase text-[10px] md:text-xs">
+              Guest Experiences
+            </span>
+            <div className="w-8 h-[1px] bg-[#5C2E0A]/20" />
+          </motion.div>
+
+          <h2 
+            className="text-4xl md:text-6xl font-bold text-[#5C2E0A]"
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            Words from our <br />
+            <span className="italic font-medium text-[#8CB662]">Coffee Lovers</span>
+          </h2>
         </div>
 
-        <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full justify-center transition-transform duration-700 ease-in-out">
-          <FaQuoteLeft className="text-5xl text-gray-400 absolute top-[-50px] left-[-30px] transform -translate-x-4 -translate-y-4 z-10" />
-          <FaQuoteRight className="text-5xl text-gray-400 absolute bottom-[-50px] right-[-30px] transform translate-x-4 translate-y-4 z-10" />
+        <div 
+          className="relative px-0 md:px-12"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
+          <button 
+            onClick={prevSlide} 
+            className="absolute -left-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
+          >
+            <FaChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          </button>
 
-          {reviews
-            .slice(currentSlide * cardsPerSlide, (currentSlide + 1) * cardsPerSlide)
-            .map((review, i) => (
-              <motion.div
-                key={i}
-                className="bg-white rounded-lg shadow-md p-6 relative flex flex-col justify-between"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: false, amount: 0.5 }}
-              >
-                <FaQuoteLeft className="text-xl text-[#6D9C40] absolute left-4 top-4 z-10" />
-                <p className="text-sm text-gray-700 mt-6 mb-6 px-2 text-center">
-                  {review.text}
-                </p>
-                <FaQuoteRight className="text-xl text-[#76B13A] absolute right-4 bottom-4 z-10" />
-                <div className="border-t border-gray-300 pt-3 text-center">
-                  <p className="font-bold text-black text-sm mb-1">{review.name}</p>
-                  <div className="flex items-center justify-center gap-1 text-[#FFB800] text-sm">
-                    {[...Array(Math.floor(review.rating))].map((_, idx) => (
-                      <FaStar key={idx} />
-                    ))}
-                    <span className="ml-1 text-black">({review.rating}/5)</span>
+          <button 
+            onClick={nextSlide} 
+            className="absolute -right-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
+          >
+            <FaChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <div className="flex justify-center gap-6 lg:gap-8 min-h-[380px] md:min-h-[420px]">
+            <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+              {getVisibleReviews().map((review, i) => (
+                <motion.div
+                  key={`${currentIndex}-${review.name}-${i}`}
+                  custom={direction}
+                  variants={cardVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="w-full bg-white rounded-[3rem] p-10 md:p-12 shadow-[0_30px_60px_-15px_rgba(92,46,10,0.08)] border border-[#5C2E0A]/5 flex flex-col items-center text-center relative"
+                >
+                  <FaQuoteLeft className="text-[#8CB662]/20 mb-8" size={32} />
+                  
+                  <p 
+                    className="text-[#5C2E0A]/80 text-lg md:text-xl leading-relaxed italic mb-10 flex-grow"
+                    style={{ fontFamily: "'Playfair Display', serif" }}
+                  >
+                    "{review.text}"
+                  </p>
+
+                  <div className="flex flex-col items-center">
+                    <div className="flex gap-1.5 mb-5 justify-center">
+                      {[...Array(5)].map((_, idx) => (
+                        <FaStar key={idx} className={idx < review.rating ? "text-[#D4AF37]" : "text-gray-100"} size={14} />
+                      ))}
+                    </div>
+                    <h4 className="text-[#5C2E0A] font-bold text-lg tracking-tight uppercase">{review.name}</h4>
+                    <p className="text-[#8CB662] text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">Verified Guest</p>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          <div className="flex xl:hidden justify-center gap-4 mt-12">
+            <button onClick={prevSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
+              <FaChevronLeft size={18} />
+            </button>
+            <button onClick={nextSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
+              <FaChevronRight size={18} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex justify-center mt-8 gap-2">
-          {Array.from({ length: totalSlides }).map((_, index) => (
-            <span
+        <div className="flex justify-center mt-16 gap-3">
+          {reviews.map((_, index) => (
+            <button
               key={index}
-              onClick={() => handleDotClick(index)}
-              className={`w-4 h-4 rounded-full cursor-pointer ${
-                index === currentSlide ? "bg-[#6D9C40]" : "bg-gray-400"
+              onClick={() => {
+                setDirection(index > currentIndex ? 1 : -1);
+                setCurrentIndex(index);
+              }}
+              className={`h-1.5 transition-all duration-700 rounded-full ${
+                index === currentIndex 
+                  ? "w-10 bg-[#8CB662]" 
+                  : "w-2 bg-[#5C2E0A]/10 hover:bg-[#5C2E0A]/20"
               }`}
-            ></span>
+            />
           ))}
         </div>
       </div>
@@ -152,12 +185,3 @@ const CustomerReviewSection: React.FC = () => {
 };
 
 export default CustomerReviewSection;
-
-
-
-
-
-
-
-
-

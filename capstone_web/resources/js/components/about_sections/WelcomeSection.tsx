@@ -1,87 +1,119 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaFacebookF, FaInstagram, FaTiktok } from 'react-icons/fa';
+import { 
+  Facebook, 
+  Instagram, 
+  Music2, 
+  Quote
+} from 'lucide-react';
 
-function WelcomeSection() {
-  const fadeInVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-  };
-
+const WelcomeSection: React.FC = () => {
   return (
-    <section className="py-12 px-4 md:px-8 lg:px-16 text-center bg-white">
-      <motion.h2
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.5 }}
-        variants={fadeInVariants}
-        className="text-4xl md:text-5xl font-bold text-[#5b8c3d] mb-4"
-        style={{ fontFamily: "'Patrick Hand', cursive" }}
-      >
-        Welcome
-        <img
-          src="/images/leaf-icon.png"
-          alt="Leaf icon"
-          className="inline-block w-15 h-15 ml-2 mb-1"
-        />
-      </motion.h2>
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400&display=swap" rel="stylesheet" />
 
-      <motion.p
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.5 }}
-        variants={fadeInVariants}
-        className="text-base md:text-lg text-gray-800 max-w-3xl mx-auto leading-relaxed mb-10"
-        style={{ fontFamily:  "'Tangerine', cursive" }}
-      >
-        Established in 2019, Mi Amore Cafe was built on a passion for great flavors and warm
-        connections. From our expertly brewed coffee and soothing teas to our freshly squeezed
-        lemonade, every sip and bite is made with love. Whether you're here for a quick refreshment
-        or a cozy gathering, Mi Amore is your go-to spot for quality drinks, delicious treats,
-        and a welcoming ambiance.
-      </motion.p>
+      <section className="relative py-28 px-6 sm:px-12 lg:px-32 bg-[#FAF9F6] overflow-hidden text-center">
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" 
+             style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/natural-paper.png')` }} />
 
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.5 }}
-        variants={fadeInVariants}
-        className="flex justify-center items-center gap-5"
-      >
-        <a
-          href="https://facebook.com/miamorecafe"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Facebook"
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#7ba642] hover:bg-[#8bc662] transition duration-300 transform hover:scale-105"
-        >
-          <FaFacebookF className="text-white text-xl" />
-        </a>
+        <div className="max-w-4xl mx-auto relative z-10">
+          
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex items-center justify-center gap-4 mb-8"
+          >
+            <div className="h-[1px] w-8 bg-[#88B04B]/40" />
+            <span className="text-[#88B04B] font-bold tracking-[0.4em] uppercase text-[10px] md:text-xs">
+              Established 2019
+            </span>
+            <div className="h-[1px] w-8 bg-[#88B04B]/40" />
+          </motion.div>
 
-        <a
-          href="https://instagram.com/miamorecafe"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Instagram"
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#7ba642] hover:bg-[#8bc662] transition duration-300 transform hover:scale-105"
-        >
-          <FaInstagram className="text-white text-xl" />
-        </a>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 
+              className="text-[38px] md:text-[54px] lg:text-[64px] text-[#2b1c10] leading-[1.1] mb-10"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              The Heart of <br />
+              <span className="italic text-[#5C2E0A]">Mi Amore Cafe</span>
+            </h2>
+          </motion.div>
 
-        <a
-          href="https://tiktok.com/@miamorecafe"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="TikTok"
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#7ba642] hover:bg-[#8bc662] transition duration-300 transform hover:scale-105"
-        >
-          <FaTiktok className="text-white text-xl" />
-        </a>
-      </motion.div>
-    </section>
+          <motion.div 
+            initial={{ scale: 0 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            className="mb-10 text-[#88B04B]/30 flex justify-center"
+          >
+            <Quote size={40} fill="currentColor" />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3, duration: 1 }}
+            className="space-y-6"
+          >
+            <p 
+              className="text-[#4a4a4a] text-[16px] md:text-[19px] leading-[1.8] font-light italic"
+              style={{ fontFamily: "'Poppins', sans-serif" }}
+            >
+              Mi Amore Cafe was born from a simple dream: to create a space where premium flavors 
+              meet genuine human connection. Every blend tells a story of passion, and every cup 
+              is a testament to our craftsmanship.
+            </p>
+            <p 
+              className="text-[#5a5a5a] text-[14px] md:text-[15px] max-w-2xl mx-auto leading-relaxed opacity-80"
+              style={{ fontFamily: "'Poppins', sans-serif" }}
+            >
+              From our signature hand-poured coffee to our refreshing artisanal teas, we ensure 
+              that every visit feels like coming home. We believe that the best moments are 
+              shared over a perfect brew.
+            </p>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5 }}
+            className="mt-20 pt-12 border-t border-[#5C2E0A]/5 flex flex-col items-center"
+          >
+            <span className="text-[10px] uppercase tracking-[0.3em] text-[#5C2E0A]/40 font-bold mb-8">
+              Stay Connected
+            </span>
+            <div className="flex gap-6">
+              {[ 
+                { icon: <Facebook size={18} strokeWidth={2} />, link: "facebook" },
+                { icon: <Instagram size={18} strokeWidth={2} />, link: "instagram" },
+                { icon: <Music2 size={18} strokeWidth={2} />, link: "tiktok" }
+              ].map((social, index) => (
+                <motion.a
+                  key={index}
+                  href={`https://${social.link}.com/miamorecafe`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1, backgroundColor: "#5C2E0A", color: "#ffffff" }}
+                  className="w-12 h-12 flex items-center justify-center rounded-full border border-[#5C2E0A]/10 text-[#5C2E0A] transition-all duration-300 shadow-sm bg-white"
+                >
+                  {social.icon}
+                </motion.a>
+              ))}
+            </div>
+          </motion.div>
+
+        </div>
+      </section>
+    </>
   );
 }
 
 export default WelcomeSection;
-
-

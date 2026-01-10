@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, X, Coffee, Calendar, MapPin, Users, Phone, User } from "lucide-react";
 import axios from "axios";
 
 interface InputFieldProps {
@@ -8,32 +8,38 @@ interface InputFieldProps {
   placeholder?: string;
   field: string;
   type?: string;
+  value?: string;
   onChange: (field: string, value: string) => void;
   error?: string;
+  icon?: React.ReactNode;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, placeholder, field, type = "text", onChange, error }) => (
-  <div className="flex flex-col gap-1">
-    <label className="font-medium text-sm sm:text-base">{label}</label>
-    <input
-      type={type}
-      className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-300 outline-none text-sm sm:text-base ${
-        error ? "border-red-500" : "border-gray-300"
-      }`}
-      placeholder={placeholder}
-      onChange={(e) => onChange(field, e.target.value)}
-      min={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
-    />
-    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+const InputField: React.FC<InputFieldProps> = ({ label, placeholder, field, type = "text", value, onChange, error, icon }) => (
+  <div className="flex flex-col gap-1.5 group">
+    <label className="font-bold text-[#5C2E0A] text-[10px] tracking-[0.2em] uppercase ml-1 opacity-70">
+      {label}
+    </label>
+    <div className="relative">
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[#8CB662] opacity-60 group-focus-within:opacity-100 transition-opacity">
+        {icon}
+      </div>
+      <input
+        type={type}
+        value={value}
+        className={`w-full bg-transparent border-b border-[#5C2E0A]/20 py-2 pl-7 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A] placeholder-[#5C2E0A]/30 font-medium ${
+          error ? "border-red-400" : ""
+        }`}
+        placeholder={placeholder}
+        onChange={(e) => onChange(field, e.target.value)}
+        min={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
+      />
+    </div>
+    {error && <p className="text-red-500 text-[10px] mt-1 italic font-medium uppercase tracking-wider">{error}</p>}
   </div>
 );
 
 const BookCartSection: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
-
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -42,8 +48,13 @@ const BookCartSection: React.FC = () => {
     estimated_pax: "",
     event_location: "",
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setErrors({});
+  };
 
   const handleChange = (field: string, value: string) => {
     setForm({ ...form, [field]: value });
@@ -52,241 +63,179 @@ const BookCartSection: React.FC = () => {
 
   const submitInquiry = async () => {
     const newErrors: Record<string, string> = {};
-
-    if (!form.name.trim()) newErrors.name = "Name is required";
-
-    // PHONE VALIDATION
-    if (!form.phone.trim()) newErrors.phone = "Phone number is required";
-    else if (!/^\d{11}$/.test(form.phone))
-      newErrors.phone = "Phone number must be exactly 11 digits";
-
+    if (!form.name.trim()) newErrors.name = "Full Name is required";
+    if (!/^\d{11}$/.test(form.phone)) newErrors.phone = "Enter valid 11-digit phone number";
     if (!form.event_type.trim()) newErrors.event_type = "Event type is required";
-
-    if (!form.event_date.trim()) newErrors.event_date = "Event date is required";
-    else if (new Date(form.event_date) < new Date(new Date().toDateString()))
-      newErrors.event_date = "Event date cannot be in the past";
-
-    if (!form.estimated_pax || Number(form.estimated_pax) <= 0)
-      newErrors.estimated_pax = "Estimated Pax must be a positive number";
-
-    if (!form.event_location.trim()) newErrors.event_location = "Event location is required";
+    if (!form.event_date) newErrors.event_date = "Date is required";
+    if (!form.estimated_pax || Number(form.estimated_pax) <= 0) newErrors.estimated_pax = "Invalid pax";
+    if (!form.event_location.trim()) newErrors.event_location = "Location is required";
 
     setErrors(newErrors);
-
     if (Object.keys(newErrors).length > 0) return;
 
     try {
-      await axios.post("/api/eventinquiry", {
-        ...form,
-        estimated_pax: Number(form.estimated_pax),
-      });
-
-      alert("Inquiry submitted successfully!");
-      setIsModalOpen(false);
-      setForm({
-        name: "",
-        phone: "",
-        event_type: "",
-        event_date: "",
-        estimated_pax: "",
-        event_location: "",
-      });
-      setErrors({});
-    } catch (error: any) {
-      console.error("ERROR RESPONSE:", error.response?.data);
-      alert("Failed to submit inquiry");
+      await axios.post("/api/eventinquiry", { ...form, estimated_pax: Number(form.estimated_pax) });
+      alert("Inquiry sent! We'll reach out soon.");
+      closeModal();
+      setForm({ name: "", phone: "", event_type: "", event_date: "", estimated_pax: "", event_location: "" });
+    } catch (error) {
+      alert("Something went wrong. Please try again.");
     }
   };
 
-  const today = new Date().toISOString().split("T")[0];
-
   return (
-    <>
-      <section className="w-full max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-20 space-y-24 md:space-y-28">
+    <section className="bg-[#faf7f2] py-24 px-6 md:px-12 relative overflow-hidden">
+      <div 
+        className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-multiply"
+        style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }}
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          <motion.video
-            autoPlay loop muted playsInline
-            className="w-full rounded-xl shadow-lg object-cover object-center max-h-[300px] sm:max-h-[360px] md:max-h-[460px]"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+      <div className="max-w-7xl mx-auto space-y-32 relative z-10">
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          <motion.div 
+            className="relative group order-2 lg:order-1"
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <source src="/images/MiAmoreVideo1.mp4" type="video/mp4" />
-          </motion.video>
+            <div className="absolute -inset-4 border border-[#5C2E0A]/10 rounded-[2rem] rotate-2 group-hover:rotate-0 transition-transform duration-700" />
+            <video autoPlay loop muted playsInline className="relative z-10 w-full rounded-2xl shadow-2xl grayscale-[20%] hover:grayscale-0 transition-all duration-700 aspect-video lg:aspect-square object-cover">
+              <source src="/images/MiAmoreVideo1.mp4" type="video/mp4" />
+            </video>
+          </motion.div>
 
-          <motion.div
-            className="space-y-4 sm:space-y-5"
+          <motion.div 
+            className="space-y-6 order-1 lg:order-2"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            viewport={{ once: true }}
           >
-            <motion.h2
-              className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-wide text-[#8e674a]"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7 }}
-              style={{ fontFamily: "'Kalam', cursive" }}
-            >
-              The Art of Coffee Brewing
-            </motion.h2>
-
-            <p className="text-gray-700 leading-relaxed max-w-md text-sm sm:text-base">
-              See how we craft each cup with care—from grinding the beans to the perfect pour.
+            <h4 className="text-[#8CB662] font-bold tracking-[0.4em] text-[10px] uppercase">Craftsmanship</h4>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#5C2E0A] leading-[1.1]" style={{ fontFamily: "'Playfair Display', serif" }}>
+              The Art of <br /><span className="italic text-[#8CB662]/80">Slow Brewing</span>
+            </h2>
+            <p className="text-[#5C2E0A]/70 text-base md:text-lg leading-relaxed max-w-md font-medium">
+              Witness the precision behind every drop. Our artisan process ensures that every cup served at your event is a masterpiece of flavor.
             </p>
-
-            <motion.button
+            <motion.button 
               whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.92 }}
+              whileTap={{ scale: 0.95 }}
               onClick={openModal}
-              className="flex items-center gap-3 bg-[#8e674a] text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-lg font-semibold shadow-md hover:bg-[#7d5a3f] transition-all text-sm sm:text-base"
+              className="flex items-center gap-4 bg-[#5C2E0A] text-[#FAF9F6] px-8 py-4 rounded-full font-bold shadow-xl hover:bg-[#3d1f07] transition-all tracking-wide"
             >
-              Book Now
-              <motion.span whileTap={{ x: 10 }}>
-                <ArrowRight size={20} />
-              </motion.span>
+              Book Now <ArrowRight size={18} />
             </motion.button>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          <motion.div
-            className="space-y-4 sm:space-y-5 order-2 md:order-1"
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          <motion.div 
+            className="space-y-6 order-1"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
           >
-            <motion.h2
-              className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-wide text-[#65b741]"
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7 }}
-              style={{ fontFamily: "'Kalam', cursive" }}
-            >
-              Mi Amore On-the-Go
-            </motion.h2>
-
-            <p className="text-gray-700 leading-relaxed max-w-md text-sm sm:text-base">
-              We bring the Mi Amore experience straight to your event—fresh drinks and premium flavors.
+            <h4 className="text-[#8CB662] font-bold tracking-[0.4em] text-[10px] uppercase">Mobile Cart</h4>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#5C2E0A] leading-[1.1]" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Mi Amore <br /><span className="italic text-[#8CB662]/80">On-the-Go</span>
+            </h2>
+            <p className="text-[#5C2E0A]/70 text-base md:text-lg leading-relaxed max-w-md font-medium">
+              We bring the Mi Amore experience straight to your venue—freshly handcrafted drinks and a vintage vibe that elevates any celebration.
             </p>
-
-            <motion.button
+            <motion.button 
               whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.92 }}
+              whileTap={{ scale: 0.95 }}
               onClick={openModal}
-              className="flex items-center gap-3 bg-[#65b741] text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-lg font-semibold shadow-md hover:bg-[#56a23a] transition-all text-sm sm:text-base"
+              className="flex items-center gap-4 border-2 border-[#5C2E0A] text-[#5C2E0A] px-8 py-4 rounded-full font-bold hover:bg-[#5C2E0A] hover:text-[#FAF9F6] transition-all tracking-wide"
             >
-              Book Now
-              <motion.span whileTap={{ x: 10 }}>
-                <ArrowRight size={20} />
-              </motion.span>
+              Book Now <ArrowRight size={18} />
             </motion.button>
           </motion.div>
 
-          <motion.video
-            autoPlay loop muted playsInline
-            className="w-full rounded-xl shadow-lg object-cover object-center max-h-[300px] sm:max-h-[360px] md:max-h-[460px] order-1 md:order-2"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+          <motion.div 
+            className="relative group order-2"
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <source src="/images/MiAmoreVideo2.mp4" type="video/mp4" />
-          </motion.video>
+            <div className="absolute -inset-4 border border-[#5C2E0A]/10 rounded-[2rem] -rotate-2 group-hover:rotate-0 transition-transform duration-700" />
+            <video autoPlay loop muted playsInline className="relative z-10 w-full rounded-2xl shadow-2xl aspect-video lg:aspect-square object-cover">
+              <source src="/images/MiAmoreVideo2.mp4" type="video/mp4" />
+            </video>
+          </motion.div>
         </div>
-      </section>
+      </div>
 
-      {/* MODAL */}
       <AnimatePresence>
         {isModalOpen && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          <motion.div 
+            className="fixed inset-0 bg-[#5C2E0A]/60 backdrop-blur-md flex items-center justify-center z-[999] px-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <motion.div
-              className="bg-white w-full max-w-3xl rounded-2xl p-6 sm:p-7 md:p-8 shadow-xl relative"
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+            <motion.div 
+              className="bg-[#FAF9F6] w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] relative border border-[#5C2E0A]/10"
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
             >
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition"
-              >
-                <X size={22} />
-              </button>
-
-              <h2 className="text-center text-xl sm:text-2xl font-bold">
-                Send Us Your Event Inquiry
-              </h2>
-
-              <div className="w-[200px] h-[3px] bg-[#7fb25d] mx-auto mt-2 mb-4"></div>
-
-              <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-                Let us help make your special day unforgettable.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <InputField label="Name" placeholder="Enter your full name" field="name" onChange={handleChange} error={errors.name} />
-
-                {/* CUSTOM PHONE INPUT WITH COUNTER + AUTO PREFIX + MAX 11 */}
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium text-sm sm:text-base">Phone Number</label>
-
-                  <input
-                    type="text"
-                    className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-300 outline-none text-sm sm:text-base ${
-                      errors.phone ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder="09XXXXXXXXX"
-                    value={form.phone}
-                    onChange={(e) => {
-                      let value = e.target.value.replace(/\D/g, "");
-
-                      // enforce 09 prefix
-                      if (!value.startsWith("09")) {
-                        value = "09" + value.replace(/^0+/, "");
-                      }
-
-                      // restrict to 11 digits max
-                      value = value.slice(0, 11);
-
-                      handleChange("phone", value);
-                    }}
-                  />
-
-                  {/* LIVE COUNTER */}
-                  <p className="text-xs text-gray-600 mt-1">
-                    {form.phone.length} / 11 digits
-                  </p>
-
-                  {errors.phone && (
-                    <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-                  )}
-                </div>
-
-                <InputField label="Type of Event" placeholder="Wedding, Birthday, etc." field="event_type" onChange={handleChange} error={errors.event_type} />
-                <InputField label="Date of Event" field="event_date" type="date" onChange={handleChange} error={errors.event_date} />
-                <InputField label="Estimated Pax" placeholder="Number of guests" field="estimated_pax" type="number" onChange={handleChange} error={errors.estimated_pax} />
-                <InputField label="Event Location" placeholder="Venue or address" field="event_location" onChange={handleChange} error={errors.event_location} />
+              <div className="bg-[#5C2E0A] p-8 text-center relative">
+                <button onClick={closeModal} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
+                  <X size={24} />
+                </button>
+                <h3 className="text-2xl md:text-3xl font-bold text-[#FAF9F6] tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>Event Inquiry</h3>
+                <p className="text-[#8CB662] text-xs uppercase tracking-[0.3em] font-bold mt-2">Let’s craft your memory</p>
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.94 }}
-                onClick={submitInquiry}
-                className="w-full bg-[#7fb25d] text-white py-3 rounded-lg font-semibold hover:bg-[#6ea351] transition-all mt-6"
-              >
-                Submit Inquiry
-              </motion.button>
+              <div className="p-8 md:p-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                  <InputField label="Full Name" placeholder="e.g. Maria Clara" field="name" onChange={handleChange} error={errors.name} icon={<User size={16}/>} />
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-bold text-[#5C2E0A] text-[10px] tracking-[0.2em] uppercase ml-1 opacity-70">Phone Number</label>
+                    <div className="relative">
+                      <Phone size={16} className="absolute left-0 top-1/2 -translate-y-1/2 text-[#8CB662] opacity-60" />
+                      <input
+                        type="text"
+                        className={`w-full bg-transparent border-b border-[#5C2E0A]/20 py-2 pl-7 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A] ${errors.phone ? "border-red-400" : ""}`}
+                        value={form.phone}
+                        placeholder="09123456789"
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                          if (!val.startsWith("09") && val.length > 2) val = "09" + val.replace(/^0+/, "");
+                          handleChange("phone", val);
+                        }}
+                      />
+                      <span className="absolute right-0 bottom-2 text-[9px] font-mono text-gray-400">{form.phone.length}/11</span>
+                    </div>
+                    {errors.phone && <p className="text-red-500 text-[10px] italic mt-1">{errors.phone}</p>}
+                  </div>
+
+                  <InputField label="Event Type" placeholder="Wedding, Gala..." field="event_type" onChange={handleChange} error={errors.event_type} icon={<Coffee size={16}/>} />
+                  <InputField label="Event Date" field="event_date" type="date" onChange={handleChange} error={errors.event_date} icon={<Calendar size={16}/>} />
+                  <InputField label="Estimated Pax" placeholder="No. of guests" field="estimated_pax" type="number" onChange={handleChange} error={errors.estimated_pax} icon={<Users size={16}/>} />
+                  <InputField label="Venue Location" placeholder="City or Address" field="event_location" onChange={handleChange} error={errors.event_location} icon={<MapPin size={16}/>} />
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02, backgroundColor: "#8CB662" }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={submitInquiry}
+                  className="w-full bg-[#5C2E0A] text-[#FAF9F6] py-4 rounded-xl font-bold shadow-lg transition-all mt-10 tracking-[0.2em] uppercase text-xs"
+                >
+                  Submit Inquiry
+                </motion.button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </section>
   );
 };
 

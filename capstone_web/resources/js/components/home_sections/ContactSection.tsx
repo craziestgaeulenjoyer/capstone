@@ -1,303 +1,192 @@
-import React, { useState } from "react";
+import React from "react";
 import { FaPhoneAlt } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";
 import { IoMdArrowForward } from "react-icons/io";
-import { motion } from "framer-motion";
-import axios from "axios";
+import { motion, Variants } from "framer-motion";
 
 const ContactSection: React.FC = () => {
-  type ContactFields = "name" | "email" | "phone" | "message";
-
-  const [formData, setFormData] = useState<Record<ContactFields, string>>({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
-
-  const [errors, setErrors] = useState<Record<ContactFields, string>>({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-
-  // Timing-based spam prevention
-  const [startTime] = useState(Date.now());
-
-  // INPUT CHANGE HANDLER
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const field = e.target.id as ContactFields;
-    let value = e.target.value;
-
-    // SPECIAL LOGIC FOR PHONE FIELD
-    if (field === "phone") {
-      // Allow only digits
-      value = value.replace(/\D/g, "");
-
-      // Auto-prefix "09"
-      if (!value.startsWith("09")) {
-        value = "09" + value.replace(/^0+/, "");
-      }
-
-      // Limit to 11 digits
-      value = value.slice(0, 11);
-    }
-
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: "" }));
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+    },
   };
 
-  // VALIDATION FUNCTION
-  const validate = () => {
-    const newErrors: Record<ContactFields, string> = {
-      name: "",
-      email: "",
-      phone: "",
-      message: "",
-    };
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (formData.name.trim().length < 3)
-      newErrors.name = "Name must be at least 3 characters.";
-    if (!emailRegex.test(formData.email.trim()))
-      newErrors.email = "Enter a valid email address.";
-    if (!/^\d{11}$/.test(formData.phone.trim()))
-      newErrors.phone = "Phone must be exactly 11 digits.";
-    if (formData.message.trim().length < 10)
-      newErrors.message = "Message must be at least 10 characters.";
-
-    setErrors(newErrors);
-    return Object.values(newErrors).every((e) => !e);
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
   };
 
-  // FORM SUBMIT
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMsg("");
-
-    // Timing spam check
-    const elapsed = (Date.now() - startTime) / 1000;
-    if (elapsed < 5) {
-      setSuccessMsg("Your submission looks like spam. Please try again.");
-      return;
-    }
-
-    if (!validate()) return;
-
-    setIsSubmitting(true);
-    try {
-      await axios.post("/api/contact", {
-        ...formData,
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        message: formData.message.trim(),
-      });
-
-      setSuccessMsg("Your message has been sent successfully!");
-      setFormData({ name: "", email: "", phone: "", message: "" });
-    } catch (error) {
-      console.error(error);
-      setSuccessMsg("Something went wrong. Please try again later.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const fields = [
+    { id: "name", label: "Full Name", type: "text" },
+    { id: "email", label: "Email Address", type: "email" },
+    { id: "phone", label: "Phone Number", type: "tel" },
+  ];
 
   return (
-    <motion.section
+    <section
       id="contact"
-      className="bg-[#daffb3] shadow px-4 py-16"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-      viewport={{ once: true, amount: 0.2 }}
+      className="bg-[#b1c79c] overflow-hidden px-6 py-20 md:py-32 w-full relative"
     >
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-stretch">
+      <div 
+        className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-multiply"
+        style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }}
+      />
+
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24 items-center relative z-10">
         
-        {/* LEFT SIDE */}
-        <motion.div className="md:w-1/2 pl-12 pr-6 flex flex-col justify-center">
-          <div className="mb-2">
-            <motion.img
-              src="/images/coffee-splash.png"
-              alt="Coffee splash"
-              className="mb-2 w-full max-w-xs"
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true, amount: 0.4 }}
-            />
+        <motion.div
+          className="w-full lg:w-5/12 text-center lg:text-left"
+          initial={{ opacity: 0, x: -30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <motion.div 
+            className="inline-flex items-center gap-3 mb-6"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+          >
+            <div className="w-8 h-[1px] bg-[#63aa1c]" />
+            <span className="text-[#ffffff] text-[11px] font-bold tracking-[0.4em] uppercase">
+              Get In Touch
+            </span>
+          </motion.div>
+          
+          <h2 
+            className="text-4xl md:text-6xl font-bold text-[#5C2E0A] mb-8 leading-[1.1]"
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            We'd love to <br /> 
+            <span className="italic text-[#7cbd3b]">Hear from You.</span>
+          </h2>
+          
+          <p className="text-[#5C2E0A]/70 text-base md:text-lg mb-12 max-w-md mx-auto lg:mx-0 leading-relaxed font-medium">
+            Whether it's a bulk order, partnership, or just a friendly hello, we're here to craft a connection with you.
+          </p>
 
-            <motion.h2
-              className="text-3xl font-extrabold mb-4 leading-tight text-left"
-              style={{ fontFamily: "'Kalam', cursive" }}
-            >
-              <span className="text-[#76B13A]">We’d </span>
-              <span className="text-[#B13A3A]">Love </span>
-              <span className="text-[#76B13A]">to </span>
-              <span className="text-[#76B13A]">Hear </span>
-              <span className="text-blue-400">From </span>
-              <span className="text-blue-400">You!</span>
-            </motion.h2>
-
-            <p className="text-black text-lg mb-6 max-w-md text-left">
-              Whether you’re craving a cup, planning a visit, or just want to
-              say hello — Mi Amore is here for you.
-            </p>
+          <div className="space-y-4 w-full max-w-md mx-auto lg:mx-0">
+            {[
+              { icon: <MdEmail />, label: "Email us", val: "miamore.cml@gmail.com" },
+              { icon: <FaPhoneAlt className="text-sm" />, label: "Call us", val: "+63 917 892 4125" }
+            ].map((info, idx) => (
+              <motion.div 
+                key={idx} 
+                whileHover={{ x: 5 }}
+                className="flex items-center gap-5 p-6 bg-white rounded-3xl border border-[#5C2E0A]/5 shadow-sm transition-all"
+              >
+                <div className="w-12 h-12 flex-shrink-0 rounded-2xl bg-[#5C2E0A] flex items-center justify-center text-[#FAF9F6] text-xl">
+                  {info.icon}
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] uppercase tracking-widest text-[#8CB662] font-bold mb-1">{info.label}</p>
+                  <p className="text-sm md:text-base font-bold text-[#5C2E0A]">{info.val}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
-
-          {/* CONTACT INFO */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-start gap-3">
-              <MdEmail className="text-[#76B13A] text-2xl mt-1" />
-              <div>
-                <p className="text-lg font-bold text-[#9D7353] mb-1">E-mail</p>
-                <p className="text-md font-bold text-[#1b1b1b]">
-                  miamore.cml@gmail.com
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <FaPhoneAlt className="text-[#76B13A] text-2xl mt-1" />
-              <div>
-                <p className="text-lg font-bold text-[#9D7353] mb-1">
-                  Phone Number
-                </p>
-                <p className="text-md font-bold text-[#1b1b1b]">
-                  +63 917 892 4125
-                </p>
-              </div>
-            </div>
-          </div> 
         </motion.div>
 
-        {/* RIGHT SIDE — FORM */}
-        <div className="md:w-1/2 pr-12">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl border-1 border-[#e0fac7] h-full">
+        <motion.div 
+          className="w-full lg:w-7/12"
+          initial={{ opacity: 0, x: 30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <div className="bg-white p-8 md:p-16 rounded-[3rem] shadow-[0_40px_80px_-20px_rgba(92,46,10,0.12)] border border-[#5C2E0A]/5">
+            <div className="mb-12">
+              <h3 
+                className="text-2xl md:text-3xl font-bold text-[#5C2E0A] mb-2"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                Send a Message
+              </h3>
+              <p className="text-[#5C2E0A]/40 text-sm italic">Fields marked with * are required</p>
+            </div>
 
-            <p className="text-[#41E2DA] uppercase text-sm font-bold mb-2">
-              Contact Us
-            </p>
-
-            <motion.h2 className="text-3xl font-bold text-[#9D7353] leading-snug mb-6">
-              <span className="text-[#76B13A]">Reach</span> & Get in Touch With Us!
-            </motion.h2>
-
-            <motion.form onSubmit={handleSubmit} className="space-y-4">
-              
-              {/* NAME */}
-              <div>
-                <label className="block text-md font-medium text-black mb-1">Name</label>
-                <input
-                  id="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 bg-white border ${
-                    errors.name ? "border-red-500" : "border-gray-400"
-                  } shadow-sm rounded-md text-sm text-black`}
-                />
-                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            <motion.form 
+              className="space-y-6"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {fields.slice(0, 2).map((field) => (
+                  <motion.div key={field.id} variants={itemVariants} className="relative group">
+                    <input
+                      id={field.id}
+                      type={field.type}
+                      placeholder=" "
+                      required
+                      className="peer w-full px-0 py-4 bg-transparent border-b border-[#5C2E0A]/10 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A]"
+                    />
+                    <label
+                      htmlFor={field.id}
+                      className="absolute left-0 top-4 text-[#5C2E0A]/40 text-sm transition-all duration-300 pointer-events-none 
+                        peer-focus:text-[10px] peer-focus:top-[-10px] peer-focus:text-[#8CB662] peer-focus:font-bold
+                        peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:top-[-10px]"
+                    >
+                      {field.label} *
+                    </label>
+                  </motion.div>
+                ))}
               </div>
 
-              {/* EMAIL */}
-              <div>
-                <label className="block text-md font-medium text-black mb-1">Email</label>
+              <motion.div variants={itemVariants} className="relative group">
                 <input
-                  id="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 bg-white border ${
-                    errors.email ? "border-red-500" : "border-gray-400"
-                  } shadow-sm rounded-md text-sm text-black`}
+                  id={fields[2].id}
+                  type={fields[2].type}
+                  placeholder=" "
+                  className="peer w-full px-0 py-4 bg-transparent border-b border-[#5C2E0A]/10 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A]"
                 />
-                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-              </div>
+                <label
+                  htmlFor={fields[2].id}
+                  className="absolute left-0 top-4 text-[#5C2E0A]/40 text-sm transition-all duration-300 pointer-events-none 
+                    peer-focus:text-[10px] peer-focus:top-[-10px] peer-focus:text-[#8CB662] peer-focus:font-bold
+                    peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:top-[-10px]"
+                >
+                  Contact Number (Optional)
+                </label>
+              </motion.div>
 
-              {/* UPDATED PHONE FIELD */}
-              <div>
-                <label className="block text-md font-medium text-black mb-1">Phone</label>
-
-                <input
-                  id="phone"
-                  type="text"
-                  required
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 bg-white border ${
-                    errors.phone ? "border-red-500" : "border-gray-400"
-                  } shadow-sm rounded-md text-sm text-black`}
-                />
-
-                {/* LIVE COUNTER */}
-                <p className="text-xs text-gray-600 mt-1">
-                  {formData.phone.length} / 11 digits
-                </p>
-
-                {errors.phone && (
-                  <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-                )}
-              </div>
-
-              {/* MESSAGE */}
-              <div>
-                <label className="block text-md font-medium text-black mb-1">Message</label>
+              <motion.div variants={itemVariants} className="relative group">
                 <textarea
                   id="message"
                   rows={4}
+                  placeholder=" "
                   required
-                  value={formData.message}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 bg-white border ${
-                    errors.message ? "border-red-500" : "border-gray-400"
-                  } shadow-sm rounded-md text-sm text-black`}
+                  className="peer w-full px-0 py-4 bg-transparent border-b border-[#5C2E0A]/10 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A] resize-none"
                 ></textarea>
-                {errors.message && (
-                  <p className="text-red-500 text-sm mt-1">{errors.message}</p>
-                )}
-              </div>
-
-              {successMsg && (
-                <p
-                  className={`font-medium ${
-                    successMsg.includes("success")
-                      ? "text-green-600"
-                      : "text-red-500"
-                  }`}
+                <label
+                  htmlFor="message"
+                  className="absolute left-0 top-4 text-[#5C2E0A]/40 text-sm transition-all duration-300 pointer-events-none 
+                    peer-focus:text-[10px] peer-focus:top-[-10px] peer-focus:text-[#8CB662] peer-focus:font-bold
+                    peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:top-[-10px]"
                 >
-                  {successMsg}
-                </p>
-              )}
+                  Your Message *
+                </label>
+              </motion.div>
 
-              <div className="pt-2">
+              <motion.div variants={itemVariants} className="pt-8">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="group bg-[#8CB662] hover:bg-[#7AB44E] text-white font-semibold text-md rounded-full py-2 px-5 flex items-center transition-all duration-300"
+                  className="group relative w-full bg-[#5C2E0A] text-[#FAF9F6] py-5 px-8 rounded-full overflow-hidden transition-all duration-500 shadow-xl hover:shadow-[#5C2E0A]/20"
                 >
-                  <span>{isSubmitting ? "Sending..." : "Send Message"}</span>
-                  <span className="ml-3 bg-white text-[#8CB662] p-1 rounded-full transition-transform duration-300 group-hover:translate-x-1">
-                    <IoMdArrowForward className="text-base" />
-                  </span>
+                  <div className="absolute inset-0 bg-[#8CB662] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                  <div className="relative z-10 flex items-center justify-center gap-3">
+                    <span className="text-sm font-bold uppercase tracking-widest">Send Inquiry</span>
+                    <IoMdArrowForward className="text-xl transition-transform group-hover:translate-x-1" />
+                  </div>
                 </button>
-              </div>
-
+              </motion.div>
             </motion.form>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </motion.section>
+    </section>
   );
 };
 
