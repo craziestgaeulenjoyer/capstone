@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function QRcode() {
   const [language, setLanguage] = useState("EN");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
   const languages = ["EN", "KR", "JP", "CN", "PH"];
+
+  const goBack = () => window.history.back();
 
   const handleLanguageSelect = (lang) => {
     setLanguage(lang);
@@ -17,8 +18,11 @@ export default function QRcode() {
     <div className="min-h-screen bg-white flex flex-col items-center text-gray-800 p-6 font-quicksand relative overflow-hidden">
       {/* Header */}
       <div className="w-full max-w-md flex items-center justify-between mb-4 relative">
-        <button className="flex items-center text-[#76B13A] font-medium text-sm">
-          <IoIosArrowBack className="text-lg mr-1" /> Back
+        <button
+          onClick={goBack}
+          className="flex items-center text-[#76B13A] font-medium text-lg hover:opacity-80 transition"
+        >
+          <IoIosArrowBack className="mr-1 text-xl" /> Back
         </button>
 
         {/* Language Dropdown */}
@@ -71,21 +75,27 @@ export default function QRcode() {
         Read your QR code, <br />please.
       </h2>
 
-       {/* QR Code Image */}
+      {/* QR Code Image */}
       <div className="flex justify-center">
-       <img
-        src="/images/InitialQRcode.png" // Replace with your actual QR code image path
-        alt="QR Code"
-        className="w-[140px] sm:w-[160px] md:w-[180px] object-contain"
-          />
+        <img
+          src="/images/InitialQRcode.png"
+          alt="QR Code"
+          className="w-[140px] sm:w-[160px] md:w-[180px] object-contain cursor-pointer"
+        />
       </div>
 
-      {/* --- Decorative Bottom Half-Circle --- */}
+
+      {/* Decorative Bottom Half-Circle */}
       <div
         className="absolute bottom-[-220px] left-1/2 transform -translate-x-1/2
                    w-[100%] h-[300px] bg-[#8CB662] rounded-t-[90%]"
       />
-
+            {/* Button linking to Order Number page */}
+      <a href="/ordernumber">
+        <button className="mt-6 bg-[#76B13A] text-white font-semibold px-6 py-2 rounded-lg hover:opacity-80 transition">
+          Go to Order Number
+        </button>
+      </a>
     </div>
   );
 }

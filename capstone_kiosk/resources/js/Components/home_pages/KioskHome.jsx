@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { IoIosArrowBack, IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { router } from "@inertiajs/react";
 
 export default function KioskHome() {
   const [activeTab, setActiveTab] = useState("Home");
@@ -15,7 +16,7 @@ export default function KioskHome() {
   const [selectedAddon, setSelectedAddon] = useState("");
   const [selectedExtra, setSelectedExtra] = useState("");
   const [selectedFlavor, setSelectedFlavor] = useState("");
-
+const goBack = () => window.history.back();
   const languages = ["EN", "KR", "JP", "CN", "PH"];
 
   const menuItems = [
@@ -162,12 +163,15 @@ export default function KioskHome() {
   };
 
   const handleItemClick = (item) => {
-    if (activeTab !== "Popular") return;
+     if (activeTab === "Home") {
+      
+ localStorage.setItem("kiosk_selected_category", item.name);
+    // navigate to the other file (categories page)
+    router.visit("/kioskmenu"); // 🔴 change route if needed
 
-    setSelectedItem({
-      ...item,
-      category: detectCategory(item.name),
-    });
+    return;
+  }
+    setSelectedItem(item);
 
     setQuantity(1);
     setSelectedOption("");
@@ -193,9 +197,12 @@ export default function KioskHome() {
     <div className="min-h-screen bg-gray-200 font-quicksand flex flex-col relative overflow-hidden">
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4">
-        <button className="flex items-center text-[#76B13A] font-medium text-sm">
-          <IoIosArrowBack className="text-lg mr-1" /> Back
-        </button>
+         <button
+                  onClick={goBack}
+                  className="flex items-center text-[#76B13A] font-medium text-lg hover:opacity-80 transition"
+                >
+                  <IoIosArrowBack className="mr-1 text-xl" /> Back
+                </button>
 
         {/* Dropdown */}
         <div className="relative">

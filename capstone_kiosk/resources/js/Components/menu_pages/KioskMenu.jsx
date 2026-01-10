@@ -1,20 +1,31 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { IoIosArrowBack, IoIosArrowUp } from "react-icons/io";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { router } from '@inertiajs/react';
 
 export default function KioskMenu() {
-  const [selectedCategory, setSelectedCategory] = useState("Premium Matcha");
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [language, setLanguage] = useState("EN");
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSize, setSelectedSize] = useState("Regular 16oz");
   const [quantity, setQuantity] = useState(1);
+  // ✅ CART STATE
+const [cartItems, setCartItems] = useState([]);
+const [showCartPanel, setShowCartPanel] = useState(false);
+const [selectedAddOns, setSelectedAddOns] = useState([]);
+const [orderType, setOrderType] = useState("");
+const [sortOrder, setSortOrder] = useState("default"); // default | asc | desc
+
+
+
+
   
   const scrollRef = useRef(null);
 
-   const goBack = () => window.history.back();
+  const goBack = () => window.history.back();
 
   // Define drink size options
   const drinkOptions = {
@@ -142,10 +153,70 @@ export default function KioskMenu() {
 
   const languages = ["EN", "JP", "KR", "CN"];
 
-  const handleAddToCart = () => {
-  console.log("Added to cart:", selectedItem, quantity, selectedSize);
+ const handleAddToCart = () => {
+  if (!selectedItem) return;
+
+  const cartItem = {
+    id: Date.now(),
+    name: selectedItem.name,
+    price: selectedItem.price,
+    quantity,
+    size: selectedSize,
+    category: selectedCategory,
+    addOns: selectedAddOns,
+    image: selectedItem.image,
+  };
+
+  setCartItems((prev) => [...prev, cartItem]);
+
+  // reset modal state
+  setQuantity(1);
+  setSelectedSize("Regular 16oz");
   setSelectedItem(null);
+   setSelectedAddOns([]);
 };
+// ✅ TOTAL PRICE
+const totalPrice = cartItems.reduce(
+  (sum, item) => sum + item.price * item.quantity,
+  0
+);
+
+
+  useEffect(() => {
+    const saved = localStorage.getItem("kiosk_selected_category");
+
+    if (saved) {
+      setSelectedCategory(saved);
+
+      // optional cleanup
+      localStorage.removeItem("kiosk_selected_category");
+    } else {
+      setSelectedCategory("Premium Matcha"); // fallback
+    }
+  }, []);
+useEffect(() => {
+  const storedOrderType = localStorage.getItem("order_type");
+  if (storedOrderType) {
+    setOrderType(storedOrderType);
+  }
+}, []);
+
+
+const sortedMenuItems = React.useMemo(() => {
+  if (!selectedCategory || !allMenuItems[selectedCategory]) return [];
+
+  const items = [...allMenuItems[selectedCategory]];
+
+  if (sortOrder === "asc") {
+    return items.sort((a, b) => a.price - b.price);
+  }
+
+  if (sortOrder === "desc") {
+    return items.sort((a, b) => b.price - a.price);
+  }
+
+  return items; // default order
+}, [selectedCategory, sortOrder]);
 
 
   return (
@@ -253,11 +324,16 @@ export default function KioskMenu() {
         <h2 className="text-xl font-semibold text-gray-800">{selectedCategory}</h2>
         <div className="flex items-center text-md text-gray-700">
           <span className="mr-1">Sort by</span>
-          <select className="border border-gray-300 rounded-full px-3 py-1.5 focus:outline-none">
-            <option>Default</option>
-            <option>Ascending</option>
-            <option>Descending</option>
-          </select>
+          <select
+  value={sortOrder}
+  onChange={(e) => setSortOrder(e.target.value)}
+  className="border border-gray-300 rounded-full px-3 py-1.5 focus:outline-none"
+>
+  <option value="default">Default</option>
+  <option value="asc">Price: Low → High</option>
+  <option value="desc">Price: High → Low</option>
+</select>
+
         </div>
       </div>
 
@@ -270,7 +346,8 @@ export default function KioskMenu() {
         transition={{ duration: 0.4 }}
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 px-8 mb-24"
       >
-        {allMenuItems[selectedCategory]?.map((item) => (
+       {sortedMenuItems.map((item) => (
+
           <motion.div
             key={item.id}
             whileHover={{ scale: 1.05 }}
@@ -400,12 +477,20 @@ export default function KioskMenu() {
     {/* Specialty Coffee */}
         {selectedCategory === "Specialty Coffee" && (
           <>
-            <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+              <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
               <option>Select option</option>
               <option>Hot</option>
               <option>Cold</option>
             </select>
-            <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
               <option>Select Add-ons</option>
               <option>Oat Milk</option>
               <option>Extra Espresso</option>
@@ -415,7 +500,11 @@ export default function KioskMenu() {
 
         {/* Milk Tea */}
         {selectedCategory === "Milk Tea" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+           <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Select an add-on</option>
             <option>Pearls</option>
             <option>Nata</option>
@@ -429,7 +518,11 @@ export default function KioskMenu() {
 
         {/* Lemonade & Fruit Juices */}
         {selectedCategory === "Lemonade & Fruit Juices" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+          <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Select Add-ons</option>
             <option>Pearls</option>
             <option>Nata</option>
@@ -440,7 +533,11 @@ export default function KioskMenu() {
 
         {/* Coffee */}
         {selectedCategory === "Coffee" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+           <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Select Add-ons</option>
             <option>Extra Matcha Shot</option>
             <option>Extra Coffee Shot</option>
@@ -449,7 +546,11 @@ export default function KioskMenu() {
 
         {/* Premium Matcha */}
         {selectedCategory === "Premium Matcha" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+            <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Select option</option>
             <option>Hot</option>
             <option>Cold</option>
@@ -458,7 +559,11 @@ export default function KioskMenu() {
 
         {/* Snacks */}
         {selectedCategory === "Snacks" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+         <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Select Flavor</option>
             <option>Cheese</option>
             <option>Sour & Cream</option>
@@ -470,7 +575,11 @@ export default function KioskMenu() {
 
         {/* Quesadillas & Corndogs - Only for Beef Quesadillas */}
         {selectedCategory === "Quesadillas & Corndogs" && selectedItem?.name === "Beef Quesadillas" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
+         <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Select Extra</option>
             <option>Extra Garlic Sauce</option>
           </select>
@@ -478,8 +587,11 @@ export default function KioskMenu() {
 
         {/* Platters */}
         {selectedCategory === "Platters" && (
-          <select className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]">
-            <option>Select Extra</option>
+           <select
+      className="w-[180px] border border-[#8CB662] rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-[#8CB662]"
+      value={selectedAddOns[0] || ""}
+      onChange={(e) => setSelectedAddOns([e.target.value])} // single selection
+    >
             <option>Add Extra Nuggets</option>
           </select>
         )}
@@ -489,12 +601,12 @@ export default function KioskMenu() {
 
          {/* Action Buttons */}
       <div className="mt-4 w-full flex justify-between px-4">
-        <button
-          onClick={handleAddToCart}
-          className="bg-[#8CB662] text-white px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-[#7AAF55] transition"
-        >
-          Add to Cart
-        </button>
+       <button
+  onClick={handleAddToCart}
+  className="bg-[#8CB662] text-white px-6 py-1.5 rounded-full text-xs font-semibold hover:bg-[#7AAF55] transition"
+>
+  Add to Cart
+</button>
 
         <button
           onClick={() => setSelectedItem(null)}
@@ -509,23 +621,153 @@ export default function KioskMenu() {
 
       {/* Bottom Controls */}
       <div className="fixed bottom-0 w-full bg-white border-t border-gray-200 py-4 shadow-inner flex flex-col items-center">
-        <IoIosArrowUp className="text-[#76B13A] text-2xl mb-2" />
+    <motion.button
+  onClick={() => setShowCartPanel(!showCartPanel)}
+  animate={{ rotate: showCartPanel ? 180 : 0 }}
+  transition={{ duration: 0.3 }}
+>
+  <IoIosArrowUp className="text-[#76B13A] text-2xl mb-2" />
+</motion.button>
 
-        <div className="flex justify-between items-center w-full px-8 sm:px-16">
-          <div className="flex space-x-4">
-            <button className="bg-[#A4C879] text-white px-8 py-3 rounded-full text-base font-semibold shadow-md">
-              Order Now
-            </button>
-            <button className="bg-[#DFF0D8] text-[#76B13A] px-8 py-3 rounded-full text-base font-semibold shadow-md">
-              Restart Menu
-            </button>
-          </div>
 
-          <div className="flex items-center text-gray-800 font-semibold text-lg">
-            <p className="mr-2">Total</p>
-            <span className="font-extrabold text-xl text-black">₱ 0.00</span>
-          </div>
+{/* ================= CART PANEL INSIDE PAGE ================= */}
+<AnimatePresence>
+  {showCartPanel && (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.6, ease: "easeInOut" }}
+      className="w-full overflow-hidden"
+    >
+      <div className="w-full bg-gradient-to-b from-white to-gray-50 border-t border-gray-200 shadow-inner px-6 py-5 max-h-[420px] overflow-y-auto rounded-t-3xl">
+
+        {/* Header */}
+        <div className="flex flex-col items-center mb-4">
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full mb-3" />
+          <h3 className="font-bold text-lg text-gray-800">Your Order</h3>
         </div>
+
+        {/* Order Type */}
+        {orderType && (
+          <div className="mb-4 flex justify-center">
+            <div className="px-4 py-1.5 rounded-full bg-[#8CB662]/15 text-[#6FA84C] text-xs font-semibold tracking-wide shadow-sm">
+              {orderType}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {cartItems.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-gray-400">
+            <p className="text-sm">Your cart is empty</p>
+            <p className="text-xs mt-1">Start adding delicious items 🍵</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {cartItems.map((item) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center bg-white rounded-2xl p-4 shadow-sm border border-gray-100"
+              >
+                {/* Image */}
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-16 h-16 object-contain rounded-xl bg-gray-50 p-1"
+                />
+
+                {/* Info */}
+                <div className="flex-1 ml-4">
+                  <p className="font-semibold text-sm text-gray-800">
+                    {item.name}
+                  </p>
+
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {item.size} × {item.quantity}
+                  </p>
+
+                  {item.addOns && item.addOns.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      + {item.addOns.join(", ")}
+                    </p>
+                  )}
+                </div>
+
+                {/* Price */}
+                <div className="text-right">
+                  <p className="font-bold text-sm text-gray-900">
+                    ₱ {(item.price * item.quantity).toFixed(2)}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Sticky Total */}
+        {cartItems.length > 0 && (
+          <div className="sticky bottom-0 bg-white/90 backdrop-blur border-t border-gray-200 mt-6 pt-4 pb-2 flex justify-between items-center">
+            <p className="font-semibold text-gray-700 text-sm">Total</p>
+            <p className="font-extrabold text-xl text-gray-900">
+              ₱ {totalPrice.toFixed(2)}
+            </p>
+          </div>
+        )}
+
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
+
+
+   {/* Bottom buttons */}
+<div className="flex justify-between items-center w-full px-8 sm:px-16">
+  <div className="flex space-x-4">
+    {/* Order Now */}
+    <button
+      onClick={() => {
+        // Save cart items to localStorage
+        localStorage.setItem("kiosk_cart_items", JSON.stringify(cartItems));
+        // Save the current category if needed
+        localStorage.setItem("kiosk_selected_category", selectedCategory);
+        // Navigate to checkout page using Inertia.js router
+        router.visit("/paymentselect");
+      }}
+      className="bg-[#A4C879] text-white px-8 py-3 rounded-full text-base font-semibold shadow-md"
+    >
+      Order Now
+    </button>
+
+    {/* Restart Menu */}
+    <button
+      onClick={() => {
+        // Clear cart
+        setCartItems([]);
+        localStorage.removeItem("kiosk_cart_items");
+        localStorage.removeItem("kiosk_selected_category");
+        // Navigate back to menu home page
+        router.visit("/kioskhome");
+      }}
+      className="bg-[#DFF0D8] text-[#76B13A] px-8 py-3 rounded-full text-base font-semibold shadow-md"
+    >
+      Restart Menu
+    </button>
+  </div>
+
+  {/* Cart total */}
+  <div className="flex items-center text-gray-800 font-semibold text-lg">
+    <p className="mr-2">Total ({cartItems.length})</p>
+    <span className="font-extrabold text-xl text-black">
+      ₱ {totalPrice.toFixed(2)}
+    </span>
+  </div>
+</div>
+
       </div>
     </div>
   );
