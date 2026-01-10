@@ -1021,31 +1021,28 @@ const CartScreen: React.FC = () => {
             {/* Divider */}
             <View style={{ height: 1, backgroundColor: "#eee", marginVertical: 24 }} />
 
-            {/* Still show promo code input */}
-            <Text style={styles.sectionTitle}>Apply Promo Code</Text>
-            <View style={styles.loyaltyCard}>
-              <Text style={styles.title}>Loyalty Reward</Text>
 
-              <View style={styles.switchRow}>
-                <Text>Enable Free Drinks</Text>
-                <Switch
-                  value={loyaltyEnabled}
-                  onValueChange={(value) => {
-                    setLoyaltyEnabled(value);
+            {/* Enable Loyalty Reward */}
+            <View style={styles.loyaltyToggleRow}>
+              <Text style={styles.sectionTitle}>Enable Loyalty Reward</Text>
 
-                    if (!value) {
-                      setFreeItems([]);
-                    }
-                  }}
-                />
-              </View>
+              <Switch
+                value={loyaltyEnabled}
+                onValueChange={(value) => {
+                  setLoyaltyEnabled(value);
 
-              {loyaltyEnabled && (
-                <Text style={styles.subText}>
-                  You can claim up to {freeDrinkAllowance} free drink(s)
-                </Text>
-              )}
+                  if (!value) {
+                    setFreeItems([]);
+                  }
+                }}
+              />
             </View>
+
+            {loyaltyEnabled && (
+              <Text style={styles.subTextCentered}>
+                You can claim up to {freeDrinkAllowance} free drink(s)
+              </Text>
+            )}
 
             {/* Points Info (optional, keep your old look) */}
             <View style={styles.pointsInfoBox}>
@@ -1559,23 +1556,24 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 6,
   },
-  subText: {
+  loyaltyToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    elevation: 3,
+    marginTop: 4,     
+    marginBottom: 8, 
+  },
+
+  subTextCentered: {
+    marginTop: 8,
     fontSize: 14,
     color: "#666",
-  },
-  freeCard: {
-    borderColor: "#76B13A",
-    borderWidth: 2,
-  },
-  freeBadge: {
-    position: "absolute",
-    top: 6,
-    alignSelf: "center",
-    backgroundColor: "#76B13A",
-    color: "#fff",
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    fontWeight: "bold",
+    textAlign: "center",
   },
 
   checkbox: {
@@ -2015,6 +2013,7 @@ const styles = StyleSheet.create({
   pointsInfoBox: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 4, 
     marginBottom: 10,
   },
   pointsText: {

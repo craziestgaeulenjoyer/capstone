@@ -15,22 +15,31 @@ import {
   LucideIcon,
 } from "lucide-react";
 
-const Modal: React.FC<{ children: React.ReactNode; onClose: () => void }> = ({
-  children,
-  onClose,
-}) => {
+const Modal: React.FC<{
+  children: React.ReactNode;
+  onClose: () => void;
+  size?: "sm" | "md" | "lg";
+}> = ({ children, onClose, size = "lg" }) => {
   return (
-    <div
-      className="fixed inset-0 flex justify-center items-center z-50"
-      style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-    >
-      <div className="bg-white rounded-lg shadow-lg w-3/4 max-w-3xl p-6 relative animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div
+        className={`relative bg-white rounded-lg shadow-lg p-6 animate-fadeIn
+          ${
+            size === "sm"
+              ? "w-[420px]"
+              : size === "md"
+              ? "w-[550px]"
+              : "w-3/4 max-w-3xl"
+          }
+        `}
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
         >
           ✕
         </button>
+
         {children}
       </div>
     </div>
@@ -60,6 +69,10 @@ const AccountSettings: React.FC<{
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [passwordStrength, setPasswordStrength] =
+    useState<"weak" | "normal" | "strong">("weak");
+
 
   const [otpRequestStatus, setOtpRequestStatus] =
     useState<"success" | "error" | null>(null);
@@ -96,6 +109,23 @@ const AccountSettings: React.FC<{
 
     return `${masked}${visible}@${domain}`;
   };
+
+  const getPasswordStrength = (password: string) => {
+    let score = 0;
+
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+
+    if (score <= 2) return "weak";
+    if (score === 3) return "normal";
+    return "strong";
+  };
+
+  useEffect(() => {
+    setPasswordStrength(getPasswordStrength(newPassword));
+  }, [newPassword]);
 
   return (
     <div className="w-full flex flex-col space-y-6">
@@ -439,7 +469,10 @@ const AccountSettings: React.FC<{
       )}
 
       {showPasswordModal && (
-        <Modal onClose={() => setShowPasswordModal(false)}>
+        <Modal
+          size="sm"
+          onClose={() => setShowPasswordModal(false)}
+        >
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-gray-800">
               Change Password
@@ -449,41 +482,85 @@ const AccountSettings: React.FC<{
               <p className="text-sm text-red-600">{passwordError}</p>
             )}
 
-            <input
-              type="password"
-              placeholder="Current password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2"
-            />
+            <div className="flex flex-col items-center space-y-3 mt-6">
+              <input
+                type="password"
+                placeholder="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-[80%] text-gray-900 border-gray-300 border-2 rounded-lg px-4 py-2 mb-4"
+              />
 
-            <input
-              type="password"
-              placeholder="New password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2"
-            />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-[80%] text-gray-900 border-gray-300 border-2rounded-lg px-4 py-2 mb-4 mt-2"
+              />
+            </div>
 
-            <input
-              type="password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2"
-            />
+            <div className="w-[80%] mx-auto mt-2">
+              <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    passwordStrength === "weak"
+                      ? "w-1/3 bg-red-500"
+                      : passwordStrength === "normal"
+                      ? "w-2/3 bg-yellow-400"
+                      : "w-full bg-green-500"
+                  }`}
+                />
+              </div>
+
+              <p
+                className={`mt-1 text-sm text-center font-medium ${
+                  passwordStrength === "weak"
+                    ? "text-red-600"
+                    : passwordStrength === "normal"
+                    ? "text-yellow-600"
+                    : "text-green-600"
+                }`}
+              >
+                {passwordStrength.toUpperCase()} PASSWORD
+              </p>
+            </div>
+
+            <div className="text-gray-900 w-[70%] mx-auto flex items-start gap-2 text-sm mt-3">
+              <input
+                type="checkbox"
+                checked={acceptPrivacy}
+                onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                I accept the{" "}
+                <a
+                  href="/privacypolicy"
+                  target="_blank"
+                  className="text-[#8cb662] underline"
+                >
+                  Privacy Policy
+                </a>
+              </span>
+            </div>
 
             <div className="flex justify-end gap-3 pt-4">
               <button
                 disabled={passwordLoading}
                 onClick={() => setShowPasswordModal(false)}
-                className="px-4 py-2 rounded-md bg-gray-300 text-gray-700"
+                className="cursor-pointer px-4 py-2 rounded-md bg-gray-300 text-gray-700"
               >
                 Cancel
               </button>
 
               <button
-                disabled={passwordLoading}
+                disabled={
+                  passwordLoading ||
+                  newPassword !== confirmPassword ||
+                  passwordStrength === "weak" ||
+                  !acceptPrivacy
+                }
                 onClick={async () => {
                   setPasswordError(null);
 
@@ -496,9 +573,8 @@ const AccountSettings: React.FC<{
                     setPasswordLoading(true);
 
                     await axiosClient.post(
-                      "/api/change-password",
+                      "/api/password-change/confirm",
                       {
-                        current_password: currentPassword,
                         password: newPassword,
                         password_confirmation: confirmPassword,
                       },
@@ -512,9 +588,9 @@ const AccountSettings: React.FC<{
                     setShowPasswordModal(false);
                     alert("Password changed successfully.");
 
-                    setCurrentPassword("");
                     setNewPassword("");
                     setConfirmPassword("");
+                    setAcceptPrivacy(false);
 
                   } catch (err: any) {
                     setPasswordError(
@@ -524,8 +600,10 @@ const AccountSettings: React.FC<{
                     setPasswordLoading(false);
                   }
                 }}
-                className={`px-4 py-2 rounded-md text-white ${
-                  passwordLoading
+                className={`cursor-pointer px-4 py-2 rounded-md text-white ${
+                  passwordLoading ||
+                  passwordStrength === "weak" ||
+                  !acceptPrivacy
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-[#8cb662] hover:bg-[#7ca551]"
                 }`}

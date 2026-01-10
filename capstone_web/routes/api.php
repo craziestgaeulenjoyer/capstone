@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Administrator_Controllers\AdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\SuperAdminAuthController;
 use App\Http\Controllers\Administrator_Controllers\AdminsCreationController;
+use App\Http\Controllers\Administrator_Controllers\AdminManagementController;
 use App\Http\Controllers\Administrator_Controllers\MenuController;
 use App\Http\Controllers\Administrator_Controllers\InventoryController;
 use App\Http\Controllers\Administrator_Controllers\CustomerController;
@@ -14,9 +15,11 @@ use App\Http\Controllers\Administrator_Controllers\ReportsController;
 use App\Http\Controllers\Home_Controllers\ContactController;
 use App\Http\Controllers\Home_Controllers\EventInquiryController;
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
-use App\Http\Controllers\Customer_Controllers\CustomerProfileController;
 use App\Http\Controllers\Customer_Controllers\CustomerSocialController;
 use App\Http\Controllers\Customer_Controllers\ForgotPasswordController;
+use App\Http\Controllers\Administrator_Controllers\NotificationController;
+use App\Http\Controllers\Administrator_Controllers\ProfileController;
+
 /* ---------------- CART ROUTES ---------------- */
 
 use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
@@ -80,10 +83,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-
-use App\Http\Controllers\Administrator_Controllers\NotificationController;
-use App\Http\Controllers\Administrator_Controllers\ProfileController;
-
 /* ================= EMAIL CHANGE VERIFICATION ================= */
 
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -122,6 +121,8 @@ Route::prefix('superadmin')->group(function () {
         Route::post('/create/request-otp', [AdminsCreationController::class, 'requestOtp']);
         Route::post('/create/verify-otp', [AdminsCreationController::class, 'verifyOtp']);
         Route::get('/admins', [AdminsCreationController::class, 'getAllAdmins']);
+
+        Route::put('/admins/{id}', [AdminManagementController::class, 'update']);
 
         /* Profile */
         Route::get('/profile', [SuperAdminAuthController::class, 'profile']);
@@ -170,17 +171,16 @@ Route::prefix('superadmin')->group(function () {
 
         /* Analytics */
         Route::get('/analytics', [AnalyticsController::class, 'index']);
+        Route::get('/analytics/revenue-per-day', [AnalyticsController::class, 'revenuePerDay']);
+        Route::get('/analytics/peak-hours', [AnalyticsController::class, 'peakHours']);
 
         /* Reports */
         Route::get('/reports/daily', [ReportsController::class, 'daily']);
     
-        /* Dashboard Revenue */
-        Route::get('/analytics/revenue-per-day', [AnalyticsController::class, 'revenuePerDay']);
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     });
-
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 });
 
 /* ================= ADMIN ROUTES ================= */
@@ -236,17 +236,15 @@ Route::prefix('admin')->group(function () {
 
         /* Analytics */
         Route::get('/analytics', [AnalyticsController::class, 'index']);
+        Route::get('/analytics/revenue-per-day', [AnalyticsController::class, 'revenuePerDay']);
+        Route::get('/analytics/peak-hours', [AnalyticsController::class, 'peakHours']);
 
         /* Reports */
         Route::get('/reports/daily', [ReportsController::class, 'daily']);
     
-        /* Dashboard Revenue */
-        Route::get('/analytics/revenue-per-day', [AnalyticsController::class, 'revenuePerDay']);
-    
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-
     });
 });
 

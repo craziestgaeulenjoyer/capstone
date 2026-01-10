@@ -131,7 +131,7 @@ const DashboardLoginForm = () => {
           </div>
 
           <h2 className="text-2xl font-bold text-[#8CB662]">Login to continue</h2>
-          <p className="text-gray-600 text-md mb-10 leading-relaxed">
+          <p className="text-gray-600 text-md mb-4 leading-relaxed">
             Enter your credentials to manage and monitor Mi Amore Café operations.
           </p>
 
@@ -139,7 +139,7 @@ const DashboardLoginForm = () => {
             {error && <p className="text-red-500 text-sm">{error}</p>}
 
             <div>
-              <label htmlFor="email" className="block text-gray-700 text-sm font-medium">
+              <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">
                 Email
               </label>
               <input

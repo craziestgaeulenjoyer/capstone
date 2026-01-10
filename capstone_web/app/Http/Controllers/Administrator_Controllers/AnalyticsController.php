@@ -6,15 +6,40 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use App\Models\Order;
 use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    private function resolveDateRange(string $filter, string $date): array
+    {
+        $base = Carbon::parse($date);
+
+        return match ($filter) {
+            'day' => [
+                $base->copy()->startOfDay(),
+                $base->copy()->endOfDay(),
+            ],
+
+            // IMPORTANT: day is IGNORED
+            'month' => [
+                $base->copy()->startOfMonth(),
+                $base->copy()->endOfMonth(),
+            ],
+
+            // IMPORTANT: month & day are IGNORED
+            'year' => [
+                $base->copy()->startOfYear(),
+                $base->copy()->endOfYear(),
+            ],
+        };
+    }
+
     public function index(Request $request)
     {
         try {
-            $view = $request->query('view', 'day');
+            $view = $request->query('view', $request->query('filter', 'day'));
             $date = $request->query('date');
 
             if (!$date) {
@@ -668,6 +693,52 @@ class AnalyticsController extends Controller
                         'total_orders' => (int) $row->total_orders,
                     ];
                 }
+            } elseif ($view === 'month') {
+                // Pre-fill ALL days of the month
+                $daysInMonth = Carbon::parse($date)->daysInMonth;
+                $productBreakdown = array_fill(1, $daysInMonth, []);
+
+                $productRaw = DB::table(DB::raw('orders, jsonb_array_elements(orders.items) AS item'))
+                    ->where('orders.status', 'completed')
+                    ->whereBetween('orders.created_at', [$start, $end])
+                    ->selectRaw("
+                        EXTRACT(DAY FROM orders.created_at AT TIME ZONE 'Asia/Manila')::int AS day,
+                        item->>'name' AS name,
+                        SUM((item->>'quantity')::int) AS total_orders
+                    ")
+                    ->groupByRaw("day, name")
+                    ->orderBy('day')
+                    ->get();
+
+                foreach ($productRaw as $row) {
+                    $productBreakdown[$row->day][] = [
+                        'name' => $row->name,
+                        'total_orders' => (int) $row->total_orders,
+                    ];
+                }
+            } elseif ($view === 'year') {
+
+                // Pre-fill ALL 12 months
+                $productBreakdown = array_fill(1, 12, []);
+
+                $productRaw = DB::table(DB::raw('orders, jsonb_array_elements(orders.items) AS item'))
+                    ->where('orders.status', 'completed')
+                    ->whereBetween('orders.created_at', [$start, $end])
+                    ->selectRaw("
+                        EXTRACT(MONTH FROM orders.created_at AT TIME ZONE 'Asia/Manila')::int AS month,
+                        item->>'name' AS name,
+                        SUM((item->>'quantity')::int) AS total_orders
+                    ")
+                    ->groupByRaw("month, name")
+                    ->orderBy('month')
+                    ->get();
+
+                foreach ($productRaw as $row) {
+                    $productBreakdown[$row->month][] = [
+                        'name' => $row->name,
+                        'total_orders' => (int) $row->total_orders,
+                    ];
+                }
             }
 
             return response()->json([
@@ -728,5 +799,63 @@ class AnalyticsController extends Controller
         return response()->json([
             'revenue' => $revenuePerDay
         ]);
+    }
+
+    public function peakHours(Request $request)
+    {
+        $filter = $request->query('filter', 'day');
+        $date   = $request->query('date', now()->toDateString());
+
+        Log::info('PEAK HOURS REQUEST', [
+            'filter' => $filter,
+            'date'   => $date,
+        ]);
+
+        // Base query: completed orders only (recommended)
+        $query = DB::table('orders')
+            ->whereNotNull('user_id')
+            ->where('status', 'completed'); // OPTIONAL but correct
+
+        // Apply date filter
+        if ($filter === 'day') {
+            $query->whereDate('created_at', $date);
+        } elseif ($filter === 'month') {
+            $parsed = Carbon::parse($date);
+            $query->whereMonth('created_at', $parsed->month)
+                ->whereYear('created_at', $parsed->year);
+        } elseif ($filter === 'year') {
+            $query->whereYear('created_at', Carbon::parse($date)->year);
+        }
+
+        // Aggregate UNIQUE customers per hour
+        $results = $query
+            ->selectRaw('EXTRACT(HOUR FROM created_at) as hour, COUNT(DISTINCT user_id) as count')
+            ->groupBy('hour')
+            ->get()
+            ->keyBy(fn ($row) => (int) $row->hour);
+
+        /**
+         * BUSINESS HOURS LOGIC (FIXED)
+         */
+        if ($filter === 'day') {
+            $dayOfWeek = Carbon::parse($date)->dayOfWeek; // 0 = Sunday
+            $startHour = $dayOfWeek === 0 ? 9 : 10;
+        } else {
+            // per_month / per_year
+            $startHour = 9;
+        }
+
+        $endHour = 22;
+
+        // Normalize ALL hours (this is CRITICAL)
+        $filled = [];
+        for ($h = $startHour; $h <= $endHour; $h++) {
+            $filled[] = [
+                'hour'  => $h,
+                'count' => isset($results[$h]) ? (int) $results[$h]->count : 0,
+            ];
+        }
+
+        return response()->json($filled);
     }
 }

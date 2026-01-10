@@ -47,6 +47,8 @@ const AdminAccountTable = ({ onEditClick }: AdminAccountTableProps) => {
   const [admins, setAdmins] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState('');
+  const [selectedAdmin, setSelectedAdmin] = React.useState<any | null>(null);
+  const [showModal, setShowModal] = React.useState(false);
 
   React.useEffect(() => {
     const fetchAdmins = async () => {
@@ -105,7 +107,7 @@ const AdminAccountTable = ({ onEditClick }: AdminAccountTableProps) => {
             placeholder="Filter search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 pl-10 bg-gray-50 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8cb662] focus:border-transparent transition-all duration-200"
+            className="text-gray-900 w-full px-4 py-2 pl-10 bg-gray-50 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8cb662] focus:border-transparent transition-all duration-200"
           />
         </div>
       </div>
@@ -153,8 +155,11 @@ const AdminAccountTable = ({ onEditClick }: AdminAccountTableProps) => {
                   <td className="px-6 py-3 text-gray-500">{admin.last_active || '—'}</td>
                   <td className="px-6 py-3 text-center">
                     <button
-                      onClick={onEditClick}
-                      className="text-[#8cb662] hover:underline font-semibold"
+                      onClick={() => {
+                        setSelectedAdmin(admin);
+                        setShowModal(true);
+                      }}
+                      className="cursor-pointer text-[#8cb662] hover:underline font-semibold"
                     >
                       Edit
                     </button>
@@ -164,6 +169,100 @@ const AdminAccountTable = ({ onEditClick }: AdminAccountTableProps) => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {showModal && selectedAdmin && (
+        <EditAdminModal
+          admin={selectedAdmin}
+          onClose={() => setShowModal(false)}
+          onUpdated={() => window.location.reload()}
+        />
+      )}
+    </div>
+  );
+};
+
+const EditAdminModal = ({
+  admin,
+  onClose,
+  onUpdated
+}: {
+  admin: any;
+  onClose: () => void;
+  onUpdated: () => void;
+}) => {
+  const [status, setStatus] = useState(admin.status);
+  const [email, setEmail] = useState(admin.email);
+  const currentRole = sessionStorage.getItem('dashboard_role'); // store role on login
+
+  const handleSave = async () => {
+    try {
+      await axios.put(
+        `http://127.0.0.1:8000/api/superadmin/admins/${admin.id}`,
+        { status, email },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      alert('Admin updated successfully');
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Update failed');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-md p-6 shadow-lg">
+        <h2 className="text-gray-900 text-xl font-bold mb-4">Edit Admin</h2>
+
+        {/* Email */}
+        <label className="text-gray-900 block text-sm font-semibold mb-1">Email</label>
+        <input
+          type="email"
+          placeholder="Enter email address"
+          value={email || ""}
+          disabled={currentRole !== 'super_admin'}
+          onChange={(e) => setEmail(e.target.value)}
+          className="
+            text-gray-900
+            mt-1 mb-4 w-full
+            border border-gray-300 rounded-lg
+            p-2.5 text-sm
+            placeholder:text-gray-600
+            bg-white shadow-md
+            focus:outline-none focus:ring-2 focus:ring-[#8cb662]
+            transition
+          "
+        />
+
+        {/* Status */}
+        <label className="text-gray-900 block text-sm font-semibold mb-1">Status</label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="text-gray-900 mt-1 mb-4 w-full border border-gray-300 rounded-lg p-2.5 text-sm placeholder:text-sm placeholder:text-gray-400 bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition"
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="disabled">Disabled</option>
+        </select>
+
+        <div className="flex justify-end mt-6 space-x-3">
+          <button onClick={onClose} className="cursor-pointer px-4 py-2 text-gray-500 hover:bg-gray-400 hover:text-white rounded-lg transition">
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="cursor-pointer px-6 py-2 bg-[#8cb662] hover:bg-[#8cb662]/70 text-white rounded-lg"
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   );
