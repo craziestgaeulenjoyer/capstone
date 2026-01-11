@@ -3,7 +3,50 @@ import { FcGoogle } from "react-icons/fc";
 import { FaFacebookF, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState } from "react";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
 
+const CoffeeLoader = () => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#8A9A84]/95 backdrop-blur-md"
+  >
+    <div className="relative scale-125">
+      <div className="flex gap-2 mb-2 justify-center">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            animate={{ 
+              y: [0, -20], 
+              opacity: [0, 1, 0],
+              scale: [1, 1.2] 
+            }}
+            transition={{ 
+              duration: 1.5, 
+              repeat: Infinity, 
+              delay: i * 0.4,
+              ease: "easeOut" 
+            }}
+            className="w-1.5 h-6 bg-[#FAF9F6] rounded-full blur-[1px]"
+          />
+        ))}
+      </div>
+      
+      <div className="relative w-20 h-16 bg-[#FAF9F6] rounded-b-2xl border-t-4 border-[#C5A059] shadow-xl">
+        <div className="absolute -right-4 top-2 w-6 h-8 border-4 border-[#FAF9F6] rounded-r-full" />
+      </div>
+    </div>
+    
+    <motion.p 
+      animate={{ opacity: [0.4, 1, 0.4] }}
+      transition={{ duration: 2, repeat: Infinity }}
+      className="mt-12 text-[#FAF9F6] font-serif italic tracking-[0.2em] text-sm uppercase"
+    >
+      Brewing your experience...
+    </motion.p>
+  </motion.div>
+);
 
 const SignInCard = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,211 +56,164 @@ const SignInCard = () => {
   const [processing, setProcessing] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleGoogleLogin = async () => {
-  try {
-    const res = await axios.get("/api/auth/google/redirect");
-    window.location.href = res.data.url; // redirect user to Google login
-  } catch (err) {
-    console.error("Google login failed", err);
-  }
-};
-
-const handleFacebookLogin = async () => {
-  try {
-    const res = await axios.get("/api/auth/facebook/redirect");
-    window.location.href = res.data.url; // redirect user to Facebook login
-  } catch (err) {
-    console.error("Facebook login failed", err);
-  }
-};
-
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setProcessing(true);
     setErrors({});
 
     try {
-    const response = await axios.post(
-      'http://127.0.0.1:8000/api/customer/login',
-      {
-        email,
-        password,
-        remember_me: rememberMe, // send checkbox
-      },
-      { withCredentials: true } // send cookies
-    );
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/customer/login',
+        { email, password, remember_me: rememberMe },
+        { withCredentials: true }
+      );
 
-    // Save customer token for navbar
-    const { customer_token, customer } = response.data;
-    localStorage.setItem('customer_token', customer_token);
-    localStorage.setItem('customer_info', JSON.stringify(customer));
-    
-
-      // Optionally dispatch event for immediate navbar update
+      const { customer_token, customer } = response.data;
+      localStorage.setItem('customer_token', customer_token);
+      localStorage.setItem('customer_info', JSON.stringify(customer));
       window.dispatchEvent(new Event("customer-login"));
-
-      console.log("Login successful");
-      // Redirect to home
-      window.location.href = "/home"; // or router.visit("/") if using Inertia
-
+      
+      setTimeout(() => {
+        window.location.href = "/home";
+      }, 1500);
+      
     } catch (error: any) {
+      setProcessing(false); 
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       } else if (error.response?.data?.message) {
         setErrors({ general: error.response.data.message });
       } else {
-        console.error(error);
+        setErrors({ general: "Something went wrong. Please try again." });
       }
-    } finally {
-      setProcessing(false);
     }
   };
+
   return (
     <>
-      <style>
-        {`@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');`}
-      </style>
+      <AnimatePresence>
+        {processing && <CoffeeLoader />}
+      </AnimatePresence>
 
-      <section className="min-h-screen flex items-center justify-center bg-gray-200 px-4 py-10">
-        <div className="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* LEFT SIDE */}
-          <div className="w-full md:w-1/2 px-6 py-10 flex flex-col justify-center">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <Link href="/signin" className="text-[#8CB662] hover:text-[#bafc79] transition-colors">
-                <button
-                  type="button"
-                  className="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#8CB662]"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      <section className="min-h-screen flex items-center justify-center bg-[#8A9A84] px-4 py-10 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.15] pointer-events-none" 
+             style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }} />
+        
+        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-[#C5A059]/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-[#4A5D45]/20 blur-[120px] rounded-full" />
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-lg bg-[#FAF9F6] rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.3)] border border-[#C5A059]/20 overflow-hidden relative z-10"
+        >
+          <div className="px-8 py-12 md:px-14">
+            <div className="flex justify-between items-center mb-10">
+              <Link href="/" className="group flex items-center gap-2 text-[#4A5D45]/60 hover:text-[#4A5D45] transition-all">
+                <div className="p-2 rounded-full border border-[#4A5D45]/10 group-hover:bg-white transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
-                </button>
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.3em] font-black italic">Return</span>
               </Link>
-              <img src="/images/MiAmore2.png" alt="Mi Amore Cafe Logo" className="h-15 w-auto object-contain" />
+              <img src="/images/MiAmore2.png" alt="Logo" className="h-10 w-auto brightness-0 opacity-70" />
             </div>
 
-            <h2 className="text-2xl font-bold text-[#8CB662] mb-1">Login</h2>
-            <p className="text-md text-gray-600 mb-6">
-              Welcome back! Sign in to savor the moments.
-            </p>
-
-            <form onSubmit={handleSubmit}>
-              {/* Email */}
-              <div className="mb-4">
-              <label className="text-sm block mb-1 text-gray-700">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="example@gmail.com"
-                className="w-full rounded-md border px-4 py-2"
-              />
-              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+            <div className="text-center mb-10">
+              <h2 className="text-[#3d230d] text-4xl font-serif italic mb-2">Welcome Back</h2>
+              <p className="text-[#4A5D45]/50 text-[10px] uppercase tracking-[0.5em] font-bold">Authenticating Member</p>
             </div>
 
-            <div className="mb-4">
-              <label className="text-sm block mb-1 text-gray-700">Password</label>
-              <div className="relative">
+            {errors.general && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-xs text-center font-bold">
+                {errors.general}
+              </motion.div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-black text-[#4A5D45] block mb-2 ml-1">Email Address</label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full rounded-md border px-4 py-2 pr-10"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full bg-white border border-[#4A5D45]/10 rounded-xl px-5 py-4 text-sm text-[#3d230d] placeholder-[#4A5D45]/30 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/5 transition-all outline-none shadow-sm"
+                  placeholder="name@email.com"
+                  required
                 />
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </span>
-              </div>
-              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
-            </div>
-
-              {/* Remember me / Forgot password */}
-              <div className="flex justify-between items-center text-sm text-gray-600 mb-5">
-                 <label className="flex items-center gap-2">
-    <input
-      type="checkbox"
-      className="form-checkbox text-[#8CB662]"
-      checked={rememberMe}           // ✅ controlled
-      onChange={() => setRememberMe(!rememberMe)} // ✅ toggle state
-    />
-    Remember me
-  </label>
-                <Link href="/forgotpasswordform" className="text-[#8CB662] hover:underline">
-                  Forgot your password?
-                </Link>
+                {errors.email && <p className="text-red-400 text-[10px] mt-1 font-bold italic">{errors.email}</p>}
               </div>
 
-              {/* Sign in Button */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] uppercase tracking-widest font-black text-[#4A5D45] ml-1">Password</label>
+                  <Link 
+                    href="/forgotpasswordform" 
+                    className="text-[9px] uppercase tracking-tighter font-bold text-[#C5A059] hover:underline transition-all"
+                  >
+                    Forgot?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full bg-white border border-[#4A5D45]/10 rounded-xl px-5 py-4 text-sm text-[#3d230d] placeholder-[#4A5D45]/30 focus:border-[#C5A059] focus:ring-4 focus:ring-[#C5A059]/5 transition-all outline-none shadow-sm"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#4A5D45]/30 hover:text-[#4A5D45] transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-red-400 text-[10px] mt-1 font-bold italic">{errors.password}</p>}
+              </div>
+
+              <div className="flex items-center gap-2 px-1">
+                <input 
+                  type="checkbox" 
+                  id="remember" 
+                  checked={rememberMe}
+                  onChange={() => setRememberMe(!rememberMe)}
+                  className="w-4 h-4 rounded border-[#4A5D45]/20 text-[#4A5D45] focus:ring-[#C5A059]/30 transition-all"
+                />
+                <label htmlFor="remember" className="text-[10px] uppercase tracking-widest font-bold text-[#4A5D45]/60 cursor-pointer">Remember me</label>
+              </div>
+
               <button
                 type="submit"
                 disabled={processing}
-                className="w-full bg-[#8CB662] text-white font-bold py-2 rounded-full hover:opacity-90 transition-all duration-300 ease-in-out transform hover:scale-[1.02]"
+                className="w-full bg-[#4A5D45] text-[#FAF9F6] font-bold py-5 rounded-2xl shadow-xl hover:bg-[#3d4b38] transition-all duration-300 active:scale-95 text-[11px] uppercase tracking-[0.3em] mt-4"
               >
-                {processing ? "Signing In..." : "SIGN IN"}
+                {processing ? 'Crafting Session...' : 'Sign In'}
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-3 text-gray-500">OR</span>
-              </div>
+            <div className="relative my-10">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#4A5D45]/10" /></div>
+              <div className="relative flex justify-center text-[9px] uppercase tracking-[0.4em]"><span className="bg-[#FAF9F6] px-4 text-[#4A5D45]/40 font-bold">Partner Login</span></div>
             </div>
 
-            {/* Social Buttons */}
-           <div className="flex flex-col text-gray-700 sm:flex-row gap-3">
-  <button
-    onClick={handleGoogleLogin}
-    className="flex items-center justify-center w-full border border-gray-300 py-2 rounded-md text-sm hover:bg-gray-50 transition"
-  >
-    <FcGoogle className="text-xl mr-2" /> Log in with Google
-  </button>
+            <div className="grid grid-cols-2 gap-4">
+               <button type="button" className="flex items-center justify-center gap-2 border border-[#4A5D45]/10 py-4 rounded-xl hover:bg-white hover:shadow-md transition-all text-[11px] font-bold text-[#4A5D45] uppercase tracking-tighter">
+                <FcGoogle size={18} /> Google
+              </button>
+              <button type="button" className="flex items-center justify-center gap-2 border border-[#4A5D45]/10 py-4 rounded-xl hover:bg-white hover:shadow-md transition-all text-[11px] font-bold text-[#4A5D45] uppercase tracking-tighter">
+                <FaFacebookF className="text-blue-600" size={16} /> Facebook
+              </button>
+            </div>
 
-  <button
-    onClick={handleFacebookLogin}
-    className="flex items-center justify-center w-full border border-gray-300 py-2 rounded-md text-sm hover:bg-gray-50 transition"
-  >
-    <FaFacebookF className="text-blue-600 text-lg mr-2" /> Sign in with Facebook
-  </button>
-</div>
-
-
-            {/* Footer */}
-            <p className="text-center text-sm text-gray-600 mt-6">
-              Don’t have an account?{" "}
-              <Link href={route("SignUpForm")} className="text-[#8CB662] hover:underline font-semibold">
-                Sign Up
-              </Link>
+            <p className="text-center text-[10px] text-[#4A5D45]/40 mt-10 uppercase tracking-[0.2em] font-medium">
+              New here? <Link href="/signupform" className="text-[#C5A059] font-black underline underline-offset-4 ml-1">REGISTER</Link>
             </p>
           </div>
-
-          {/* RIGHT SIDE */}
-          <div className="w-full md:w-1/2 bg-[#8CB662] flex flex-col justify-center items-center text-center p-10">
-            <p
-              className="text-white text-xl font-medium leading-relaxed mb-6"
-              style={{ fontFamily: "'Indie Flower', cursive" }}
-            >
-              Fall in love with every flavor<br />
-              experience Mi Amore Café today!
-            </p>
-            <img
-              src="/images/Coffee shop-amico.png"
-              alt="Cafe Illustration"
-              className="w-full max-w-md object-contain"
-            />
-          </div>
-        </div>
+        </motion.div>
       </section>
     </>
   );
