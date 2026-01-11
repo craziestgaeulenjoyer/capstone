@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { IoIosArrowBack, IoIosArrowDown } from "react-icons/io";
+import { IoIosArrowBack } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import { CheckCircle } from "lucide-react"; 
 
 export default function OrderNumber() {
-   const [language, setLanguage] = useState("EN");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -13,50 +12,28 @@ export default function OrderNumber() {
   const [totalPrice, setTotalPrice] = useState(0);
   const goBack = () => window.history.back();
 
-  const languages = ["EN", "KR", "JP", "CN", "PH"];
-
-  const handleLanguageSelect = (lang) => {
-    setLanguage(lang);
-    setDropdownOpen(false);
+  // Color Palette
+  const colors = {
+    sage: "#8CB662",
+    brown: "#3D2317",
+    cream: "#FDFCF8",
+    sageLight: "#E9F0DE",
   };
 
-  // Generate random order number when component mounts
   useEffect(() => {
-    const randomOrder = Math.floor(100 + Math.random() * 900); // 3-digit number
-    setOrderNumber(randomOrder);
-  }, []);
-
-
-    // Load cart, customer info, and generate order number on mount
-  useEffect(() => {
-    // Load cart items
     const storedCart = JSON.parse(localStorage.getItem("kiosk_cart_items") || "[]");
-    setCartItems(storedCart);
-
-    // Calculate total
     const total = storedCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    setCartItems(storedCart);
     setTotalPrice(total);
-
-    // Load customer info and payment method
-    const storedName = localStorage.getItem("customer_name") || "";
-    const storedPayment = localStorage.getItem("payment_method") || "";
-    setCustomerName(storedName);
-    setPaymentMethod(storedPayment);
-
-    // Generate random 3-digit order number
-    const randomOrder = Math.floor(100 + Math.random() * 900);
-    setOrderNumber(randomOrder);
+    setCustomerName(localStorage.getItem("customer_name") || "Guest");
+    setPaymentMethod(localStorage.getItem("payment_method") || "Counter");
+    
+    // Generate 3-digit number
+    setOrderNumber(Math.floor(100 + Math.random() * 900));
   }, []);
 
-  // Handle DONE button click
   const handleDoneClick = async () => {
     try {
-      // Store info in localStorage
-      localStorage.setItem("order_number", orderNumber);
-      localStorage.setItem("total_price", totalPrice);
-      localStorage.setItem("cart_items", JSON.stringify(cartItems));
-
-      // Send order to backend
       await axios.post("/kioskorders", {
         orderNumber,
         customerName,
@@ -65,139 +42,105 @@ export default function OrderNumber() {
         cartItems,
       });
 
-      console.log("Kiosk order saved successfully!");
-      alert(`Order ${orderNumber} saved successfully!`);
-      
-      // Clear all kiosk-related localStorage items
-    localStorage.removeItem("kiosk_cart_items");
-    localStorage.removeItem("customer_name");
-    localStorage.removeItem("payment_method");
-    localStorage.removeItem("order_number");
-    localStorage.removeItem("total_price");
-
-     // Redirect to home page
-    window.location.href = "/bubble-welcome";
+      // Clear all
+      ["kiosk_cart_items", "customer_name", "payment_method", "order_type"].forEach(k => localStorage.removeItem(k));
+      window.location.href = "/"; 
     } catch (error) {
       console.error("Error saving order:", error);
       alert("Failed to save order. Please try again.");
     }
   };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center text-gray-800 p-6 font-quicksand relative overflow-hidden">
-      {/* Header */}
-      <div className="w-full max-w-md flex items-center justify-between mb-2 relative">
+    <div className="min-h-screen bg-[#FDFCF8] flex flex-col items-center justify-between p-6 md:p-12 relative overflow-hidden">
+      
+      {/* 1. BACKGROUND  */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+           style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }}></div>
+
+      {/* 2. HEADER */}
+      <div className="w-full max-w-4xl flex items-center justify-between z-20">
         <button
-                         onClick={goBack}
-                         className="flex items-center text-[#76B13A] font-medium text-lg hover:opacity-80 transition"
-                       >
-                         <IoIosArrowBack className="mr-1 text-xl" /> Back
-                       </button>
-
-        {/* Language Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center text-[#76B13A] font-semibold text-sm focus:outline-none"
-          >
-            {language} <IoIosArrowDown className="ml-1" />
-          </button>
-
-          <AnimatePresence>
-            {dropdownOpen && (
-              <motion.ul
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg z-10"
-              >
-                {languages.map((lang) => (
-                  <li
-                    key={lang}
-                    onClick={() => handleLanguageSelect(lang)}
-                    className={`px-4 py-2 text-sm cursor-pointer hover:bg-[#E9F0DE] ${
-                      language === lang
-                        ? "bg-[#A4C879] text-white"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {lang}
-                  </li>
-                ))}
-              </motion.ul>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Logo */}
-      <div className="flex justify-center mb-4 mt-[-40px]">
-        <img
-          src="/images/MiAmoreWelcome.png"
-          alt="Logo"
-          className="w-[80px] sm:w-[90px] md:w-[100px] object-contain"
-        />
-      </div>
-
-      {/* Check icon / Checkout Successfully */}
-      <div className="flex justify-center mb-6">
-        <div
-          className="flex items-center justify-center rounded-full"
-          style={{
-            width: 80,
-            height: 80,
-            borderWidth: 8,
-            borderStyle: "solid",
-            borderColor: "#8CB662",
-          }}
+          onClick={goBack}
+          className="flex items-center text-[#3D2317] font-bold text-sm md:text-lg hover:opacity-70 transition group"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="30"
-            height="30"
-            fill="none"
-            stroke="#8CB662"
-            strokeWidth="6"
-            strokeLinecap="square"
-            strokeLinejoin="square"
-          >
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-        </div>
+          <IoIosArrowBack className="mr-1 group-hover:-translate-x-1 transition-transform" /> BACK
+        </button>
+        <img src="/images/MiAmoreWelcome.png" alt="Logo" className="w-16 md:w-24 object-contain" />
       </div>
 
-      {/* Text Section */}
-      <div className="text-center mb-6 relative z-20">
-        <h2 className="text-lg font-bold mb-1">Order Successful!</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          You can pick up order from the cash register
-        </p>
-
-        {/* Order Number Box */}
-        <div
-          className="rounded-md py-3 px-6 inline-block shadow-sm border border-gray-200"
-          style={{ backgroundColor: "rgba(118, 177, 58, 0.2)" }} // 20% opacity of #76B13A
-        >
-          <p className="text-sm font-semibold text-gray-800 mb-1">
-            Your order number
-          </p>
-          <p className="text-2xl font-bold text-[#76B13A]">{orderNumber}</p>
-        </div>
-      </div>
-
-      {/* --- Decorative Bottom Half-Circle with Button --- */}
-      <div
-        className="absolute bottom-[-220px] left-1/2 transform -translate-x-1/2
-               w-full h-[310px] bg-[#8CB662] rounded-t-[90%] flex justify-center items-start pt-6 z-10"
+      {/* 3. MAIN CONTENT CARD  */}
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="z-20 w-full max-w-[320px] md:max-w-[450px] bg-white shadow-2xl rounded-3xl overflow-hidden flex flex-col items-center border border-[#3D2317]/5"
       >
-         <button
+        {/* Success Header */}
+        <div className="w-full bg-[#8CB662] p-8 flex flex-col items-center text-white">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.2 }}
+          >
+            <CheckCircle size={64} strokeWidth={1.5} />
+          </motion.div>
+          <h2 className="mt-4 text-xl md:text-2xl font-black italic tracking-tighter uppercase">Order Successful!</h2>
+        </div>
+
+        {/* Order Details */}
+        <div className="p-8 md:p-12 flex flex-col items-center text-center w-full bg-white relative">
+       
+          <div className="absolute top-0 -left-3 w-6 h-6 bg-[#FDFCF8] rounded-full border-r border-[#3D2317]/5" />
+          <div className="absolute top-0 -right-3 w-6 h-6 bg-[#FDFCF8] rounded-full border-l border-[#3D2317]/5" />
+
+          <p className="text-[#3D2317]/50 text-[10px] md:text-xs uppercase tracking-[0.3em] font-bold mb-2">
+            Ticket Confirmation
+          </p>
+          
+          <div className="space-y-1 mb-8">
+            <p className="text-[#3D2317] text-sm md:text-base opacity-60">Your order number is</p>
+            <motion.h1 
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className="text-6xl md:text-8xl font-black italic text-[#3D2317] tracking-tighter"
+            >
+              #{orderNumber}
+            </motion.h1>
+          </div>
+
+          <div className="w-full border-t border-dashed border-gray-200 py-6 space-y-2">
+            <p className="text-gray-600 text-xs md:text-sm italic">
+              Please head to the counter for payment <br/> and to pick up your drinks.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center gap-1 opacity-40">
+            <p className="text-[10px] uppercase tracking-[0.4em] font-bold">Mi Amore Cafe</p>
+            <p className="text-[8px] uppercase tracking-[0.2em]">{new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* 4. FOOTER ACTION */}
+      <div className="z-20 w-full max-w-md flex flex-col items-center gap-6">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleDoneClick}
-          className="bg-white text-[#76B13A] py-2 px-6 rounded-xl font-semibold
-               transition-all hover:brightness-110 shadow-md"
+          className="bg-[#3D2317] text-[#FDFCF8] w-full md:w-64 py-4 md:py-5 rounded-full font-black text-sm md:text-lg tracking-[0.5em] uppercase shadow-xl border-2 border-[#7C8B7C] transition-all"
         >
           DONE
-        </button>
+        </motion.button>
+        
+        <p className="text-[#3D2317]/40 text-[9px] md:text-[11px] uppercase tracking-[0.3em] font-bold text-center">
+          Tap done to return to home screen
+        </p>
       </div>
+
+      <div
+        className="absolute bottom-[-150px] left-1/2 transform -translate-x-1/2
+                   w-[120%] h-[300px] bg-[#8CB662] opacity-[0.07] rounded-t-[100%] z-10 pointer-events-none"
+      />
     </div>
   );
 }

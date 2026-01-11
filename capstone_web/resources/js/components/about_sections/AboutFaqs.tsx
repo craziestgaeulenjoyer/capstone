@@ -123,10 +123,16 @@ const AboutFaqs: React.FC = () => {
                     </p>
 
                     <div className="flex flex-wrap gap-4">
-                        <button className="group px-8 py-4 bg-[#5C2E0A] text-white font-bold rounded-full flex items-center gap-3 hover:bg-[#3d1f07] transition-all shadow-lg hover:shadow-2xl">
+                        <motion.a 
+                            href="/contact"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="group px-8 py-4 bg-[#5C2E0A] text-white font-bold rounded-full flex items-center gap-3 hover:bg-[#3d1f07] transition-all shadow-lg hover:shadow-2xl no-underline"
+                        >
                             Contact Us 
                             <BsArrowUpRight className="group-hover:rotate-45 transition-transform duration-300" />
-                        </button>
+                        </motion.a>
+
                         <button 
                             onClick={() => setIsModalOpen(true)}
                             className="px-8 py-4 border border-white/40 text-white font-bold rounded-full hover:bg-white hover:text-[#8CC0BE] transition-all"
