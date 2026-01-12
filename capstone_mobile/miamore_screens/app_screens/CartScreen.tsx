@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
 import CheckoutTab from "../components/CheckoutTab";
+import { authFetch } from "../../utils/authFetch";
 
 const IMAGE_MAP: { [key: string]: any } = {
   "BrewedHotCoffee.png": require("../../assets/BrewedHotCoffee.png"),
@@ -104,9 +105,7 @@ const CartScreen: React.FC = () => {
           return;
         }
 
-        const res = await fetch("http://10.0.2.2:5000/api/cart", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch("http://10.0.2.2:5000/api/cart");
 
         let data;
         const text = await res.text(); 
@@ -143,10 +142,7 @@ const CartScreen: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
-        const res = await fetch("http://10.0.2.2:5000/api/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch("http://10.0.2.2:5000/api/profile");
         const data = await res.json();
         setUserData(data);
       } catch (err) {
@@ -160,10 +156,7 @@ const CartScreen: React.FC = () => {
   useEffect(() => {
     const fetchLoyaltyProgress = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
-        const res = await fetch("http://10.0.2.2:5000/api/loyalty/progress", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch("http://10.0.2.2:5000/api/loyalty/progress");
 
         const text = await res.text();
         try {
@@ -189,10 +182,7 @@ const CartScreen: React.FC = () => {
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
-        const res = await fetch("http://10.0.2.2:5000/api/cart", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch("http://10.0.2.2:5000/api/cart");
 
         const data = await res.json();
 
@@ -225,9 +215,7 @@ const CartScreen: React.FC = () => {
           return;
         }
 
-        const res = await fetch("http://10.0.2.2:5000/api/orders/pending", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch("http://10.0.2.2:5000/api/orders/pending");
 
         const text = await res.text();
         try {
@@ -316,11 +304,10 @@ const CartScreen: React.FC = () => {
       // GCash branch
       if (selectedPayment === "GCash") {
         // Step 1: Create pending order first
-        const orderRes = await fetch("http://10.0.2.2:5000/api/checkout", {
+        const orderRes = await authFetch("http://10.0.2.2:5000/api/checkout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         });
@@ -334,11 +321,10 @@ const CartScreen: React.FC = () => {
         }
 
         // Step 2: Initialize PayMongo GCash
-        const payRes = await fetch("http://10.0.2.2:5000/api/paymongo/gcash", {
+        const payRes = await authFetch("http://10.0.2.2:5000/api/paymongo/gcash", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             amount: totalAmount,
@@ -356,9 +342,8 @@ const CartScreen: React.FC = () => {
           } else {
             // Clear cart if payment succeeded
             for (const id of selectedItems) {
-              await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+              await authFetch(`http://10.0.2.2:5000/api/cart/${id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
               });
             }
             setCartItems((prev) =>
@@ -375,11 +360,10 @@ const CartScreen: React.FC = () => {
       }
 
       // Pay on Pickup (and other methods)
-      const response = await fetch("http://10.0.2.2:5000/api/checkout", {
+      const response = await authFetch("http://10.0.2.2:5000/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -390,9 +374,8 @@ const CartScreen: React.FC = () => {
       if (response.ok) {
         // Remove selected items from backend cart
         for (const id of selectedItems) {
-          await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+          await authFetch(`http://10.0.2.2:5000/api/cart/${id}`, {
             method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
           });
         }
 
@@ -446,18 +429,16 @@ const CartScreen: React.FC = () => {
 
     if (newQty <= 0) {
       // Remove item
-      await fetch(`http://10.0.2.2:5000/api/cart/${item.id}`, {
+      await authFetch(`http://10.0.2.2:5000/api/cart/${item.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
       });
       setCartItems(prev => prev.filter(x => x.id !== item.id));
     } else {
       // Update quantity
-      await fetch(`http://10.0.2.2:5000/api/cart/${item.id}`, {
+      await authFetch(`http://10.0.2.2:5000/api/cart/${item.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ quantity: newQty }),
       });
@@ -477,11 +458,10 @@ const CartScreen: React.FC = () => {
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch(`http://10.0.2.2:5000/api/cart/${editItem.id}`, {
+      const response = await authFetch(`http://10.0.2.2:5000/api/cart/${editItem.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           quantity: editItem.quantity,
@@ -1239,9 +1219,8 @@ const CartScreen: React.FC = () => {
                 onPress={async () => {
                   const token = await AsyncStorage.getItem("token");
                   for (const id of toggledTrashItems) {
-                    await fetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+                    await authFetch(`http://10.0.2.2:5000/api/cart/${id}`, {
                       method: "DELETE",
-                      headers: { Authorization: `Bearer ${token}` },
                     });
                   }
 
@@ -1357,14 +1336,13 @@ const CartScreen: React.FC = () => {
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
-        {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
+        {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
           <TouchableOpacity
             key={i}
             style={styles.tabItem}
             onPress={() => {
               if (tab === "Menu") navigation.navigate("Menu" as never);
               else if (tab === "Home") navigation.navigate("Home" as never);
-              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
               else if (tab === "Cart") navigation.navigate("Cart" as never);
               else if (tab === "Profile") navigation.navigate("Profile" as never);
             }}
@@ -1373,8 +1351,6 @@ const CartScreen: React.FC = () => {
               name={
                 tab === "Cart"
                   ? "cart"
-                  : tab === "Nearby"
-                  ? "location-outline"
                   : tab === "Menu"
                   ? "restaurant-outline"
                   : tab === "Home"

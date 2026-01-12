@@ -15,6 +15,7 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import { authFetch } from "../../utils/authFetch";
 
 interface CheckoutTabProps {
   userData: any;
@@ -91,11 +92,10 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
     try {
       const token = await AsyncStorage.getItem("token");
 
-      const res = await fetch("http://10.0.2.2:5000/api/gcash/send-otp", {
+      const res = await authFetch("http://10.0.2.2:5000/api/gcash/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ email: userData?.email }),
       });
@@ -134,11 +134,10 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch("http://10.0.2.2:5000/api/gcash/verify-otp", {
+      const res = await authFetch("http://10.0.2.2:5000/api/gcash/verify-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ email: userData?.email, otp }),
       });
@@ -159,11 +158,10 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
           phone_number: gcashNumber,
         });
 
-        const payRes = await fetch("http://10.0.2.2:5000/api/paymongo/gcash", {
+        const payRes = await authFetch("http://10.0.2.2:5000/api/paymongo/gcash", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             amount: totalAmount,

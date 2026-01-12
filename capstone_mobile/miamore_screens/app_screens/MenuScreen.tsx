@@ -15,6 +15,10 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
+import { useRoute } from "@react-navigation/native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../routes/navigation";
+import { authFetch } from "../../utils/authFetch";
 
 const UI_CATEGORIES = [
   "All",
@@ -47,8 +51,9 @@ const subcategoriesMap: Record<string, string[]> = {
 
 const API_URL = "http://10.0.2.2:5000"; // Node backend
 const LARAVEL_BASE = "http://10.0.2.2:8000"; // Laravel public base
+type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
 
-const MenuScreen: React.FC = () => {
+const MenuScreen: React.FC<Props> = ({ route }) => {
   const navigation = useNavigation();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +68,13 @@ const MenuScreen: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+
+  useEffect(() => {
+    if (route.params?.category) {
+      setSelectedCategory(route.params.category);
+      setSelectedSub(null);
+    }
+  }, [route.params?.category]);
 
   useEffect(() => {
     const loadFavorites = async () => {
@@ -237,11 +249,10 @@ const MenuScreen: React.FC = () => {
       };
       console.log("Adding to cart payload:", payload);
 
-      const res = await fetch(`${API_URL}/api/cart`, {
+      const res = await authFetch(`${API_URL}/api/cart`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify(payload),
       });
@@ -437,14 +448,13 @@ const MenuScreen: React.FC = () => {
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
-        {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
+        {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
           <TouchableOpacity
             key={i}
             style={styles.tabItem}
             onPress={() => {
               if (tab === "Menu") navigation.navigate("Menu" as never);
               else if (tab === "Home") navigation.navigate("Home" as never);
-              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
               else if (tab === "Cart") navigation.navigate("Cart" as never);
               else if (tab === "Profile") navigation.navigate("Profile" as never);
             }}
@@ -453,8 +463,6 @@ const MenuScreen: React.FC = () => {
               name={
                 tab === "Menu"
                   ? "restaurant"
-                  : tab === "Nearby"
-                  ? "location-outline"
                   : tab === "Home"
                   ? "home-outline"
                   : tab === "Cart"

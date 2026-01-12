@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -36,6 +36,8 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
   const [recognizedText, setRecognizedText] = useState("");
 
   const startListening = async () => {
+    if (isListening) return; 
+
     const hasPermission = await requestMicPermission();
     if (!hasPermission) {
       Alert.alert("Microphone permission denied.");
@@ -44,15 +46,31 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
 
     try {
       setIsListening(true);
-      const result = await VoiceToText.startListening();
 
+      const result = await VoiceToText.startListening();
       setRecognizedText(result || "");
     } catch (e) {
       console.error("Voice error:", e);
     } finally {
+      await stopListening(); 
+    }
+  };
+
+  const stopListening = async () => {
+    try {
+      await VoiceToText.stopListening();
+    } catch (e) {
+      console.warn("Stop listening error:", e);
+    } finally {
       setIsListening(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      VoiceToText.stopListening().catch(() => {});
+    };
+  }, []);
 
   if (!active) return null;
 
@@ -84,7 +102,10 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <TouchableOpacity
-              onPress={() => setShowVoiceModal(false)}
+              onPress={async () => {
+                await stopListening();
+                setShowVoiceModal(false);
+              }}
               style={styles.closeBtn}
             >
               <Text style={styles.closeText}>×</Text>
@@ -96,9 +117,13 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
             </Text>
 
             <TouchableOpacity
+              disabled={isListening}
               style={[
                 styles.micCircle,
-                { backgroundColor: isListening ? "#E57373" : "#76B13A" },
+                {
+                  backgroundColor: isListening ? "#E57373" : "#76B13A",
+                  opacity: isListening ? 0.7 : 1,
+                },
               ]}
               onPress={startListening}
             >

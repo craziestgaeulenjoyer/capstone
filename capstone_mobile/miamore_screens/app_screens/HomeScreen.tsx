@@ -10,16 +10,21 @@ import {
   Image,
   ImageBackground,
   Dimensions,
+  Modal,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../routes/navigation";
 
 const HomeScreen: React.FC = () => {  
-  const navigation = useNavigation();
+  type HomeNavProp = NativeStackNavigationProp<RootStackParamList, "Home">;
+  const navigation = useNavigation<HomeNavProp>();
   const { width } = Dimensions.get("window");
 
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -37,8 +42,10 @@ const HomeScreen: React.FC = () => {
         });
 
         if (!res.ok) {
-          console.log("⚠️ Token not valid, redirecting to SignIn");
-          navigation.navigate("SignIn" as never);
+          console.log("⚠️ Token expired or invalid");
+
+          await AsyncStorage.removeItem("token"); // clear token
+          setSessionExpired(true);                // show modal
           return;
         }
 
@@ -46,7 +53,9 @@ const HomeScreen: React.FC = () => {
         console.log("Token valid:", data);
       } catch (err) {
         console.error("Error validating token:", err);
-        navigation.navigate("SignIn" as never);
+
+        await AsyncStorage.removeItem("token");
+        setSessionExpired(true);
       }
     };
 
@@ -105,7 +114,9 @@ const HomeScreen: React.FC = () => {
         {/* Categories */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Categories</Text>
-          <Text style={styles.linkText}>See all</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Menu")}>
+            <Text style={styles.linkText}>See all</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.categories}>
           {[
@@ -122,10 +133,25 @@ const HomeScreen: React.FC = () => {
             }
 
             return (
-              <View key={index} style={styles.categoryItem}>
+              <TouchableOpacity
+                key={index}
+                style={styles.categoryItem}
+                onPress={() =>
+                  navigation.navigate("Menu", {
+                    category:
+                      item.name === "Snacks"
+                        ? "Foods"
+                        : item.name === "Coffee"
+                        ? "Coffees"
+                        : item.name === "Milk tea"
+                        ? "Milktea"
+                        : "Lemonade and Fruitti Juice",
+                  })
+                }
+              >
                 <View style={[styles.categoryIcon, { backgroundColor: bgColor }]} />
                 <Text style={styles.categoryText}>{item.name}</Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -208,14 +234,13 @@ const HomeScreen: React.FC = () => {
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
-        {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
+        {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
           <TouchableOpacity
             key={i}
             style={styles.tabItem}
             onPress={() => {
               if (tab === "Menu") navigation.navigate("Menu" as never);
               else if (tab === "Home") navigation.navigate("Home" as never);
-              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
               else if (tab === "Cart") navigation.navigate("Cart" as never);
               else if (tab === "Profile") navigation.navigate("Profile" as never);
             }}
@@ -224,8 +249,6 @@ const HomeScreen: React.FC = () => {
               name={
                 tab === "Home"
                   ? "home"
-                  : tab === "Nearby"
-                  ? "location-outline"
                   : tab === "Menu"
                   ? "restaurant-outline"
                   : tab === "Cart"
@@ -246,6 +269,59 @@ const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={sessionExpired}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              width: "80%",
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
+              Session Expired
+            </Text>
+
+            <Text style={{ textAlign: "center", marginBottom: 20 }}>
+              Please login again.
+            </Text>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#73C04D",
+                paddingVertical: 10,
+                paddingHorizontal: 30,
+                borderRadius: 8,
+              }}
+              onPress={() => {
+                setSessionExpired(false);
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: "SignIn" as never }],
+                });
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>
+                OK
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

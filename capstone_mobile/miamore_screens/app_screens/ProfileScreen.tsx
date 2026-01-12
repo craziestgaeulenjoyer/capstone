@@ -18,6 +18,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Header from "../components/Header";
 import { products } from "../data/products";
 import { API_BASE, fixUrl } from "../../config/api";
+import { authFetch } from "../../utils/authFetch";
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -58,9 +59,7 @@ const ProfileScreen: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${API_BASE}/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await authFetch(`${API_BASE}/api/profile`);
 
       if (!response.ok) {
         console.log("Profile fetch failed:", response.status);
@@ -94,11 +93,10 @@ const ProfileScreen: React.FC = () => {
   const handleSave = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await fetch("http://10.0.2.2:5000/api/profile", {
+      const response = await authFetch("http://10.0.2.2:5000/api/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -151,12 +149,9 @@ const ProfileScreen: React.FC = () => {
     const token = await AsyncStorage.getItem("token");
 
     try {
-      const res = await fetch(`${API_BASE}/api/profile/upload-picture`, {
+      const res = await authFetch(`${API_BASE}/api/profile/upload-picture`, {
         method: "POST",
         body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       const data = await res.json();
@@ -700,11 +695,10 @@ const ProfileScreen: React.FC = () => {
             onPress={async () => {
               try {
                 const token = await AsyncStorage.getItem("token");
-                const response = await fetch("http://10.0.2.2:5000/api/feedback", {
+                const response = await authFetch("http://10.0.2.2:5000/api/feedback", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                   },
                   body: JSON.stringify({ rating, description }),
                 });
@@ -730,14 +724,13 @@ const ProfileScreen: React.FC = () => {
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
-        {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
+        {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
           <TouchableOpacity
             key={i}
             style={styles.tabItem}
             onPress={() => {
               if (tab === "Menu") navigation.navigate("Menu" as never);
               else if (tab === "Home") navigation.navigate("Home" as never);
-              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
               else if (tab === "Cart") navigation.navigate("Cart" as never);
               else if (tab === "Profile") navigation.navigate("Profile" as never);
             }}
@@ -746,8 +739,6 @@ const ProfileScreen: React.FC = () => {
               name={
                 tab === "Profile"
                   ? "person"
-                  : tab === "Nearby"
-                  ? "location-outline"
                   : tab === "Menu"
                   ? "restaurant-outline"
                   : tab === "Home"

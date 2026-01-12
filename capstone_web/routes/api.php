@@ -128,19 +128,19 @@ Route::prefix('superadmin')->group(function () {
         Route::get('/profile', [SuperAdminAuthController::class, 'profile']);
 
         /* Menu */
-        Route::post('/menu-items', [MenuController::class, 'store'])->name('menu.store');
-        Route::get('/menu-items', [MenuController::class, 'list'])->name('menu.index');
-        Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('menu.update');
-        Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('menu.destroy');
+        Route::post('/menu-items', [MenuController::class, 'store'])->name('superadmin.menu.store');
+        Route::get('/menu-items', [MenuController::class, 'list'])->name('superadmin.menu.index');
+        Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('superadmin.menu.update');
+        Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('superadmin.menu.destroy');
 
-        Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('inventory.logs');
+        Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('superadmin.inventory.logs');
 
-        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-        Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
-        Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('inventory.show');
-        Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
-        Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
-        Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('inventory.archive');
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('superadmin.inventory.index');
+        Route::post('/inventory', [InventoryController::class, 'store'])->name('superadmin.inventory.store');
+        Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('superadmin.inventory.show');
+        Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('superadmin.inventory.update');
+        Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('superadmin.inventory.destroy');
+        Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('superadmin.inventory.archive');
 
         /* Customers */
         Route::get('/customers', [CustomerController::class, 'listCustomers']);
@@ -153,7 +153,7 @@ Route::prefix('superadmin')->group(function () {
         Route::get(
             '/sales_orders/archived',
             [SalesOrderController::class, 'archived']
-        )->name('sales_orders.archived');
+        )->name('superadmin.sales_orders.archived');
         Route::put(
             '/sales_orders/{orderCode}/status',
             [SalesOrderController::class, 'updateStatus']
@@ -194,19 +194,19 @@ Route::prefix('admin')->group(function () {
         Route::get('/profile', [AdminAuthController::class, 'profile']);
 
         /* Menu */
-        Route::post('/menu-items', [MenuController::class, 'store'])->name('menu.store');
-        Route::get('/menu-items', [MenuController::class, 'list'])->name('menu.index');
-        Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('menu.update');
-        Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('menu.destroy');
+        Route::post('/menu-items', [MenuController::class, 'store'])->name('admin.menu.store');
+        Route::get('/menu-items', [MenuController::class, 'list'])->name('admin.menu.index');
+        Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('admin.menu.update');
+        Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('admin.menu.destroy');
 
-        Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('inventory.logs');
+        Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('admin.inventory.logs');
 
-        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-        Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
-        Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('inventory.show');
-        Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
-        Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
-        Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('inventory.archive');
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('admin.inventory.index');
+        Route::post('/inventory', [InventoryController::class, 'store'])->name('admin.inventory.store');
+        Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('admin.inventory.show');
+        Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('admin.inventory.update');
+        Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('admin.inventory.destroy');
+        Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('admin.inventory.archive');
         /* Customers */
         Route::get('/customers', [CustomerController::class, 'listCustomers']);
         Route::get('/customers/{id}', [CustomerController::class, 'getCustomer']);

@@ -140,23 +140,20 @@ const NearbyScreen: React.FC = () => {
 
       {/* Bottom Tabs */}
       <View style={styles.bottomTabs}>
-        {["Home", "Nearby", "Menu", "Cart", "Profile"].map((tab, i) => (
+        {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
           <TouchableOpacity
             key={i}
             style={styles.tabItem}
             onPress={() => {
               if (tab === "Menu") navigation.navigate("Menu" as never);
               else if (tab === "Home") navigation.navigate("Home" as never);
-              else if (tab === "Nearby") navigation.navigate("Nearby" as never);
               else if (tab === "Cart") navigation.navigate("Cart" as never);
               else if (tab === "Profile") navigation.navigate("Profile" as never);
             }}
           >
             <Icon
               name={
-                tab === "Nearby"
-                  ? "location"
-                  : tab === "Home"
+                tab === "Home"
                   ? "home-outline"
                   : tab === "Menu"
                   ? "restaurant-outline"
@@ -165,7 +162,7 @@ const NearbyScreen: React.FC = () => {
                   : "person-outline"
               }
               size={22}
-              color={tab === "Nearby" ? "#73C04D" : "#999"}
+              color={tab === "Home" ? "#73C04D" : "#999"}
             />
             <Text
               style={[

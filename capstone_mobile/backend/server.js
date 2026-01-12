@@ -29,7 +29,6 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const googleClient = new OAuth2Client('1018371869413-d6k2ancgs59ujstbuu8j6b38lo6foec8.apps.googleusercontent.com');
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
@@ -172,34 +171,6 @@ app.post('/api/google-login', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(401).json({ message: 'Invalid Google token.' });
-  }
-});
-
-// Facebook sign-in route
-app.post('/api/facebook-login', async (req, res) => {
-  const { token } = req.body;
-
-  try {
-    // Verify token with Facebook Graph API
-    const fbResponse = await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${token}`);
-    const fbUser = await fbResponse.json();
-
-    if (!fbUser.email) return res.status(400).json({ message: 'Email permission required' });
-
-    let user = await pool.query('SELECT * FROM customers WHERE email = $1', [fbUser.email]);
-    if (user.rows.length === 0) {
-      user = await pool.query(
-        `INSERT INTO customers (full_name, email, password_hash, email_verified)
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-        [fbUser.name, fbUser.email, '', true]
-      );
-    }
-
-    const sessionToken = jwt.sign({ userId: user.rows[0].id }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ sessionToken });
-  } catch (err) {
-    console.error(err);
-    res.status(401).json({ message: 'Invalid Facebook token.' });
   }
 });
 
