@@ -4,6 +4,9 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\Kiosk\KioskOrderController;
+
+Route::post('/kioskorders', [KioskOrderController::class, 'store'])->name('kioskorders.store');
 
 
 /* ---------- Kiosk Featured Pages ---------- */
@@ -29,7 +32,7 @@ Route::get('/kioskhome', function () {
 Route::get('/kioskmenu', function () {
     return Inertia::render('kiosk_pages/Menu');
 });
-
+ 
 
 /* ---------- Payment Selection ---------- */
 

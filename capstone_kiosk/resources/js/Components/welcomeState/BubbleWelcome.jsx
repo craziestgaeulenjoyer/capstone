@@ -1,179 +1,124 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { router } from "@inertiajs/react";
 
 export default function BubbleWelcome() {
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [showImage, setShowImage] = useState(false);
-  const [moveImage, setMoveImage] = useState(false);
-  const [showTagline, setShowTagline] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
-  const CIRCLE_FADE_MS = 2000;
-  const BUFFER_MS = 200;
-  const IMAGE_DELAY_MS = 800;
-  const IMAGE_MOVE_DELAY_MS = 2200;
-  const TAGLINE_DELAY_MS = 2500;
-  const REDIRECT_DELAY_MS = 5500; // total duration before going to next page (ProductFeature.jsx)
+  // --- THEME COLORS ---
+  const colors = {
+    sage: "#8CB662",
+    sageSoft: "#A3B1A3",
+    brown: "#3D2317",
+    cream: "#FDFCF8",
+  };
 
+  const handleStart = () => {
+    if (isExiting) return;
+    setIsExiting(true);
+    setTimeout(() => router.visit("/productfeature"), 600);
+  };
 
-  // Circles configuration
-  const baseCircles = [
-    { top: "2rem", left: "2rem", size: "18rem" },
-    { top: "-4rem", left: "16rem", size: "18rem" },
-    { top: "-4rem", left: "26rem", size: "20rem" },
-    { top: "4rem", left: "14rem", size: "20rem" },
-    { top: "2rem", left: "28rem", size: "22rem" },
-    { top: "6rem", right: "2rem", size: "24rem" },
-    { top: "4rem", right: "1rem", size: "28rem" },
-    { top: "-2rem", left: "50%", transform: "translateX(-50%)", size: "20rem" },
-    { top: "22rem", left: "-6rem", size: "22rem" },
-    { top: "22rem", right: "-6rem", size: "22rem" },
-    { top: "16rem", left: "4rem", size: "20rem" },
-    { top: "18rem", left: "20rem", size: "26rem" },
-    { top: "16rem", right: "6rem", size: "24rem" },
-    { bottom: "10rem", left: "4rem", size: "22rem" },
-    { bottom: "-2rem", left: "22rem", size: "24rem" },
-    { bottom: "4rem", right: "4rem", size: "22rem" },
-    { top: "-6rem", left: "-2rem", size: "22rem" },
-    { top: "-8rem", left: "8rem", size: "20rem" },
-    { top: "-10rem", right: "-4rem", size: "26rem" },
-    { top: "-6rem", right: "6rem", size: "22rem" },
-    { top: "-2rem", right: "16rem", size: "20rem" },
-    { top: "14rem", left: "-8rem", size: "24rem" },
-    { top: "18rem", left: "-10rem", size: "30rem" },
-    { top: "18rem", left: "0rem", size: "20rem" },
-    { top: "20rem", left: "10rem", size: "18rem" },
-    { top: "14rem", right: "-8rem", size: "24rem" },
-    { top: "18rem", right: "-10rem", size: "30rem" },
-    { top: "18rem", right: "0rem", size: "20rem" },
-    { top: "20rem", right: "10rem", size: "18rem" },
-  ];
-
-  const fadeAnimations = [
-    "animate-fade-out-top",
-    "animate-fade-out-bottom",
-    "animate-fade-out-left",
-    "animate-fade-out-right",
-  ];
-
-  const colors = ["#76B13A", "#8CB662"];
-
-  const circles = useMemo(() => {
-    return baseCircles.map((c, i) => {
-      const fadeAnim =
-        fadeAnimations[Math.floor(Math.random() * fadeAnimations.length)];
-      const delay = (Math.random() * 0.45).toFixed(2) + "s";
-      const color = colors[i % colors.length];
-      return { ...c, fadeAnim, delay, color };
-    });
-  }, []);
-
-  // --- Sequence control ---
   useEffect(() => {
-    const welcomeTimer = setTimeout(
-      () => setShowWelcome(true),
-      CIRCLE_FADE_MS + BUFFER_MS
-    );
-    const imageTimer = setTimeout(
-      () => setShowImage(true),
-      CIRCLE_FADE_MS + BUFFER_MS + IMAGE_DELAY_MS
-    );
-    const moveTimer = setTimeout(
-      () => setMoveImage(true),
-      CIRCLE_FADE_MS + BUFFER_MS + IMAGE_MOVE_DELAY_MS
-    );
-    const taglineTimer = setTimeout(
-      () => setShowTagline(true),
-      CIRCLE_FADE_MS + BUFFER_MS + TAGLINE_DELAY_MS
-    );
+    const autoRedirect = setTimeout(() => {
+      handleStart();
+    }, 6000);
 
-     //Auto-redirect to ProductFeature page
-    const redirectTimer = setTimeout(() => {
-      router.visit("/productfeature");
-    }, REDIRECT_DELAY_MS);
-
-    return () => {
-      clearTimeout(welcomeTimer);
-      clearTimeout(imageTimer);
-      clearTimeout(moveTimer);
-      clearTimeout(taglineTimer);
-    };
+    return () => clearTimeout(autoRedirect);
   }, []);
+
+  const bubbles = useMemo(() => [
+    { size: "w-[40vw] h-[40vw]", top: "-10%", left: "-5%", delay: 0, duration: 25 },
+    { size: "w-[50vw] h-[50vw]", bottom: "-15%", right: "-10%", delay: 2, duration: 30 },
+    { size: "w-[25vw] h-[25vw]", top: "15%", right: "5%", delay: 1, duration: 20 },
+    { size: "w-[30vw] h-[30vw]", bottom: "10%", left: "10%", delay: 4, duration: 28 },
+  ], []);
 
   return (
-    <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-white">
-      {/* --- Circles --- */}
-      <div className="absolute inset-0">
-        {circles.map((circle, i) => (
-          <div
+    <div 
+      onClick={handleStart} 
+      className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden bg-[#FDFCF8] cursor-pointer"
+    >
+      
+      <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.05]"
+           style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/pinstriped-suit.png')` }}></div>
+
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {bubbles.map((b, i) => (
+          <motion.div
             key={i}
-            className={`absolute rounded-full ${circle.fadeAnim}`}
-            style={{
-              width: circle.size,
-              height: circle.size,
-              top: circle.top,
-              left: circle.left,
-              right: circle.right,
-              bottom: circle.bottom,
-              transform: circle.transform,
-              backgroundColor: circle.color,
-              opacity: 0.95,
-              animationDelay: circle.delay,
+            animate={{ 
+              x: [0, 40, 0],
+              y: [0, 50, 0],
+              scale: [1, 1.1, 1],
             }}
+            transition={{ duration: b.duration, repeat: Infinity, ease: "easeInOut" }}
+            className={`absolute rounded-full blur-[80px] md:blur-[120px] opacity-20 ${b.size}`}
+            style={{ backgroundColor: colors.sage, top: b.top, left: b.left, right: b.right, bottom: b.bottom }}
           />
         ))}
       </div>
 
-      {/* --- WELCOME text --- */}
-      {showWelcome && (
-        <div className="flex flex-col items-center">
-          <h1
-            className="text-[#76B13A] text-6xl font-extrabold tracking-widest opacity-0 animate-fade-in mb-3"
-            style={{
-              animationDuration: "1s",
-              animationFillMode: "forwards",
-              zIndex: 50,
-            }}
+      {/* 3. MAIN CONTENT */}
+      <AnimatePresence>
+        {!isExiting && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="z-20 flex flex-col items-center text-center px-8"
           >
-            WELCOME
-          </h1>
+            <motion.img
+              src="/images/MiAmoreWelcome.png"
+              alt="Logo"
+              className="w-40 h-40 md:w-64 md:h-64 object-contain mb-6 drop-shadow-xl"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity }}
+            />
 
-          {/* --- Tagline below --- */}
-          {showTagline && (
-            <p
-              className="text-gray-600 text-base tracking-wide opacity-0 animate-fade-in text-center max-w-xl"
-              style={{
-                animationDuration: "1.2s",
-                animationFillMode: "forwards",
-                zIndex: 55,
-              }}
-            >
-              Your cozy spot for handcrafted drinks and 
-               <br />
-              delicious treats, made with love.
-            </p>
-          )}
-        </div>
-      )}
+            <div className="space-y-2">
+              <h1 className="text-5xl md:text-8xl font-black italic uppercase text-[#3D2317] tracking-tighter">
+                Welcome
+              </h1>
+              <p className="text-[#8CB662] text-sm md:text-lg font-bold tracking-[0.4em] uppercase">
+                Mi Amore Kiosk
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* --- MiAmoreWelcome.png image --- */}
-      {showImage && (
-        <img
-          src="/images/MiAmoreWelcome.png"
-          alt="MiAmore Welcome"
-          className={`absolute transition-all duration-[1500ms] ease-in-out opacity-0 animate-fade-in ${
-            moveImage
-              ? "top-[1.5rem] right-[1.5rem] w-[90px]" // Final small top-right
-              : "bottom-[58%] w-[300px]" // Starts above WELCOME
-          }`}
-          style={{
-            animationDuration: "1s",
-            animationFillMode: "forwards",
-            zIndex: 60,
-          }}
-        />
-      )}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2 }}
+        className="absolute bottom-16 z-30 flex flex-col items-center gap-4"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex flex-col items-center"
+        >
+          <span className="text-[#3D2317] text-[10px] md:text-xs tracking-[0.5em] uppercase font-bold mb-2">
+            Tap anywhere to order
+          </span>
+          <div className="w-40 h-[2px] bg-[#3D2317]/10 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ x: "-100%" }}
+              animate={{ x: "0%" }}
+              transition={{ duration: 6, ease: "linear" }}
+              className="w-full h-full bg-[#8CB662]"
+            />
+          </div>
+        </motion.div>
+      </motion.div>
 
+      <div className="absolute inset-8 border border-[#3D2317]/5 pointer-events-none">
+        <div className="absolute -top-1 -left-1 w-2 h-2 bg-[#8CB662]"></div>
+        <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#8CB662]"></div>
+        <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-[#8CB662]"></div>
+        <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#8CB662]"></div>
+      </div>
     </div>
-
   );
 }

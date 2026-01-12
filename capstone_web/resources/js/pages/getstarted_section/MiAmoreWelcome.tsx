@@ -1,72 +1,89 @@
 import React from "react";
 import { Link } from '@inertiajs/react';
+import { motion } from 'framer-motion';
 
 const MiAmoreWelcome = () => {
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 px-2">
-      <div className="bg-white rounded-3xl shadow-xl flex flex-col md:flex-row overflow-hidden w-full max-w-3xl">
+    <div className="flex justify-center items-center min-h-screen bg-[#8A9A84] px-4 md:px-8 relative overflow-hidden">
+      
+      <div className="absolute inset-0 opacity-[0.15] pointer-events-none" 
+           style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }} />
+      
+      <div className="absolute top-[-10%] left-[-5%] w-64 h-64 rounded-full bg-[#4A5D45]/20 blur-3xl" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-80 h-80 rounded-full bg-[#C5A059]/10 blur-3xl" />
 
-        {/* LEFT SIDE */}
-        <div className="md:w-[48%] px-8 py-10 flex flex-col justify-between">
-
-          {/* Header and Text */}
-          <div className="flex justify-between items-center w-full mb-4">
-  <button
-    onClick={() => window.history.back()}
-    className="text-gray-500 hover:text-gray-700 text-sm"
-  >
-    ← Back
-  </button>
-</div>
-          <div>
-            
-            <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="h-15 w-auto mb-6" />
-            <h2 className="text-2xl font-bold text-[#8CB662] mb-1">GET STARTED</h2>
-            <p className="text-sm text-[#4A4A4A] mb-5">Sign up to join or log in to continue.</p>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8 }}
+        className="bg-[#FAF9F6] shadow-[0_30px_100px_rgba(0,0,0,0.3)] overflow-hidden w-full max-w-2xl rounded-[1.5rem] border border-[#C5A059]/20 relative z-10"
+      >
+        <div className="px-8 py-10 md:px-12 md:py-14 flex flex-col items-center text-center">
+          
+          <div className="w-full flex justify-start mb-8">
+            <button
+              onClick={() => window.history.back()}
+              className="text-[#4A5D45]/60 hover:text-[#4A5D45] text-[10px] uppercase tracking-[0.3em] flex items-center gap-2 transition-all font-bold"
+            >
+              <span className="text-sm">←</span> Return
+            </button>
           </div>
 
-          {/* Cup Image */}
-          <div className="relative w-full flex justify-center mb-6">
-            <div className="w-60 h-60 bg-[#EFF5EE] rounded-tl-[60px] rounded-br-[60px] shadow-md overflow-hidden">
-              <img
-                src="/images/img2.jpg"
-                alt="Mi Amore Cup"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+          <motion.div
+             initial={{ opacity: 0, y: -10 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.2 }}
+             className="mb-8"
+          >
+            <img 
+              src="/images/MiAmore2.png" 
+              alt="Mi Amore Logo" 
+              className="h-16 md:h-20 w-auto mx-auto brightness-[0.2]" 
+            />
+            <div className="h-[1px] w-20 bg-[#C5A059]/40 mx-auto mt-4" />
+          </motion.div>
+          
+          <h2 className="text-[#4A5D45] text-[10px] md:text-xs uppercase tracking-[0.5em] font-black mb-6 opacity-80">
+            Premium Coffee Experience
+          </h2>
+          
+          <h1 className="text-[#3d230d] text-3xl md:text-5xl font-serif mb-6 leading-tight">
+            A Journey of <br />
+            <span className="text-[#C5A059] italic font-light">Passion & Elegance</span>
+          </h1>
+          
+          <p className="text-[#4A5D45]/70 text-sm md:text-base font-light leading-relaxed mb-10 max-w-md italic">
+            "Every cup is a masterpiece, every visit is a memory. 
+            Join our community of coffee lovers today."
+          </p>
 
-          {/* Buttons */}
-          <div className="flex justify-center gap-4">
+          <div className="w-full max-w-sm flex flex-col sm:flex-row gap-4">
             <Link
               href={route('SignInCard')}
-              className="bg-[#8CB662] text-white font-semibold py-2 px-6 rounded-full hover:opacity-90 transition-transform transform hover:scale-105 duration-300"
+              className="flex-1 bg-[#4A5D45] text-[#FAF9F6] font-bold py-4 px-8 rounded-xl shadow-lg hover:bg-[#3d4b38] hover:shadow-xl transition-all duration-300 active:scale-95 text-[11px] uppercase tracking-widest border border-[#4A5D45]"
             >
               Sign In
             </Link>
             <Link
               href={route('SignUpForm')}
-              className="bg-white border border-[#8CB662] text-[#8CB662] font-semibold py-2 px-6 rounded-full hover:bg-[#8CB662] hover:text-white transition-transform transform hover:scale-105 duration-300"
+              className="flex-1 bg-transparent border-2 border-[#4A5D45] text-[#4A5D45] font-bold py-4 px-8 rounded-xl hover:bg-[#4A5D45] hover:text-[#FAF9F6] transition-all duration-300 active:scale-95 text-[11px] uppercase tracking-widest"
             >
-              Sign Up
+              Create Account
             </Link>
           </div>
-        </div>
 
-        {/* RIGHT SIDE */}
-        <div className="bg-[#8CB662] text-white md:w-[52%] px-6 py-10 flex flex-col justify-center items-center text-center">
-          <div className="bg-white rounded-full w-40 h-40 flex items-center justify-center shadow-lg mb-4">
-            <img src="/images/MiAmore2.png" alt="Mi Amore Logo" className="w-30 h-30 object-contain" />
+          <div className="mt-14 w-full">
+            <div className="flex items-center justify-center gap-4 mb-4 opacity-20">
+              <div className="h-[1px] flex-1 bg-[#3d230d]" />
+              <span className="text-[#3d230d] text-lg">☕</span>
+              <div className="h-[1px] flex-1 bg-[#3d230d]" />
+            </div>
+            <p className="text-[#4A5D45]/40 text-[9px] uppercase tracking-[0.4em] font-medium">
+              &copy; 2025 Mi Amore Café • Batangas, PH
+            </p>
           </div>
-          <h2 className="text-3xl font-bold mb-1 tracking-wide">W E L C O M E</h2>
-          <p
-              className="text-white text-lg font-medium leading-relaxed mb-6"
-              style={{ fontFamily: "'Indie Flower', cursive" }}
-            >
-            to Mi Amore Café your cozy corner for coffee and comfort!
-          </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

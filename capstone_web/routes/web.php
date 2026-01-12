@@ -6,48 +6,59 @@ use App\Http\Controllers\CustomerSignupController;
 use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
 
-///SIGN UP CUSTOMER ROUTE////
-Route::post('/signup', [CustomerSignupController::class, 'store'])->name('signup.store');
-//
-//SIGN IN CUSTOMER ROUTE///
-Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])->name('login.authenticate');
+/* ---------------- CUSTOMER AUTHENTICATION LOGIC ---------------- */
+
+// Signup Process
+Route::post('/signup', [CustomerSignupController::class, 'store'])
+    ->name('signup.store');
+
+// Verification Logic 
+Route::post('/verify-otp', [CustomerSignupController::class, 'verify'])
+    ->name('customer.signup.verify');
+
+Route::post('/resend-otp', [CustomerSignupController::class, 'resend'])
+    ->name('customer.signup.resend');
+
+// Login Logic
+Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])
+    ->name('login.authenticate');
+
+
+/* ---------------- REDIRECTS ---------------- */
 
 Route::get('/', fn() => redirect('/home'));
 
+
 /* ------- ADMINS & SUPER ADMINS EMAIL VERIFICATION ROUTES ------- */
 
-// Step 2: Deny request (email button)
 Route::post('/email-change/deny', [ProfileController::class, 'denyEmailChange']);
 
-// Step 3: Show change email form (SIGNED / TOKEN-BASED)
 Route::get('/email-change/confirm/{token}', [ProfileController::class, 'verifyEmailChangeToken'])
     ->name('email-change.confirm');
 
-// Step 4: Finalize email change
 Route::post('/email-change/confirm', [ProfileController::class, 'finalizeEmailChange']);
 
 Route::get('/email-change', function () {
     return Inertia::render('EmailChange');
 });
 
-// --- CART SECTION ROUTES ---
 
-// 1. ShoppingCartPage.tsx
+/* ---------------- CART SECTION ROUTES ---------------- */
+
 Route::get('/customer-cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
     ->name('shopping.cart');
 
 Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'))
     ->name('payment.cart');
 
-// 2. LoyaltyPointsPage.tsx
 Route::get('/loyalty', fn() => Inertia::render('Cart_section/LoyaltyPage'))
     ->name('loyalty.cart');
 
-// 3. CheckoutDetailsPage.tsx (Shipping/Billing details)
 Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
     ->name('checkout.details');
 
-/* ---------------- WEBSITE ROUTES ---------------- */
+
+/* ---------------- WEBSITE PAGES ---------------- */
 
 Route::get('/home', fn() => Inertia::render('website_pages/Home_MiAmore'))
     ->name('home');
@@ -73,7 +84,7 @@ Route::get('/termsandcondition', fn() => Inertia::render('PrivacyandTerms_sectio
 
 /* ---------------- GET STARTED / AUTH SCREENS ---------------- */
 
-Route::get('/signin', fn() => Inertia::render('getstarted_section/MiAmoreWelcome'))
+Route::get('/welcome', fn() => Inertia::render('getstarted_section/MiAmoreWelcome'))
     ->name('SignIn');
 
 Route::get('/signincard', fn() => Inertia::render('getstarted_section/SignInCard'))
@@ -82,8 +93,8 @@ Route::get('/signincard', fn() => Inertia::render('getstarted_section/SignInCard
 Route::get('/signupform', fn() => Inertia::render('getstarted_section/SignUpForm'))
     ->name('SignUpForm');
 
-Route::get('/accountverification', fn() => Inertia::render('getstarted_section/AccountVerification'))
-    ->name('AccountVerification');
+Route::get('/emailverification', fn() => Inertia::render('getstarted_section/VerificationEmail'))
+    ->name('VerificationEmail');
 
 Route::get('/forgotpasswordform', fn() => Inertia::render('getstarted_section/ForgotPasswordForm'))
     ->name('ForgotPasswordForm');
@@ -116,15 +127,11 @@ Route::get('/dashboardverificationsuccess', fn() => Inertia::render('Redirect_Pa
     ->name('DashboardVerificationSuccess');
 
 
-/* ---------------- SANCTUM COOKIE ---------------- */
+/* ---------------- SYSTEM ROUTES ---------------- */
 
 Route::get('/sanctum/csrf-cookie', fn() => response()->json(['message' => 'CSRF cookie set']));
 
-/* ---------------- LOGIN REDIRECT ---------------- */
-
 Route::middleware(['web'])->get('/login', fn() => redirect('/dashboardgetstarted'));
-
-/* ---------------- FALLBACK (FIXES INERTIA ERROR) ---------------- */
 
 Route::fallback(fn() => Inertia::render('Errors/NotFound', [
     'status' => 404,
@@ -132,7 +139,7 @@ Route::fallback(fn() => Inertia::render('Errors/NotFound', [
 ])->toResponse(request())->setStatusCode(404));
 
 
-/* ---------------- ADDITIONAL ROUTES ---------------- */
+/* ---------------- ADDITIONAL FILES ---------------- */
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
