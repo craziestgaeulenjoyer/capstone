@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { FaQuoteLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { FaStar } from "react-icons/fa6";
 import { motion, AnimatePresence, Variants } from "framer-motion";
+import axios from "axios";
 
 interface Review {
   name: string;
@@ -9,20 +10,13 @@ interface Review {
   rating: number;
 }
 
-const reviews: Review[] = [
-  { name: "James Miller", text: "The cozy atmosphere is perfect for unwinding. I love their specialty lattes!", rating: 5 },
-  { name: "Olivia Harris", text: "Best café experience I've had! The cappuccino is rich and smooth, and the staff are always welcoming.", rating: 5 },
-  { name: "Noah Scott", text: "Such a great vibe! Their avocado toast and latte are delicious. Perfect spot to work.", rating: 4 },
-  { name: "Ava Carter", text: "Loved everything about this place! Their matcha latte is superb and the staff are very attentive.", rating: 5 },
-  { name: "Mason Mitchell", text: "Great atmosphere for hanging out or getting work done. The pastries are on point.", rating: 5 },
-  { name: "Isabella King", text: "A perfect place to relax and sip on their signature brews. Amazing options!", rating: 5 },
-];
-
 const CustomerReviewSection: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsToShow, setItemsToShow] = useState(3);
   const [isPaused, setIsPaused] = useState(false);
   const [direction, setDirection] = useState(0);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -34,6 +28,18 @@ const CustomerReviewSection: React.FC = () => {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get("/api/feedback/approved")
+      .then(res => {
+        setReviews(res.data);
+      })
+      .catch(err => {
+        console.error("Failed to fetch approved reviews", err);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const totalSlides = reviews.length;
@@ -55,18 +61,52 @@ const CustomerReviewSection: React.FC = () => {
   }, [nextSlide, isPaused]);
 
   const getVisibleReviews = () => {
-    const result = [];
-    for (let i = 0; i < itemsToShow; i++) {
-      result.push(reviews[(currentIndex + i) % totalSlides]);
-    }
-    return result;
+    const visibleCount = Math.min(itemsToShow, reviews.length);
+    return reviews.slice(currentIndex, currentIndex + visibleCount);
   };
 
   const cardVariants: Variants = {
     enter: (d: number) => ({ x: d > 0 ? 50 : -50, opacity: 0, scale: 0.95 }),
-    center: { x: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] } },
-    exit: (d: number) => ({ x: d > 0 ? -50 : 50, opacity: 0, scale: 0.95, transition: { duration: 0.4 } })
+    center: { 
+      x: 0, 
+      opacity: 1, 
+      scale: 1, 
+      transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] } 
+    },
+    exit: (d: number) => ({ 
+      x: d > 0 ? -50 : 50, 
+      opacity: 0, 
+      scale: 0.95, 
+      transition: { duration: 0.4 } 
+    })
   };
+
+  useEffect(() => {
+    if (isPaused || reviews.length <= itemsToShow) return;
+
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, [nextSlide, isPaused, reviews.length, itemsToShow]);
+
+  if (loading) {
+    return (
+      <section className="bg-[#FAF9F6] py-24 text-center">
+        <p className="text-[#5C2E0A] font-semibold">
+          Loading reviews...
+        </p>
+      </section>
+    );
+  }
+
+  if (reviews.length === 0) {
+    return (
+      <section className="bg-[#FAF9F6] py-24 text-center">
+        <p className="text-[#5C2E0A] font-semibold">
+          No reviews yet. Be the first to leave one!
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="bg-[#FAF9F6] py-24 md:py-32 relative overflow-hidden w-full">
@@ -104,19 +144,23 @@ const CustomerReviewSection: React.FC = () => {
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
-          <button 
-            onClick={prevSlide} 
-            className="absolute -left-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
-          >
-            <FaChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          </button>
+          {reviews.length > itemsToShow && (
+            <>
+              <button 
+                onClick={prevSlide} 
+                className="absolute -left-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
+              >
+                <FaChevronLeft size={18} />
+              </button>
 
-          <button 
-            onClick={nextSlide} 
-            className="absolute -right-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
-          >
-            <FaChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </button>
+              <button 
+                onClick={nextSlide} 
+                className="absolute -right-4 top-1/2 -translate-y-1/2 z-30 bg-white p-5 rounded-full shadow-xl text-[#5C2E0A] hidden xl:flex hover:bg-[#5C2E0A] hover:text-white transition-all duration-500 group"
+              >
+                <FaChevronRight size={18} />
+              </button>
+            </>
+          )}
 
           <div className="flex justify-center gap-6 lg:gap-8 min-h-[380px] md:min-h-[420px]">
             <AnimatePresence mode="popLayout" custom={direction} initial={false}>
@@ -153,18 +197,21 @@ const CustomerReviewSection: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          <div className="flex xl:hidden justify-center gap-4 mt-12">
-            <button onClick={prevSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
-              <FaChevronLeft size={18} />
-            </button>
-            <button onClick={nextSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
-              <FaChevronRight size={18} />
-            </button>
-          </div>
+          {reviews.length > itemsToShow && (
+            <div className="flex xl:hidden justify-center gap-4 mt-12">
+              <button onClick={prevSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
+                <FaChevronLeft size={18} />
+              </button>
+              <button onClick={nextSlide} className="bg-white p-5 rounded-full shadow-md text-[#5C2E0A] active:scale-90 transition-all border border-[#5C2E0A]/5">
+                <FaChevronRight size={18} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-center mt-16 gap-3">
-          {reviews.map((_, index) => (
+          {reviews.length > 1 &&
+            reviews.map((_, index) => (
             <button
               key={index}
               onClick={() => {

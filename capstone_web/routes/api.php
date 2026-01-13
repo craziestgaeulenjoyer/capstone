@@ -13,6 +13,7 @@ use App\Http\Controllers\Administrator_Controllers\SalesOrderController;
 use App\Http\Controllers\Administrator_Controllers\AnalyticsController;
 use App\Http\Controllers\Administrator_Controllers\ReportsController;
 use App\Http\Controllers\Administrator_Controllers\EventInquiriesController;
+use App\Http\Controllers\Administrator_Controllers\FeedbackController;
 use App\Http\Controllers\Home_Controllers\ContactController;
 use App\Http\Controllers\Home_Controllers\EventInquiryController;
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
@@ -183,6 +184,9 @@ Route::prefix('superadmin')->group(function () {
         Route::get('/events/{id}', [EventInquiriesController::class, 'show']);
         Route::patch('/events/{id}/status', [EventInquiriesController::class, 'updateStatus']);
 
+        Route::get('/feedback', [FeedbackController::class, 'index']);
+        Route::patch('/feedback/{feedback}/status', [FeedbackController::class, 'updateStatus']);
+
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
@@ -253,6 +257,9 @@ Route::prefix('admin')->group(function () {
         Route::get('/events/{id}', [EventInquiriesController::class, 'show']);
         Route::patch('/events/{id}/status', [EventInquiriesController::class, 'updateStatus']);
 
+        Route::get('/feedback', [FeedbackController::class, 'index']);
+        Route::patch('/feedback/{feedback}/status', [FeedbackController::class, 'updateStatus']);
+
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
@@ -261,6 +268,9 @@ Route::prefix('admin')->group(function () {
 
 /* ---------------- PUBLIC MENU ---------------- */
 Route::get('/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
+
+/* --------------- REVIEWS ---------------- */
+Route::get('/feedback/approved', [FeedbackController::class, 'approved']);
 
 /* Upload Profile Picture */
 Route::post('/upload-profile-picture', function (Request $request) {
