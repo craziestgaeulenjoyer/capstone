@@ -957,7 +957,7 @@ const Analytics: React.FC = () => {
     : salesData;
 
   const forecastRevenueData = useMemo(() => {
-    // 1️⃣ Get actual values
+    // Get actual values
     const actual =
       filter === 'day'
         ? revenueDaySource.map(d => d.revenue)
@@ -965,7 +965,7 @@ const Analytics: React.FC = () => {
 
     const forecast = performLinearRegression(actual, forecastSteps);
 
-    // 2️⃣ Build chart points
+    // Build chart points
     const actualSeries =
       filter === 'day'
         ? revenueDaySource.map(d => ({

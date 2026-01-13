@@ -1,10 +1,22 @@
 // config/api.ts
-export const API_BASE = "http://10.0.2.2:5000";
+import { Platform } from "react-native";
+
+// CHANGE THIS TO YOUR PC IP
+const LAN_IP = "192.168.1.8";
+
+export const API_BASE =
+  Platform.OS === "android"
+    ? __DEV__
+      ? `http://${LAN_IP}:5000` // physical phone
+      : "https://your-production-api.com"
+    : "http://localhost:5000";
 
 /**
- * Fix URLs returned by the Laravel backend (port 8000) to React Native dev server (port 5000)
+ * Fix URLs returned by backend (if any)
  */
 export const fixUrl = (url?: string | null): string | null => {
   if (!url) return null;
-  return url.replace("10.0.2.2:8000", "10.0.2.2:5000");
+  return url
+    .replace("localhost:8000", `${LAN_IP}:5000`)
+    .replace("10.0.2.2:8000", `${LAN_IP}:5000`);
 };

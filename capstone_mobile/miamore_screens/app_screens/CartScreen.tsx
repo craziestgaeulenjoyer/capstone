@@ -13,11 +13,12 @@ import {
   Switch,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
 import CheckoutTab from "../components/CheckoutTab";
 import { authFetch } from "../../utils/authFetch";
+import { API_BASE } from "../../config/api";
 
 const IMAGE_MAP: { [key: string]: any } = {
   "BrewedHotCoffee.png": require("../../assets/BrewedHotCoffee.png"),
@@ -105,7 +106,7 @@ const CartScreen: React.FC = () => {
           return;
         }
 
-        const res = await authFetch("http://10.0.2.2:5000/api/cart");
+        const res = await authFetch(`${API_BASE}/api/cart`);
 
         let data;
         const text = await res.text(); 
@@ -142,7 +143,7 @@ const CartScreen: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await authFetch("http://10.0.2.2:5000/api/profile");
+        const res = await authFetch(`${API_BASE}/api/profile`);
         const data = await res.json();
         setUserData(data);
       } catch (err) {
@@ -156,7 +157,7 @@ const CartScreen: React.FC = () => {
   useEffect(() => {
     const fetchLoyaltyProgress = async () => {
       try {
-        const res = await authFetch("http://10.0.2.2:5000/api/loyalty/progress");
+        const res = await authFetch(`${API_BASE}/api/loyalty/progress`);
 
         const text = await res.text();
         try {
@@ -180,33 +181,6 @@ const CartScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        const res = await authFetch("http://10.0.2.2:5000/api/cart");
-
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setCartItems(data);
-
-          const subtotalCalc = data.reduce(
-            (sum, item) => sum + Number(item.price) * item.quantity,
-            0
-          );
-          setSubtotal(subtotalCalc);
-
-          const deliveryFee = 0; 
-          setTotalAmount(subtotalCalc + deliveryFee);
-        }
-      } catch (err) {
-        console.error("Error fetching cart:", err);
-      }
-    };
-
-    fetchCart();
-  }, []);
-
-  useEffect(() => {
     const fetchPendingOrders = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
@@ -215,7 +189,7 @@ const CartScreen: React.FC = () => {
           return;
         }
 
-        const res = await authFetch("http://10.0.2.2:5000/api/orders/pending");
+        const res = await authFetch(`${API_BASE}/api/orders/pending`);
 
         const text = await res.text();
         try {
@@ -248,6 +222,51 @@ const CartScreen: React.FC = () => {
     const freeDrinksEarned = Math.floor(drinksQty / 10);
     setLoyaltyRewards(freeDrinksEarned);
   }, [cartItems]);
+
+  const fetchCartItems = async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/api/cart`);
+
+      const text = await res.text();
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.warn("Cart response is not JSON:", text);
+        return;
+      }
+
+      if (!res.ok) {
+        console.warn("Cart fetch failed:", data?.message || res.status);
+        return;
+      }
+
+      if (Array.isArray(data)) {
+        setCartItems(data);
+
+        const subtotalCalc = data.reduce(
+          (sum, item) => sum + Number(item.price) * item.quantity,
+          0
+        );
+
+        setSubtotal(subtotalCalc);
+        setTotalAmount(subtotalCalc); // add delivery fee later if needed
+      }
+    } catch (err) {
+      console.error("Error fetching cart:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartItems();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCartItems();
+    }, [])
+  );
 
   const handleCheckout = async () => {
     if (selectedItems.length === 0) {
@@ -304,7 +323,7 @@ const CartScreen: React.FC = () => {
       // GCash branch
       if (selectedPayment === "GCash") {
         // Step 1: Create pending order first
-        const orderRes = await authFetch("http://10.0.2.2:5000/api/checkout", {
+        const orderRes = await authFetch(`${API_BASE}/api/checkout`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -321,7 +340,7 @@ const CartScreen: React.FC = () => {
         }
 
         // Step 2: Initialize PayMongo GCash
-        const payRes = await authFetch("http://10.0.2.2:5000/api/paymongo/gcash", {
+        const payRes = await authFetch(`${API_BASE}/api/paymongo/gcash`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -342,7 +361,7 @@ const CartScreen: React.FC = () => {
           } else {
             // Clear cart if payment succeeded
             for (const id of selectedItems) {
-              await authFetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+              await authFetch(`${API_BASE}/api/cart/${id}`, {
                 method: "DELETE",
               });
             }
@@ -360,7 +379,7 @@ const CartScreen: React.FC = () => {
       }
 
       // Pay on Pickup (and other methods)
-      const response = await authFetch("http://10.0.2.2:5000/api/checkout", {
+      const response = await authFetch(`${API_BASE}/api/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -374,7 +393,7 @@ const CartScreen: React.FC = () => {
       if (response.ok) {
         // Remove selected items from backend cart
         for (const id of selectedItems) {
-          await authFetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+          await authFetch(`${API_BASE}/api/cart/${id}`, {
             method: "DELETE",
           });
         }
@@ -429,13 +448,13 @@ const CartScreen: React.FC = () => {
 
     if (newQty <= 0) {
       // Remove item
-      await authFetch(`http://10.0.2.2:5000/api/cart/${item.id}`, {
+      await authFetch(`${API_BASE}/api/cart/${item.id}`, {
         method: "DELETE",
       });
       setCartItems(prev => prev.filter(x => x.id !== item.id));
     } else {
       // Update quantity
-      await authFetch(`http://10.0.2.2:5000/api/cart/${item.id}`, {
+      await authFetch(`${API_BASE}/api/cart/${item.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -458,7 +477,7 @@ const CartScreen: React.FC = () => {
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await authFetch(`http://10.0.2.2:5000/api/cart/${editItem.id}`, {
+      const response = await authFetch(`${API_BASE}/api/cart/${editItem.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1219,7 +1238,7 @@ const CartScreen: React.FC = () => {
                 onPress={async () => {
                   const token = await AsyncStorage.getItem("token");
                   for (const id of toggledTrashItems) {
-                    await authFetch(`http://10.0.2.2:5000/api/cart/${id}`, {
+                    await authFetch(`${API_BASE}/api/cart/${id}`, {
                       method: "DELETE",
                     });
                   }

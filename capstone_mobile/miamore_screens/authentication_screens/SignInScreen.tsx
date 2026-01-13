@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { API_BASE } from "../../config/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
 
@@ -67,7 +68,7 @@ const SignInScreen = () => {
     }
 
     try {
-      const response = await fetch('http://10.0.2.2:5000/api/login', {
+      const response = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -125,7 +126,7 @@ const SignInScreen = () => {
     }
 
     try {
-      const response = await fetch('http://10.0.2.2:5000/api/register', {
+      const response = await fetch(`${API_BASE}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -162,7 +163,7 @@ const SignInScreen = () => {
       const idToken = tokens.idToken;
 
       // Send the ID token to backend for verification
-      const response = await fetch('http://10.0.2.2:5000/api/google-login', {
+      const response = await fetch(`${API_BASE}/api/google-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: idToken }),

@@ -456,6 +456,89 @@ app.get('/api/menu-items', async (req, res) => {
   }
 });
 
+app.post("/api/voice-order", authenticateToken, async (req, res) => {
+  const { transcript } = req.body;
+
+  if (!transcript) {
+    return res.status(400).json({ message: "Transcript required" });
+  }
+
+  try {
+    const menuResult = await pool.query(`
+      SELECT id, name, price, image_path
+      FROM menu_items
+    `);
+
+    const menuItems = menuResult.rows;
+
+    // Normalization
+    const normalize = (str = "") =>
+      str
+        .toLowerCase()
+        .replace(/\b(iced|ice|snow|eye)\b/g, "ice")
+        .replace(/\b(one|isa|isang|isa'ng)\b/g, "")
+        .replace(/\b(no|none)\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const normalizedTranscript = normalize(transcript);
+
+    // Quantity detection (EN + TL)
+    const quantityMap = {
+      one: 1, isa: 1,
+      two: 2, dalawa: 2,
+      three: 3, tatlo: 3,
+      four: 4, apat: 4,
+      five: 5, lima: 5,
+    };
+
+    let quantity = 1;
+    for (const word of transcript.toLowerCase().split(" ")) {
+      if (quantityMap[word]) {
+        quantity = quantityMap[word];
+        break;
+      }
+    }
+
+    // Fuzzy item matching
+    const matchedItem = menuItems.find(item => {
+      const normalizedItemName = normalize(item.name);
+      return normalizedTranscript.includes(normalizedItemName);
+    });
+
+    if (!matchedItem) {
+      return res.status(404).json({
+        message: "No matching menu item found",
+        transcript,
+      });
+    }
+
+    // Add to cart
+    const insert = await pool.query(
+      `INSERT INTO cart_items
+       (customer_id, product_id, product_name, quantity, price, image, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [
+        req.userId,
+        matchedItem.id,
+        matchedItem.name,
+        quantity,
+        matchedItem.price,
+        matchedItem.image_path,
+      ]
+    );
+
+    res.json({
+      message: "Item added via voice order",
+      item: insert.rows[0],
+    });
+
+  } catch (err) {
+    console.error("Voice order error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // Adding Items to Cart
 app.post('/api/cart', authenticateToken, async (req, res) => {
@@ -1123,4 +1206,7 @@ app.post("/api/voice-order", authenticateToken, async (req, res) => {
 });
 
 const PORT = 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('Server running on all interfaces');
+});
+
