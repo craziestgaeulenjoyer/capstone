@@ -1,9 +1,10 @@
-import { Link } from "@inertiajs/react";
+
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebookF, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link, router } from "@inertiajs/react";
 
 const CoffeeLoader = () => (
   <motion.div 
@@ -56,38 +57,59 @@ const SignInCard = () => {
   const [processing, setProcessing] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setProcessing(true);
-    setErrors({});
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setProcessing(true);
+  setErrors({});
 
-    try {
-      const response = await axios.post(
-        'http://127.0.0.1:8000/api/customer/login',
-        { email, password, remember_me: rememberMe },
-        { withCredentials: true }
-      );
+  console.log("🔐 Attempting login with:", {
+    email,
+    rememberMe,
+  });
 
-      const { customer_token, customer } = response.data;
-      localStorage.setItem('customer_token', customer_token);
-      localStorage.setItem('customer_info', JSON.stringify(customer));
-      window.dispatchEvent(new Event("customer-login"));
-      
-      setTimeout(() => {
-        window.location.href = "/home";
-      }, 1500);
-      
-    } catch (error: any) {
-      setProcessing(false); 
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      } else if (error.response?.data?.message) {
-        setErrors({ general: error.response.data.message });
-      } else {
-        setErrors({ general: "Something went wrong. Please try again." });
-      }
+  try {
+    const response = await axios.post("/customer/login", {
+      email,
+      password,
+      remember_me: rememberMe,
+    });
+
+    console.log("✅ Login successful");
+    console.log("📦 Full response:", response);
+    console.log("📦 Response data:", response.data);
+
+   if (response.data?.customer) {
+  console.log("👤 Logged in customer:", response.data.customer);
+} else {
+  console.log("⚠️ Login succeeded but customer data missing");
+}
+
+
+   router.visit("/home", {
+  replace: true,
+  preserveScroll: true,
+});
+
+
+  } catch (error: any) {
+    console.error("❌ Login failed");
+
+    if (error.response) {
+      console.error("📛 Error data:", error.response.data);
+      console.error("📛 Status:", error.response.status);
+    } else {
+      console.error("📛 Unknown error:", error);
     }
-  };
+
+    setProcessing(false);
+    setErrors(
+      error.response?.data?.errors || {
+        general: "Login failed",
+      }
+    );
+  }
+};
+
 
   return (
     <>

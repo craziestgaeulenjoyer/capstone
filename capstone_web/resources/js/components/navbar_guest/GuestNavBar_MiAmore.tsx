@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import { Menu, X, ShoppingCart, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageProps as InertiaPageProps } from "@inertiajs/core";
+import { router } from "@inertiajs/react";
+import axiosClient from "@/axiosClient";
 
 declare var route: any;
 
@@ -11,6 +13,14 @@ interface AuthProps {
     id: number;
     name: string;
     email: string;
+  };
+
+  // ✅ ADDED (does NOT remove anything)
+  customer: null | {
+    id: number;
+    name: string;
+    email: string;
+    role: "customer";
   };
 }
 
@@ -23,9 +33,16 @@ const GuestNavBar_MiAmore: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [cartCount, setCartCount] = useState(0);
+
   const { props } = usePage<PageProps>();
   const auth = props.auth;
+
+  console.log("AUTH PROPS:", props.auth);
+  // ✅ ADDED (single source of truth)
+  const isCustomer = Boolean(auth?.customer);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,9 +61,45 @@ const GuestNavBar_MiAmore: React.FC = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const getRoute = (routeName: string) => {
-    try { return route(routeName); } catch (e) { return "#"; }
+    try {
+      return route(routeName);
+    } catch (e) {
+      return "#";
+    }
   };
+
+  const handleLogout = () => {
+    router.post(route('customer.logout'));
+  };
+
+   const fetchCartCount = async () => {
+  if (!isCustomer) return;
+
+  try {
+    const res = await axiosClient.get("/cart/count");
+    setCartCount(res.data.count);
+  } catch (err) {
+    console.error(err);
+  }
+};
+useEffect(() => {
+  fetchCartCount();
+  window.addEventListener("cart-updated", fetchCartCount);
+
+  return () => window.removeEventListener("cart-updated", fetchCartCount);
+}, [isCustomer]);
 
   const navLinks = [
     { name: "Home", href: "/home" },
@@ -58,21 +111,23 @@ const GuestNavBar_MiAmore: React.FC = () => {
 
   return (
     <>
-      <nav 
+      <nav
         className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
           visible ? "translate-y-0" : "-translate-y-full"
         } ${
-          scrolled 
-            ? "bg-[#3d230d]/90 backdrop-blur-xl shadow-2xl py-3 border-b border-white/5" 
+          scrolled
+            ? "bg-[#3d230d]/90 backdrop-blur-xl shadow-2xl py-3 border-b border-white/5"
             : "bg-transparent py-6"
         }`}
       >
         <div className="max-w-screen-xl mx-auto px-6 md:px-12 flex items-center justify-between">
-          
           <Link href="/home" className="relative z-10">
-            <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
               <img
-                src="/images/MiAmore2.png" 
+                src="/images/MiAmore2.png"
                 alt="Mi Amore Logo"
                 className={`h-12 md:h-14 w-auto transition-all duration-500 rounded-full bg-[#FAF9F6] p-1 ${
                   !scrolled ? "shadow-lg" : "shadow-md"
@@ -88,12 +143,16 @@ const GuestNavBar_MiAmore: React.FC = () => {
                   <Link
                     href={link.href}
                     className={`relative text-[13px] font-bold uppercase tracking-[0.2em] transition-all duration-300 italic ${
-                      scrolled ? "text-[#FAF9F6]/80 hover:text-[#8CB662]" : "text-[#3d230d] hover:text-[#8CB662]"
+                      scrolled
+                        ? "text-[#FAF9F6]/80 hover:text-[#8CB662]"
+                        : "text-[#3d230d] hover:text-[#8CB662]"
                     }`}
                   >
                     {link.name}
-                    <motion.span 
-                      className={`absolute -bottom-2 left-0 h-[1.5px] ${scrolled ? "bg-[#8CB662]" : "bg-[#3d230d]"}`}
+                    <motion.span
+                      className={`absolute -bottom-2 left-0 h-[1.5px] ${
+                        scrolled ? "bg-[#8CB662]" : "bg-[#3d230d]"
+                      }`}
                       initial={{ width: 0 }}
                       whileHover={{ width: "100%" }}
                       transition={{ duration: 0.3 }}
@@ -103,10 +162,15 @@ const GuestNavBar_MiAmore: React.FC = () => {
               ))}
             </ul>
 
-            <div className={`h-5 w-[1px] ${scrolled ? "bg-white/10" : "bg-[#3d230d]/10"}`} />
+            <div
+              className={`h-5 w-[1px] ${
+                scrolled ? "bg-white/10" : "bg-[#3d230d]/10"
+              }`}
+            />
 
             <div className="flex items-center space-x-5">
-              {!auth?.user ? (
+              {/* ✅ CHANGED CONDITION ONLY */}
+              {!isCustomer ? (
                 <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }}>
                   <Link
                     href={getRoute("SignIn")}
@@ -117,18 +181,61 @@ const GuestNavBar_MiAmore: React.FC = () => {
                 </motion.div>
               ) : (
                 <div className="flex items-center gap-5">
-                  <Link href="/cart" className={`relative transition-transform hover:scale-110 ${scrolled ? "text-white" : "text-[#3d230d]"}`}>
+                  <Link
+                    href="/cart"
+                    className={`relative transition-transform hover:scale-110 ${
+                      scrolled ? "text-white" : "text-[#3d230d]"
+                    }`}
+                  >
                     <ShoppingCart size={20} strokeWidth={2.5} />
-                    <span className="absolute -top-2 -right-2 bg-[#8CB662] text-[9px] w-4 h-4 rounded-full flex items-center justify-center text-white font-bold">0</span>
+                    <span className="absolute -top-2 -right-2 bg-[#8CB662] text-[9px] w-4 h-4 rounded-full flex items-center justify-center text-white font-bold">
+                       {cartCount}
+                    </span>
                   </Link>
-                  <Link href="/profile" className={`flex items-center gap-2 border px-5 py-2 rounded-full transition-all text-[11px] font-bold uppercase tracking-widest ${
-                    scrolled 
-                      ? "bg-white/5 hover:bg-white/10 border-white/20 text-white" 
-                      : "bg-[#3d230d]/5 hover:bg-[#3d230d]/10 border-[#3d230d]/20 text-[#3d230d]"
-                  }`}>
-                    <User size={14} className="text-[#8CB662]" />
-                    <span>Profile</span>
-                  </Link>
+
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      className={`flex items-center gap-2 border px-5 py-2 rounded-full transition-all text-[11px] font-bold uppercase tracking-widest ${
+                        scrolled
+                          ? "bg-white/5 hover:bg-white/10 border-white/20 text-white"
+                          : "bg-[#3d230d]/5 hover:bg-[#3d230d]/10 border-[#3d230d]/20 text-[#3d230d]"
+                      }`}
+                    >
+                      <User size={14} className="text-[#8CB662]" />
+                      <span className="max-w-[90px] truncate">
+                        {auth.customer!.name}
+                      </span>
+                    </button>
+                    <AnimatePresence>
+                      {dropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                        >
+                          <Link
+                            href="/profile"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setDropdownOpen(false)}
+                          >
+                            Profile
+                          </Link>
+                          <button
+                            onClick={() => {
+                              handleLogout();
+                              setDropdownOpen(false);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Logout
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               )}
             </div>
@@ -138,7 +245,9 @@ const GuestNavBar_MiAmore: React.FC = () => {
             <button
               onClick={() => setIsOpen(!isOpen)}
               className={`p-2 rounded-full transition-all ${
-                scrolled ? "text-white hover:bg-white/10" : "text-[#3d230d] hover:bg-black/5"
+                scrolled
+                  ? "text-white hover:bg-white/10"
+                  : "text-[#3d230d] hover:bg-black/5"
               }`}
             >
               {isOpen ? <X size={26} /> : <Menu size={26} />}
@@ -150,12 +259,14 @@ const GuestNavBar_MiAmore: React.FC = () => {
       <AnimatePresence>
         {isOpen && (
           <>
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
               className="fixed inset-0 bg-[#3d230d]/60 backdrop-blur-md lg:hidden z-[60]"
             />
-            
+
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -164,13 +275,22 @@ const GuestNavBar_MiAmore: React.FC = () => {
               className="fixed top-0 right-0 h-screen w-[80%] max-w-[320px] bg-[#FAF9F6] shadow-[-20px_0_60px_rgba(0,0,0,0.2)] p-10 flex flex-col lg:hidden z-[70]"
             >
               <div className="flex justify-between items-center mb-12">
-                <img src="/images/MiAmore2.png" alt="Logo" className="h-12 w-auto" />
-                <button onClick={() => setIsOpen(false)} className="text-[#3d230d] p-1"><X size={28} /></button>
+                <img
+                  src="/images/MiAmore2.png"
+                  alt="Logo"
+                  className="h-12 w-auto"
+                />
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-[#3d230d] p-1"
+                >
+                  <X size={28} />
+                </button>
               </div>
 
               <ul className="flex flex-col space-y-8 mb-12">
                 {navLinks.map((link, i) => (
-                  <motion.li 
+                  <motion.li
                     key={link.name}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -188,7 +308,8 @@ const GuestNavBar_MiAmore: React.FC = () => {
               </ul>
 
               <div className="mt-auto space-y-4">
-                {!auth?.user ? (
+                {/* ✅ CHANGED CONDITION ONLY */}
+                {!isCustomer ? (
                   <Link
                     href={getRoute("SignIn")}
                     onClick={() => setIsOpen(false)}
@@ -198,12 +319,29 @@ const GuestNavBar_MiAmore: React.FC = () => {
                   </Link>
                 ) : (
                   <>
-                    <Link href="/cart" onClick={() => setIsOpen(false)} className="w-full border-2 border-[#3d230d]/20 text-[#3d230d] py-3 rounded-xl block text-center font-bold uppercase tracking-widest">
+                    <Link
+                      href="/customer-cart"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full border-2 border-[#3d230d]/20 text-[#3d230d] py-3 rounded-xl block text-center font-bold uppercase tracking-widest"
+                    >
                       My Cart
                     </Link>
-                    <Link href="/profile" onClick={() => setIsOpen(false)} className="w-full bg-[#8CB662] text-white py-4 rounded-xl block text-center font-bold uppercase tracking-widest">
-                      Settings
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full bg-[#8CB662] text-white py-4 rounded-xl block text-center font-bold uppercase tracking-widest"
+                    >
+                      Profile
                     </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsOpen(false);
+                      }}
+                      className="w-full bg-red-500 text-white py-4 rounded-xl block text-center font-bold uppercase tracking-widest"
+                    >
+                      Logout
+                    </button>
                   </>
                 )}
               </div>

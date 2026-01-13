@@ -76,12 +76,7 @@ Route::prefix('customer')->group(function () {
 // Verification screen
 Route::get('/verification', [CustomerAuthController::class, 'showVerification'])->name('customer.verification.email');
 
-/* ---------------- AUTHENTICATED CUSTOMER ROUTES ---------------- */
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/customer/profile', function (Request $request) {
-        return response()->json(['customer' => $request->user()]);
-    });
-});
+
 
 /* ================= EMAIL CHANGE VERIFICATION ================= */
 
@@ -252,10 +247,10 @@ Route::prefix('admin')->group(function () {
 /* ---------------- PUBLIC MENU ---------------- */
 
 /* ================= PUBLIC ================= */
-Route::get('/api/menu', [MenuController::class, 'publicMenu']);
+Route::get('/menu', [MenuController::class, 'publicMenu']);
 // Public Menu
 
-Route::get('/api/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
+Route::get('/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
 
 /* Upload Profile Picture */
 Route::post('/upload-profile-picture', function (Request $request) {

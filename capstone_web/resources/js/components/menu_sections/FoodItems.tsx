@@ -1,198 +1,225 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Search, X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Search, X } from "lucide-react";
+import { usePage } from "@inertiajs/react";
+import type { PageProps as InertiaPageProps } from "@inertiajs/core";
+
+
+interface AuthProps {
+  user: null | {
+    id: number;
+    name: string;
+    email: string;
+  };
+  customer: null | {
+    id: number;
+    name: string;
+    email: string;
+    role: "customer";
+  };
+}
+
+interface PageProps extends InertiaPageProps {
+  auth: AuthProps;
+}
+
 
 interface ApiItem {
   id: number;
   name: string;
   description: string;
-  type: string;
   categories: string[];
   subcategories: string[];
   image_path: string;
-  price: {
-    regular?: number;
-    large?: number;
-  };
+  price: { regular?: number; large?: number };
 }
 
 interface FoodItem {
   id: number;
   name: string;
   description: string;
-  category: 'Snacks' | 'Platters' | 'Croffles' | 'Quesadillas & Korean Corndogs';
+  category: "Snacks" | "Platters" | "Croffles" | "Quesadillas & Korean Corndogs";
   image: string;
-  price: string;
   rawPrice: { regular?: number; large?: number };
 }
 
-const SUBCATEGORIES = ['Snacks', 'Platters', 'Croffles', 'Quesadillas & Korean Corndogs'] as const;
-const categories: ('All' | FoodItem['category'])[] = ['All', ...SUBCATEGORIES];
+const SUBCATEGORIES = [
+  "Snacks",
+  "Platters",
+  "Croffles",
+  "Quesadillas & Korean Corndogs",
+] as const;
+
+const categories: ("All" | FoodItem["category"])[] = [
+  "All",
+  ...SUBCATEGORIES,
+];
 
 const FoodItems: React.FC = () => {
   const [items, setItems] = useState<FoodItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'All' | FoodItem['category']>('All');
-  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<"All" | FoodItem["category"]>("All");
+  const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedFlavor, setSelectedFlavor] = useState('');
-  const [selectedExtra, setSelectedExtra] = useState('');
-  const [selectedSize, setSelectedSize] = useState<'regular' | 'large' | ''>('');
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedFlavor, setSelectedFlavor] = useState("");
+  const [selectedExtra, setSelectedExtra] = useState("");
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  /* 🔐 CHECK LOGIN (same as CoffeeItems) */
-  useEffect(() => {
-    const token = localStorage.getItem('customer_token');
-    setIsLoggedIn(!!token);
-  }, []);
+const { props } = usePage<PageProps>();
+const auth = props.auth;
+const isLoggedIn = Boolean(auth?.customer);
 
   /* 📦 FETCH MENU */
   useEffect(() => {
-    axios.get('/api/menu')
+    axios.get("/api/menu")
       .then((res) => {
-        const data: ApiItem[] = res.data.items || res.data;
+        const data: ApiItem[] = res.data.items || res.data || [];
 
-        const filtered = data.filter((item) =>
-          item.subcategories.some((sub) =>
-            SUBCATEGORIES.some((cat) => sub.endsWith(`:${cat}`))
+        const foodItems = data
+          .filter(item =>
+            item.subcategories.some(sub =>
+              SUBCATEGORIES.some(cat => sub.endsWith(`:${cat}`))
+            )
           )
-        );
+          .map(item => {
+            const sub = item.subcategories.find(sc =>
+              SUBCATEGORIES.some(cat => sc.endsWith(`:${cat}`))
+            );
 
-        const foodItems: FoodItem[] = filtered.map((item) => {
-          const sub = item.subcategories.find((sc) =>
-            SUBCATEGORIES.some((cat) => sc.endsWith(`:${cat}`))
-          );
-
-          const category = sub ? sub.split(':')[1] : 'Snacks';
-
-          const { regular, large } = item.price;
-          let formattedPrice = '';
-          if (regular && large) formattedPrice = `₱${regular}/${large}`;
-          else if (regular) formattedPrice = `₱${regular}`;
-          else if (large) formattedPrice = `₱${large}`;
-
-          return {
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            category: category as FoodItem['category'],
-            image: `/storage/${item.image_path}`,
-            price: formattedPrice,
-            rawPrice: item.price,
-          };
-        });
+            return {
+              id: item.id,
+              name: item.name,
+              description: item.description,
+              category: (sub?.split(":")[1] || "Snacks") as FoodItem["category"],
+              image: `/storage/${item.image_path}`,
+              rawPrice: item.price,
+            };
+          });
 
         setItems(foodItems);
       })
       .catch(console.error);
   }, []);
 
-  const filtered = items.filter((item) => {
-    const byCat = activeTab === 'All' || item.category === activeTab;
+  const filtered = items.filter(item => {
+    const byCat = activeTab === "All" || item.category === activeTab;
     const bySearch = item.name.toLowerCase().includes(search.toLowerCase());
     return byCat && bySearch;
   });
 
-  const handleDecrease = () => quantity > 1 && setQuantity(quantity - 1);
-  const handleIncrease = () => setQuantity(quantity + 1);
+  const handleDecrease = () => quantity > 1 && setQuantity(q => q - 1);
+  const handleIncrease = () => setQuantity(q => q + 1);
 
-  /* 🛒 ADD TO CART (COPIED LOGIC FROM CoffeeItems) */
-  const handleAddToCart = async () => {
-    const token = localStorage.getItem('customer_token');
-    if (!token || !selectedItem) {
-      alert('Please log in to add items to cart.');
-      return;
-    }
-
-    const price =
-      selectedSize === 'large'
-        ? selectedItem.rawPrice.large
-        : selectedItem.rawPrice.regular;
-
-    try {
-      await axios.post(
-        '/api/cart/add',
-        {
-          product_id: selectedItem.id,
-          product_name: selectedItem.name,
-          size: selectedSize || null,
-          quantity,
-          instructions: selectedExtra || selectedFlavor || '',
-          price,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      alert('Item added to cart!');
-      setSelectedItem(null);
-      setQuantity(1);
-      setSelectedFlavor('');
-      setSelectedExtra('');
-      setSelectedSize('');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to add item to cart.');
-    }
+  const getAvailableSizes = (price: { regular?: number; large?: number }) => {
+    const sizes: string[] = [];
+    if (price.regular) sizes.push("regular");
+    if (price.large) sizes.push("large");
+    return sizes;
   };
 
   const getOptionsFor = (item: FoodItem) => {
     const map: Record<string, { flavors?: string[]; extras?: string[] }> = {
-      Fries: { flavors: ['Cheese', 'BBQ', 'Sour Cream'] },
-      'Cheese Sticks': { extras: ['10 pcs', '15 pcs'] },
-      'Hash Brown': { extras: ['2 pcs', '3 pcs'] },
+      Fries: { flavors: ["Cheese", "BBQ", "Sour Cream"] },
+      "Cheese Sticks": { extras: ["10 pcs", "15 pcs"] },
+      "Hash Brown": { extras: ["2 pcs", "3 pcs"] },
     };
     return map[item.name] || {};
   };
 
+  /* 🛒 ADD TO CART */
+  const handleAddToCart = async () => {
+  if (!isLoggedIn || !selectedItem) {
+    alert("Please log in to add items to cart.");
+    return;
+  }
+
+  const price =
+    selectedSize === "large"
+      ? selectedItem.rawPrice.large
+      : selectedItem.rawPrice.regular;
+
+  try {
+    await axios.post("/cart/add", {
+      product_id: selectedItem.id,
+      product_name: selectedItem.name,
+      size: selectedSize,
+      quantity,
+      instructions: selectedExtra || selectedFlavor || "",
+      price,
+    });
+
+    alert("Item added to cart!");
+
+    setSelectedItem(null);
+    setQuantity(1);
+    setSelectedSize(null);
+    setSelectedFlavor("");
+    setSelectedExtra("");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to add item to cart.");
+  }
+};
+
   return (
-    <div className="px-6 pt-10 pb-16">
+    <div className="px-6 pt-10 pb-16 text-black">
       {/* Tabs & Search */}
-      <div className="flex justify-between items-center mb-10 gap-4">
+      <div className="flex flex-col md:flex-row justify-between gap-4 mb-10">
         <div className="flex flex-wrap gap-3">
-          {categories.map((t) => (
+          {categories.map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
-              className={`px-5 py-2 rounded-full border ${
-                activeTab === t
-                  ? 'bg-[#8CB662] text-white'
-                  : 'border-gray-300'
-              }`}
+              className={`px-5 py-2 rounded-full border text-sm font-semibold
+                ${
+                  activeTab === t
+                    ? "bg-[#8CB662] text-white border-[#8CB662]"
+                    : "bg-white text-black border-gray-300 hover:bg-gray-100"
+                }
+              `}
             >
               {t}
             </button>
           ))}
         </div>
-        <div className="relative max-w-md w-full">
-          <Search className="absolute left-3 top-2.5" size={18} />
+
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-2.5 text-black" size={18} />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Search food..."
-            className="w-full pl-10 pr-4 py-2 rounded-full border"
+            className="w-full pl-10 pr-4 py-2 rounded-full border bg-white text-black"
           />
         </div>
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map((item) => (
+        {filtered.map(item => (
           <div
             key={item.id}
-            onClick={() => setSelectedItem(item)}
-            className="cursor-pointer bg-white rounded-xl shadow"
+            onClick={() => {
+              setSelectedItem(item);
+              setSelectedSize("regular");
+              setQuantity(1);
+              setSelectedFlavor("");
+              setSelectedExtra("");
+            }}
+            className="rounded-2xl shadow hover:shadow-lg transition bg-white cursor-pointer text-black"
           >
             <div className="bg-[#E1E1E1] p-4 flex justify-center">
-              <img src={item.image} className="w-60 h-60 object-contain" />
+              <img src={item.image} className="w-60 h-60 object-contain rounded-xl" />
             </div>
             <div className="p-4">
               <h3 className="font-bold">{item.name}</h3>
-              <p className="text-sm">{item.description}</p>
-              <div className="text-right text-[#76B13A] font-bold">{item.price}</div>
+              <p className="text-sm text-gray-600">{item.description}</p>
+              <div className="text-right text-[#76B13A] font-bold">
+                ₱{item.rawPrice.regular}
+                {item.rawPrice.large && ` | ₱${item.rawPrice.large}`}
+              </div>
             </div>
           </div>
         ))}
@@ -200,32 +227,115 @@ const FoodItems: React.FC = () => {
 
       {/* Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white max-w-4xl w-full p-8 rounded relative">
-            <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4">
-              <X />
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+          <div className="bg-white max-w-4xl w-full rounded p-8 relative text-black">
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="absolute top-4 right-4 text-black"
+            >
+              <X size={24} />
             </button>
 
-            <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+            <div className="flex flex-col md:flex-row gap-8">
+              <img
+                src={selectedItem.image}
+                className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
+              />
 
-            {/* Quantity */}
-            <div className="flex gap-2 mb-4">
-              <button onClick={handleDecrease}>-</button>
-              <span>{quantity}</span>
-              <button onClick={handleIncrease}>+</button>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+
+                <div className="text-[#65B741] font-bold text-xl mb-2">
+                  ₱
+                  {selectedSize === "large"
+                    ? selectedItem.rawPrice.large
+                    : selectedItem.rawPrice.regular}
+                </div>
+
+                <p className="text-gray-700 mb-4">{selectedItem.description}</p>
+
+                {/* Quantity */}
+                <div className="mb-4">
+                  <label className="text-sm font-semibold">Quantity</label>
+                  <div className="flex gap-2 mt-1">
+                    <button className="px-3 border rounded-full bg-white text-black" onClick={handleDecrease}>-</button>
+                    <span>{quantity}</span>
+                    <button className="px-3 border rounded-full bg-white text-black" onClick={handleIncrease}>+</button>
+                  </div>
+                </div>
+
+                {/* Size */}
+                <div className="mb-4">
+                  <label className="text-sm font-semibold">Size</label>
+                  <div className="h-[2px] bg-[#8CB662] my-2" />
+                  <div className="flex gap-2">
+                    {getAvailableSizes(selectedItem.rawPrice).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedSize(s)}
+                        className={`px-4 py-1 rounded-full border text-sm
+                          ${
+                            selectedSize === s
+                              ? "bg-[#8CB662] text-white border-[#8CB662]"
+                              : "bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                          }
+                        `}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Options */}
+                {(() => {
+                  const opts = getOptionsFor(selectedItem);
+                  return (
+                    <>
+                      {opts.flavors && (
+                        <select
+                          value={selectedFlavor}
+                          onChange={e => setSelectedFlavor(e.target.value)}
+                          className="border rounded px-2 py-1 mb-3 w-[300px] bg-white text-black"
+                        >
+                          <option value="">Select flavor</option>
+                          {opts.flavors.map(f => (
+                            <option key={f}>{f}</option>
+                          ))}
+                        </select>
+                      )}
+
+                      {opts.extras && (
+                        <select
+                          value={selectedExtra}
+                          onChange={e => setSelectedExtra(e.target.value)}
+                          className="border rounded px-2 py-1 mb-4 w-[300px] bg-white text-black"
+                        >
+                          <option value="">Select extra</option>
+                          {opts.extras.map(e => (
+                            <option key={e}>{e}</option>
+                          ))}
+                        </select>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Add to Cart */}
+                {isLoggedIn ? (
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
+                  >
+                    Add to Cart
+                  </button>
+                ) : (
+                  <div className="text-red-500 font-semibold">
+                    Please log in to order.
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* Add to Cart */}
-            {isLoggedIn ? (
-              <button
-                onClick={handleAddToCart}
-                className="border px-6 py-2 rounded hover:bg-[#8CB662] hover:text-white"
-              >
-                Add to Cart
-              </button>
-            ) : (
-              <div className="text-red-500 font-semibold">Please log in to order.</div>
-            )}
           </div>
         </div>
       )}
