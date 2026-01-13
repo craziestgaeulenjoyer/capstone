@@ -248,14 +248,8 @@ Route::prefix('admin')->group(function () {
     });
 });
 
-
 /* ---------------- PUBLIC MENU ---------------- */
-
-/* ================= PUBLIC ================= */
-Route::get('/api/menu', [MenuController::class, 'publicMenu']);
-// Public Menu
-
-Route::get('/api/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
+Route::get('/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
 
 /* Upload Profile Picture */
 Route::post('/upload-profile-picture', function (Request $request) {

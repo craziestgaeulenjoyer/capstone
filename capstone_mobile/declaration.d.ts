@@ -26,3 +26,12 @@ declare module '@react-native-checkbox/checkbox' {
   const CheckBox: React.FC<CheckBoxProps>;
   export default CheckBox;
 }
+
+declare module "@ascendtis/react-native-voice-to-text" {
+  export function startListening(): Promise<void>;
+  export function stopListening(): Promise<void>;
+  export function destroy(): Promise<void>;
+
+  export let onSpeechResults: (event: any) => void;
+  export let onSpeechError: (event: any) => void;
+}

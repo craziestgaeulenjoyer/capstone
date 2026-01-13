@@ -36,7 +36,7 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
   const [recognizedText, setRecognizedText] = useState("");
 
   const startListening = async () => {
-    if (isListening) return; 
+    if (isListening) return;
 
     const hasPermission = await requestMicPermission();
     if (!hasPermission) {
@@ -46,15 +46,23 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
 
     try {
       setIsListening(true);
+      setRecognizedText("");
 
-      const result = await VoiceToText.startListening();
-      setRecognizedText(result || "");
+      console.log("🎤 START LISTENING");
+
+      const result = (await (VoiceToText as any).startListening()) as string;
+
+      console.log("🎤 RESULT:", result);
+
+      if (typeof result === "string" && result.length > 0) {
+        setRecognizedText(result);
+      }
     } catch (e) {
-      console.error("Voice error:", e);
+      console.error("❌ Voice start error:", e);
     } finally {
-      await stopListening(); 
+      setIsListening(false);
     }
-  };
+  };  
 
   const stopListening = async () => {
     try {
@@ -82,7 +90,11 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
         <Text style={styles.headerTitle}>{title}</Text>
 
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => setShowVoiceModal(true)}>
+          <TouchableOpacity
+            onPress={() => {
+              setShowVoiceModal(true);
+            }}
+          >
             <Icon name="mic-outline" size={24} color="#000" />
           </TouchableOpacity>
 
@@ -117,7 +129,6 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
             </Text>
 
             <TouchableOpacity
-              disabled={isListening}
               style={[
                 styles.micCircle,
                 {

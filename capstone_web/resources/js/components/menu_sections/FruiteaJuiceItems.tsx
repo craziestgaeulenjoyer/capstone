@@ -220,7 +220,7 @@ const FruiteaJuiceItems: React.FC = () => {
             <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
 
             {/* Dynamic Price */}
-            <div className="text-[#65B741] font-bold text-xl mb-4">
+            <div className="text-gray-900 font-bold text-xl mb-4">
               {getPriceForSize(selectedItem)}
             </div>
 
