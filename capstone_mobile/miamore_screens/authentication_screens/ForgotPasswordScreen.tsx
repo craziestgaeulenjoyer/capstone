@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal } from 'reac
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../routes/navigation';
+import { API_BASE } from "../../config/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 
@@ -14,7 +15,7 @@ const ForgotPasswordScreen = () => {
 
   const handleSendOtp = async () => {
     try {
-      const res = await fetch('http://10.0.2.2:5000/api/forgot-password', {
+      const res = await fetch(`${API_BASE}/api/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

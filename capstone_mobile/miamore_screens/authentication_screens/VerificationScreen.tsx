@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../routes/navigation'; 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE } from "../../config/api";
 
 type VerificationRouteProp = RouteProp<RootStackParamList, 'VerificationScreen'>;
 
@@ -64,7 +65,7 @@ const VerificationScreen = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://10.0.2.2:5000/api/verify-otp', {
+      const response = await fetch(`${API_BASE}/api/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +108,7 @@ const VerificationScreen = () => {
     setCountdown(60);
 
     try {
-      const response = await fetch('http://10.0.2.2:5000/api/resend-otp', {
+      const response = await fetch(`${API_BASE}/api/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: route.params.email }) 

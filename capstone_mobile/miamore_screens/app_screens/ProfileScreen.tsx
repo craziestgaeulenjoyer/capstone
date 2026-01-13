@@ -93,7 +93,7 @@ const ProfileScreen: React.FC = () => {
   const handleSave = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await authFetch("http://10.0.2.2:5000/api/profile", {
+      const response = await authFetch(`${API_BASE}/api/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -695,7 +695,7 @@ const ProfileScreen: React.FC = () => {
             onPress={async () => {
               try {
                 const token = await AsyncStorage.getItem("token");
-                const response = await authFetch("http://10.0.2.2:5000/api/feedback", {
+                const response = await authFetch(`${API_BASE}/api/feedback`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
