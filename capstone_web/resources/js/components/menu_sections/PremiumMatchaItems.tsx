@@ -154,7 +154,7 @@ const isLoggedIn = Boolean(auth?.customer);
               setSelectedItem(item);
               setSelectedSize("16oz");
               setQuantity(1);
-              setSelectedOption("");
+              setSelectedSize('16oz'); 
             }}
             className="rounded-2xl shadow hover:shadow-lg transition border bg-white cursor-pointer text-black"
           >

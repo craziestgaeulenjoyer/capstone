@@ -1,40 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FaStar, FaPlus, FaMinus, FaShoppingBag, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { X, ChevronDown } from 'lucide-react';
+import { Sparkles, Utensils, MoveRight } from 'lucide-react';
 
-type Product = {
-  id: number;
-  title: string;
-  description: string;
-  price: string;
-  image: string;
-  category: string;
-};
+// --- TYPES ---
+type Product = { id: number; title: string; description: string; price: string; image: string; category: string; };
 
-type Category =
-  | 'Lemonade & Fruit Juice' | 'Milk Tea' | 'Snacks' | 'Coffee'
-  | 'Platters' | 'Specialty Coffee' | 'Premium Matcha'
-  | 'Quesadillas & Corndogs' | 'Croffles';
-
-const categories: Category[] = [
-  'Lemonade & Fruit Juice', 'Milk Tea', 'Snacks', 'Coffee', 
-  'Platters', 'Specialty Coffee', 'Premium Matcha', 'Quesadillas & Corndogs', 'Croffles',
-];
-
-const categoryOptions: Record<string, { flavors?: string[]; addOns?: string[]; extras?: string[] }> = {
-  'Lemonade & Fruit Juice': { addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Strawberry Popping Bobba'] },
-  'Milk Tea': { addOns: ['Pearls', 'Nata', 'Coffee Jelly', 'Crushed Oreo', 'Cream Cheese', 'Cheesecake', 'Strawberry Popping Bobba'] },
-  'Coffee': { addOns: ['Extra Espresso Shot'] },
-  'Specialty Coffee': { flavors: ['Hot', 'Iced'], addOns: ['Oat Milk', 'Extra Espresso Shot'] },
-  'Premium Matcha': { addOns: ['Oat Milk'] },
-  'Snacks': { flavors: ['Cheese', 'Sour & Cream', 'BBQ', 'Butter Cheese', 'Honey Butter'] },
-  'Quesadillas & Corndogs': { addOns: ['Extra Garlic Sauce'] },
-  'Croffles': {},
-  'Platters': {},
-};
-
+// --- DATA ---
 const productData: Product[] = [
   { id: 1, title: 'Classic Lemonade', description: 'Timeless balance of tart lemon and sweetness.', category: 'Lemonade & Fruit Juice', image: '/images/ClassicLemonade.png', price: '₱60/70' },
   { id: 2, title: 'Strawberry Lemonade', description: 'Zesty lemonade infused with sweet, ripe strawberry juice.', category: 'Lemonade & Fruit Juice', image: '/images/StrawberryLemonade.png', price: '₱70/80' },
@@ -60,177 +32,165 @@ const productData: Product[] = [
   { id: 22, title: 'Biscoff Croffle', description: 'Croffle drizzled with Biscoff spread and cookie crumbs.', category: 'Croffles', image: '/images/BiscoffCroffle.png', price: '₱120' },
 ];
 
+const categories = Array.from(new Set(productData.map(item => item.category)));
+
 const BestSellerSection: React.FC = () => {
-  const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [activeCategory, setActiveCategory] = useState<Category>('Lemonade & Fruit Juice');
-  const [selectedItem, setSelectedItem] = useState<Product | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.05 });
+  const [activeTab, setActiveTab] = useState(categories[0]);
+  
+  const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string>('16oz');
-  const [selectedFlavor, setSelectedFlavor] = useState('');
-  const [selectedAddOn, setSelectedAddOn] = useState('');
-
-  const scrollCategories = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const { scrollLeft } = scrollRef.current;
-      const scrollTo = direction === 'left' ? scrollLeft - 150 : scrollLeft + 150;
-      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+  const handleTabClick = (cat: string) => {
+    setActiveTab(cat);
+    const element = tabRefs.current[cat];
+    const container = containerRef.current;
+    
+    if (element && container) {
+      const containerWidth = container.offsetWidth;
+      const elementOffset = element.offsetLeft;
+      const elementWidth = element.offsetWidth;
+      const scrollPosition = elementOffset - (containerWidth / 2) + (elementWidth / 2);
+      
+      container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
     }
   };
 
   return (
-    <section ref={ref} className="bg-[#B4D9DD] py-16 md:py-32 px-4 relative overflow-hidden min-h-screen">
-      <div className="absolute inset-0 opacity-[0.1] pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/p6.png')` }} />
+    <section ref={ref} className="bg-[#FCFAF7] py-12 lg:py-24 px-4 relative overflow-hidden min-h-screen">
+      
+      {/* BACKGROUND ELEMENTS */}
+      <div className="absolute inset-0 opacity-[0.3] pointer-events-none mix-blend-multiply" 
+           style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/cream-paper.png')` }}></div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={inView ? { opacity: 1, y: 0 } : {}} className="text-center mb-12 md:mb-16">
-          <img src="/images/MiAmore2.png" alt="Logo" className="mx-auto w-20 md:w-28 mb-4 drop-shadow-md" />
-          <h2 className="text-4xl md:text-5xl font-bold text-[#5C2E0A] mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
-            The <span className="italic text-white drop-shadow-sm">Masterpieces</span>
-          </h2>
-          
-          <div className="relative mt-8">
-            <button onClick={() => scrollCategories('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 p-2 rounded-full shadow-md md:hidden text-[#5C2E0A]"><FaChevronLeft size={10} /></button>
-            <div ref={scrollRef} className="flex overflow-x-auto no-scrollbar md:flex-wrap justify-start md:justify-center gap-2 pb-4 px-10 md:px-0 scroll-smooth">
-              {categories.map((cat) => (
-                <button key={cat} onClick={() => setActiveCategory(cat)}
-                  className={`whitespace-nowrap px-5 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all duration-300 ${cat === activeCategory ? 'bg-[#5C2E0A] text-white shadow-lg' : 'bg-white/80 text-[#5C2E0A] hover:bg-white'}`}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => scrollCategories('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 p-2 rounded-full shadow-md md:hidden text-[#5C2E0A]"><FaChevronRight size={10} /></button>
+      <div className="max-w-[1440px] mx-auto relative z-10">
+        
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={inView ? { opacity: 1, y: 0 } : {}} 
+          className="text-center mb-10 lg:mb-16"
+        >
+          <div className="flex justify-center mb-4">
+            <span className="h-[1px] w-8 lg:w-16 bg-[#8CB662]/30 self-center"></span>
+            <img src="/images/MiAmore2.png" alt="Logo" className="w-12 lg:w-16 mx-4 sepia-[.5] hue-rotate-[60deg] saturate-[.8]" />
+            <span className="h-[1px] w-8 lg:w-16 bg-[#8CB662]/30 self-center"></span>
           </div>
+          
+          <h2 className="text-4xl md:text-6xl lg:text-7xl font-serif text-[#2C1810] tracking-tight mb-4" 
+              style={{ fontFamily: "'Playfair Display', serif" }}>
+            The <span className="italic font-light text-[#8CB662]">Artisan</span> Collection
+          </h2>
         </motion.div>
 
-        <div className="relative">
-          <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible no-scrollbar snap-x snap-mandatory px-4 md:px-0 pb-10">
-            <AnimatePresence mode="wait">
-              {productData.filter(p => p.category === activeCategory).map((item) => (
-                <motion.div 
-                  key={item.id} 
+        {/* Navigation Tabs */}
+        <div className="relative max-w-6xl mx-auto mb-10">
+          <div className="flex lg:hidden justify-between items-center mb-3 px-4">
+             <span className="text-[9px] font-black text-[#8CB662] uppercase tracking-[0.2em]">Select Category</span>
+             <motion.div 
+                animate={{ x: [0, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="flex items-center gap-1.5 text-[#2C1810]/40"
+              >
+                <span className="text-[9px] font-bold uppercase tracking-widest">Swipe</span>
+                <MoveRight size={12} />
+              </motion.div>
+          </div>
+
+          <div 
+            ref={containerRef}
+            className="flex overflow-x-auto no-scrollbar gap-2 lg:gap-3 px-4 lg:px-2 py-4 scroll-smooth flex-nowrap lg:flex-wrap lg:justify-center w-full touch-pan-x"
+          >
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                ref={(el) => { tabRefs.current[cat] = el; }}
+                onClick={() => handleTabClick(cat)}
+                className={`whitespace-nowrap px-7 py-3 rounded-full text-[10px] lg:text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 border
+                ${activeTab === cat 
+                  ? 'bg-[#8CB662] text-white border-[#8CB662] shadow-xl shadow-[#8CB662]/30 scale-105' 
+                  : 'bg-white/70 text-[#2C1810]/60 border-[#2C1810]/5 hover:border-[#8CB662]/30 hover:bg-white'}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Product Grid / Swipe Section */}
+        <div className="px-2 lg:px-4">
+          <motion.div 
+            layout 
+            className="
+              /* Mobile & Tablet: Swipe Layout */
+              flex overflow-x-auto pb-10 gap-5 snap-x snap-mandatory no-scrollbar
+              /* Laptop & Desktop: 4 Columns Grid */
+              lg:grid lg:grid-cols-4 lg:gap-6 xl:gap-8 lg:overflow-visible lg:pb-0
+            "
+          >
+            <AnimatePresence mode="popLayout">
+              {productData.filter(p => p.category === activeTab).map((item) => (
+                <motion.div
+                  key={item.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.9 }} 
-                  animate={{ opacity: 1, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.9 }} 
-                  onClick={() => {setSelectedItem(item); setQuantity(1); setSelectedFlavor(''); setSelectedAddOn('');}}
-                  className="min-w-[85vw] sm:min-w-[45vw] md:min-w-0 snap-center group cursor-pointer bg-white/90 p-4 rounded-[2rem] shadow-md hover:shadow-2xl transition-all duration-500 border border-white/40"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.4 }}
+                  className="
+                    /* Swipe Settings */
+                    min-w-[85vw] sm:min-w-[45vw] md:min-w-[40vw] snap-center 
+                    /* Grid Settings for Laptop */
+                    lg:min-w-full group
+                  "
                 >
-                  <div className="relative aspect-square mb-4 overflow-hidden rounded-[1.5rem] bg-[#F1F0E8]">
-                    <img src={item.image} alt={item.title} className="w-full h-full object-contain p-6 transform group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute top-3 right-3 bg-[#8CB662] text-white px-3 py-1 rounded-full text-[10px] font-bold shadow-sm">{item.price}</div>
+                  <div className="bg-white p-5 lg:p-6 rounded-[2.5rem] shadow-[0_15px_40px_-20px_rgba(0,0,0,0.08)] border border-[#3d1f07]/5 hover:border-[#8CB662]/20 transition-all duration-500 h-full flex flex-col">
+                    
+                    {/* Image */}
+                    <div className="relative aspect-square mb-6 overflow-hidden rounded-[2rem] bg-[#F8F9F5]">
+                      <img 
+                        src={item.image} 
+                        alt={item.title} 
+                        className="w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-700" 
+                      />
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm border border-[#8CB662]/10">
+                        <Sparkles size={10} className="text-[#8CB662]" />
+                        <span className="text-[8px] font-black uppercase text-[#2C1810]">Best Seller</span>
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex flex-col flex-grow px-2">
+                      <h3 className="text-xl lg:text-xl xl:text-2xl font-serif text-[#2C1810] mb-2 font-bold leading-tight">
+                        {item.title}
+                      </h3>
+                      <p className="text-[#2C1810]/50 text-xs lg:text-[13px] leading-relaxed mb-6 font-medium italic line-clamp-2">
+                        {item.description}
+                      </p>
+                      
+                      <div className="mt-auto pt-5 border-t border-[#F0F2ED] flex justify-between items-end">
+                        <div className="flex flex-col">
+                          <span className="text-[8px] uppercase font-bold text-[#8CB662] mb-1">Price</span>
+                          <span className="text-xl lg:text-xl xl:text-2xl font-serif font-black text-[#2C1810]">{item.price}</span>
+                        </div>
+                        <div className="h-10 w-10 rounded-full bg-[#FCFAF7] border border-[#8CB662]/20 flex items-center justify-center text-[#8CB662] group-hover:bg-[#8CB662] group-hover:text-white transition-all duration-500 shadow-sm">
+                          <Utensils size={16} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-[#5C2E0A] truncate px-2" style={{ fontFamily: "'Playfair Display', serif" }}>{item.title}</h3>
-                  <div className="flex gap-1 px-2 mb-2">{[...Array(5)].map((_, i) => <FaStar key={i} className="text-[#D4AF37] text-[10px]" />)}</div>
-                  <p className="text-[#5C2E0A]/60 text-[11px] italic px-2 line-clamp-2 leading-relaxed">{item.description}</p>
                 </motion.div>
               ))}
             </AnimatePresence>
-          </div>
-          
-          <div className="flex justify-center gap-1.5 md:hidden -mt-4">
-             {productData.filter(p => p.category === activeCategory).map((_, i) => (
-               <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#5C2E0A]/20" />
-             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* MODAL SECTION */}
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#203a3d]/70 backdrop-blur-md">
-            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} 
-              className="bg-[#FAF9F6] w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh]">
-              
-              <button onClick={() => setSelectedItem(null)} className="absolute top-6 right-6 z-20 p-2 bg-[#B4D9DD]/40 hover:bg-[#B4D9DD] rounded-full text-[#5C2E0A] transition-colors"><X size={20} /></button>
-
-              <div className="w-full md:w-5/12 bg-[#F1F0E8] flex items-center justify-center p-12 relative">
-                <div className="absolute -bottom-10 -left-10 text-[#5C2E0A]/5 font-black text-9xl select-none italic">Mi</div>
-                <img src={selectedItem.image} alt={selectedItem.title} className="w-full h-full object-contain relative z-10 drop-shadow-2xl animate-float" />
-              </div>
-
-              <div className="w-full md:w-7/12 p-8 md:p-12 flex flex-col overflow-y-auto no-scrollbar">
-                <div className="mb-6">
-                  <span className="text-[#8CB662] font-bold text-[10px] tracking-[0.3em] uppercase mb-2 block">{selectedItem.category}</span>
-                  <h2 className="text-3xl font-bold text-[#5C2E0A] mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>{selectedItem.title}</h2>
-                  <p className="text-[#5C2E0A]/50 text-xs italic leading-relaxed">{selectedItem.description}</p>
-                </div>
-
-                <div className="flex items-center justify-between border-y border-[#5C2E0A]/10 py-6 mb-8">
-                  <div><p className="text-[10px] font-bold text-[#5C2E0A]/40 uppercase mb-1">Unit Price</p><p className="text-3xl font-black text-[#5C2E0A]">{selectedItem.price}</p></div>
-                  <div className="flex items-center bg-[#B4D9DD]/20 rounded-xl p-1 border border-[#B4D9DD]/40">
-                    <button onClick={() => setQuantity(q => Math.max(1, q-1))} className="w-9 h-9 flex items-center justify-center bg-white rounded-lg text-[#5C2E0A] shadow-sm"><FaMinus size={10}/></button>
-                    <span className="w-10 text-center font-bold text-[#5C2E0A]">{quantity}</span>
-                    <button onClick={() => setQuantity(q => q+1)} className="w-9 h-9 flex items-center justify-center bg-white rounded-lg text-[#5C2E0A] shadow-sm"><FaPlus size={10}/></button>
-                  </div>
-                </div>
-
-                <div className="space-y-5 flex-grow">
-                  {['Lemonade & Fruit Juice', 'Milk Tea', 'Snacks'].includes(selectedItem.category) && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2">
-                      <p className="text-[10px] font-bold text-[#5C2E0A]/40 uppercase tracking-widest mb-3">Choose Serving Size</p>
-                      <div className="flex gap-3">
-                        {(selectedItem.category === 'Snacks' ? ['Regular', 'Large'] : ['16oz', '22oz']).map(size => (
-                          <button key={size} onClick={() => setSelectedSize(size)}
-                            className={`flex-1 py-3 rounded-xl font-bold text-[10px] tracking-widest transition-all ${selectedSize === size ? 'bg-[#5C2E0A] text-white shadow-lg' : 'bg-white text-[#5C2E0A] border border-[#5C2E0A]/10'}`}>{size}</button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {(() => {
-                    const opts = categoryOptions[selectedItem.category];
-                    if (!opts) return null;
-                    return (
-                      <div className="grid grid-cols-1 gap-4">
-                        {opts.flavors && (
-                          <div className="relative">
-                            <label className="text-[10px] font-bold text-[#5C2E0A]/40 uppercase tracking-widest mb-2 block">Flavors / Style</label>
-                            <div className="relative">
-                              <select value={selectedFlavor} onChange={e => setSelectedFlavor(e.target.value)} className="w-full bg-white border border-[#5C2E0A]/10 rounded-xl py-3 px-4 text-xs font-medium text-[#5C2E0A] appearance-none focus:outline-none focus:ring-2 focus:ring-[#8CB662]/30">
-                                <option value="">Select option</option>
-                                {opts.flavors.map(f => <option key={f} value={f}>{f}</option>)}
-                              </select>
-                              <ChevronDown className="absolute right-4 top-3.5 text-[#5C2E0A]/40 pointer-events-none" size={14} />
-                            </div>
-                          </div>
-                        )}
-                        {opts.addOns && (
-                          <div className="relative">
-                            <label className="text-[10px] font-bold text-[#5C2E0A]/40 uppercase tracking-widest mb-2 block">Premium Add-ons</label>
-                            <div className="relative">
-                              <select value={selectedAddOn} onChange={e => setSelectedAddOn(e.target.value)} className="w-full bg-white border border-[#5C2E0A]/10 rounded-xl py-3 px-4 text-xs font-medium text-[#5C2E0A] appearance-none focus:outline-none focus:ring-2 focus:ring-[#8CB662]/30">
-                                <option value="">No add-ons</option>
-                                {opts.addOns.map(a => <option key={a} value={a}>{a}</option>)}
-                              </select>
-                              <ChevronDown className="absolute right-4 top-3.5 text-[#5C2E0A]/40 pointer-events-none" size={14} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <div className="mt-10">
-                  <button className="w-full bg-[#5C2E0A] text-white py-5 rounded-[1.5rem] font-bold text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#3d1f07] transition-all shadow-xl shadow-[#5C2E0A]/20 active:scale-95">
-                    <FaShoppingBag size={14}/> Add to Cart
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Montserrat:wght@300..900&display=swap');
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        .animate-float { animation: float 4s ease-in-out infinite; }
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+        body { font-family: 'Montserrat', sans-serif; overflow-x: hidden; }
       `}</style>
     </section>
   );

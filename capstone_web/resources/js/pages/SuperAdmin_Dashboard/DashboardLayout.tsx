@@ -7,8 +7,8 @@ import EventsTable from "../SuperAdminDashItems/EventsTable";
 import ReportsContent from "@/pages/SuperAdminDashItems/Reports";
 import AnalyticsContent from "@/pages/SuperAdminDashItems/Analytics";
 import ManageItemsContent from "@/pages/SuperAdminDashItems/Manage_Items";
+import ReviewDashboard from "../SuperAdminDashItems/Reviews";
 import TeamsContent from "@/pages/SuperAdminDashItems/Teams";
-
 
 interface DashboardLayoutProps {
   subpage?: string;
@@ -24,6 +24,7 @@ export default function DashboardLayout({ subpage }: DashboardLayoutProps) {
       case "events": return <EventsTable />;
       case "reports": return <ReportsContent />;
       case "analytics": return <AnalyticsContent />;
+      case "reviews": return <ReviewDashboard />; 
       case "manage-items": return <ManageItemsContent />;
       case "teams": return <TeamsContent />;
       default: return <Dashboard />;

@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\SuperAdmin;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Auth\Events\Verified;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 class SuperAdminAuthController extends Controller
 {
@@ -85,6 +86,19 @@ class SuperAdminAuthController extends Controller
         Log::info('Verification email resent to SuperAdmin', ['email' => $user->email]);
 
         return response()->json(['message' => 'Verification email resent successfully.']);
+    }
+
+    public function verify(EmailVerificationRequest $request)
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect('/superadmin/dashboard');
+        }
+
+        if ($request->user()->markEmailAsVerified()) {
+            event(new Verified($request->user()));
+        }
+
+        return redirect('/superadmin/dashboard');
     }
 
     public function profile(Request $request)

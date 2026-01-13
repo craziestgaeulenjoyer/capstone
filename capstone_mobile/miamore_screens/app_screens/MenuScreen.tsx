@@ -15,10 +15,10 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
-import { useRoute } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../routes/navigation";
 import { authFetch } from "../../utils/authFetch";
+import { API_BASE } from "../../config/api";
 
 const UI_CATEGORIES = [
   "All",
@@ -49,7 +49,6 @@ const subcategoriesMap: Record<string, string[]> = {
   foods: ["Snacks", "Platters", "Croffles", "Quesadillas & Korean Corndogs"],
 };
 
-const API_URL = "http://10.0.2.2:5000"; // Node backend
 const LARAVEL_BASE = "http://10.0.2.2:8000"; // Laravel public base
 type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
 
@@ -96,7 +95,7 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
     console.warn("Fetching menu items...");
 
     try {
-      const res = await fetch(`${API_URL}/api/menu-items`);
+      const res = await fetch(`${API_BASE}/api/menu-items`);
       const data = await res.json();
       console.warn("Raw data fetched:", data);
 
@@ -249,7 +248,7 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
       };
       console.log("Adding to cart payload:", payload);
 
-      const res = await authFetch(`${API_URL}/api/cart`, {
+      const res = await authFetch(`${API_BASE}/api/cart`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

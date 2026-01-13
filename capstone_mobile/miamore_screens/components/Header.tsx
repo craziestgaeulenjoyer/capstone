@@ -11,7 +11,10 @@ import {
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import { NativeEventEmitter, NativeModules } from "react-native";
 import * as VoiceToText from "@ascendtis/react-native-voice-to-text";
+import { API_BASE } from "../../config/api";
+import { authFetch } from "../../utils/authFetch";
 
 async function requestMicPermission() {
   if (Platform.OS === "android") {
@@ -27,47 +30,124 @@ async function requestMicPermission() {
     );
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
-  return true; // iOS automatically handles permission
+  return true;
 }
+
+type SpeechResultEvent = {
+  value?: string[];
+};
 
 const Header = ({ title, active = true }: { title: string; active?: boolean }) => {
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognizedText, setRecognizedText] = useState("");
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
 
   const startListening = async () => {
-    if (isListening) return; 
-
-    const hasPermission = await requestMicPermission();
-    if (!hasPermission) {
-      Alert.alert("Microphone permission denied.");
-      return;
-    }
-
     try {
       setIsListening(true);
+      setRecognizedText("- listening -");
 
-      const result = await VoiceToText.startListening();
-      setRecognizedText(result || "");
-    } catch (e) {
-      console.error("Voice error:", e);
-    } finally {
-      await stopListening(); 
+      await VoiceToText.startListening({
+        locale: "fil-PH",
+        interimResults: false,
+      });
+
+      console.log("🎤 Listening started");
+    } catch (err) {
+      console.error("Start listening error:", err);
+      setIsListening(false);
     }
   };
 
+  /* ================= STOP LISTENING ================= */
   const stopListening = async () => {
     try {
+      console.log("🛑 Listening stopped");
       await VoiceToText.stopListening();
     } catch (e) {
-      console.warn("Stop listening error:", e);
+      console.warn("Stop error:", e);
     } finally {
       setIsListening(false);
     }
   };
 
+  const VoiceModule = NativeModules.VoiceToText;
+  const voiceEmitter = VoiceModule
+    ? new NativeEventEmitter(VoiceModule)
+    : null;
+
+  /* ================= EVENT LISTENERS ================= */
   useEffect(() => {
+    if (!voiceEmitter) return;
+
+    const resultListener = voiceEmitter.addListener(
+      "onSpeechResults",
+      (e: SpeechResultEvent) => {
+        const handleSpeechResult = async () => {
+          if (isProcessingVoice) return; // 🔒 prevent duplicates
+          setIsProcessingVoice(true);
+
+          console.log("📝 Speech result:", e);
+
+          let text = "";
+
+          if (typeof e?.value === "string") {
+            text = e.value;
+          } else if (Array.isArray(e?.value) && e.value.length > 0) {
+            text = e.value[0];
+          }
+
+          if (!text.trim()) {
+            setIsProcessingVoice(false);
+            return;
+          }
+
+          setRecognizedText(text);
+          await stopListening();
+
+          try {
+            const response = await authFetch(`${API_BASE}/api/voice-order`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ transcript: text }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              Alert.alert(
+                "Voice Order Failed",
+                data.message || "No matching item found."
+              );
+            } else {
+              Alert.alert("Added to Cart", data.message);
+            }
+          } catch (err) {
+            console.error("Voice order error:", err);
+            Alert.alert("Error", "Failed to process voice order.");
+          } finally {
+            setIsProcessingVoice(false);
+          }
+        };
+
+        handleSpeechResult();
+      }
+    );
+
+    const errorListener = voiceEmitter.addListener(
+      "onSpeechError",
+      (e: unknown) => {
+        console.error("❌ Speech error:", e);
+        stopListening();
+      }
+    );
+
     return () => {
+      resultListener.remove();
+      errorListener.remove();
       VoiceToText.stopListening().catch(() => {});
     };
   }, []);
@@ -82,7 +162,11 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
         <Text style={styles.headerTitle}>{title}</Text>
 
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => setShowVoiceModal(true)}>
+          <TouchableOpacity
+            onPress={() => {
+              setShowVoiceModal(true);
+            }}
+          >
             <Icon name="mic-outline" size={24} color="#000" />
           </TouchableOpacity>
 
@@ -104,6 +188,8 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
             <TouchableOpacity
               onPress={async () => {
                 await stopListening();
+                setRecognizedText("");
+                setIsProcessingVoice(false);
                 setShowVoiceModal(false);
               }}
               style={styles.closeBtn}
@@ -125,7 +211,7 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
                   opacity: isListening ? 0.7 : 1,
                 },
               ]}
-              onPress={startListening}
+              onPress={isListening ? stopListening : startListening}
             >
               <Icon name="mic" size={90} color="#fff" />
             </TouchableOpacity>
@@ -149,7 +235,10 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
 
               <TouchableOpacity
                 style={[styles.actionBtn, styles.retryBtn]}
-                onPress={() => setRecognizedText("")}
+                onPress={() => {
+                  setRecognizedText("");
+                  setIsProcessingVoice(false); 
+                }}
               >
                 <Text style={styles.btnText}>Try again</Text>
               </TouchableOpacity>

@@ -16,7 +16,6 @@ Route::middleware(['web'])->group(function () {
        CUSTOMER AUTH ROUTES
     ==========================*/
     Route::prefix('customer')->group(function () {
-
         /* ---- SIGNUP PROCESS ---- */
         Route::post('/signup', [CustomerAuthController::class, 'signup'])
             ->name('customer.signup.store');
@@ -84,14 +83,19 @@ Route::middleware(['web'])->group(function () {
 
         // Email verification link
         Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
-            $admin = Admin::find($id);
-            if (!$admin) return response()->json(['message' => 'Invalid verification link or user not found'], 404);
 
-            if (!hash_equals(sha1($admin->getEmailForVerification()), $hash)) {
-                return response()->json(['message' => 'Invalid or expired verification link'], 400);
+            if (! $request->hasValidSignature()) {
+                return response()->make(
+                    '<h1>Verification link expired or invalid.</h1>',
+                    403
+                );
             }
 
-            if (!$admin->hasVerifiedEmail()) $admin->markEmailAsVerified();
+            $admin = Admin::findOrFail($id);
+
+            if (! $admin->hasVerifiedEmail()) {
+                $admin->markEmailAsVerified();
+            }
 
             return response()->make(<<<HTML
                 <html>
@@ -104,13 +108,16 @@ Route::middleware(['web'])->group(function () {
                             window.opener.postMessage({type:'EMAIL_VERIFIED', role:'admin'}, '*');
                             setTimeout(()=>window.close(),1500);
                         } else {
-                            window.location.href='/admin/';
+                            window.location.href='/admin/dashboard';
                         }
                     </script>
                 </body>
                 </html>
             HTML);
-        })->name('admin.verification.verify');
+
+        })
+        ->middleware('signed')
+        ->name('admin.verification.verify');
 
         // Resend verification email
         Route::post('/email/resend', [AdminAuthController::class, 'resendVerificationEmail']);
@@ -134,14 +141,19 @@ Route::middleware(['web'])->group(function () {
 
         // Email verification link
         Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
-            $superAdmin = SuperAdmin::find($id);
-            if (!$superAdmin) return response()->json(['message' => 'Invalid verification link or user not found'], 404);
 
-            if (!hash_equals(sha1($superAdmin->getEmailForVerification()), $hash)) {
-                return response()->json(['message' => 'Invalid or expired verification link'], 400);
+            if (! $request->hasValidSignature()) {
+                return response()->make(
+                    '<h1>Verification link expired or invalid.</h1>',
+                    403
+                );
             }
 
-            if (!$superAdmin->hasVerifiedEmail()) $superAdmin->markEmailAsVerified();
+            $superAdmin = SuperAdmin::findOrFail($id);
+
+            if (! $superAdmin->hasVerifiedEmail()) {
+                $superAdmin->markEmailAsVerified();
+            }
 
             return response()->make(<<<HTML
                 <html>
@@ -154,13 +166,16 @@ Route::middleware(['web'])->group(function () {
                             window.opener.postMessage({type:'EMAIL_VERIFIED', role:'super_admin'}, '*');
                             setTimeout(()=>window.close(),1500);
                         } else {
-                            window.location.href='/superadmin/';
+                            window.location.href='/superadmin/dashboard';
                         }
                     </script>
                 </body>
                 </html>
             HTML);
-        })->name('superadmin.verification.verify');
+
+        })
+        ->middleware('signed')
+        ->name('superadmin.verification.verify');
 
         // Resend verification email
         Route::post('/email/resend', [SuperAdminAuthController::class, 'resendVerificationEmail']);

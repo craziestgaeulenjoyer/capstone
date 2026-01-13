@@ -22,6 +22,7 @@ interface OrderHour {
   hour: number;
   orders: number;
   customers: number;
+  revenue: number; 
   day: string;   
   month: number;
 }
@@ -614,7 +615,7 @@ const Analytics: React.FC = () => {
     if (!salesData || salesData.length === 0) return [];
 
     if (view !== 'Per Day') {
-      return salesData; // ⬅ Leave month/year untouched
+      return salesData; 
     }
 
     const isSunday = currentDate.getDay() === 0;
@@ -622,7 +623,7 @@ const Analytics: React.FC = () => {
     const closeHour = 22;
 
     return salesData.filter(item => {
-      const hour = Number(item.name); // name = hour when Per Day
+      const hour = Number(item.name); 
       return !isNaN(hour) && hour >= openHour && hour <= closeHour;
     });
   }, [salesData, view, currentDate]);
@@ -630,14 +631,12 @@ const Analytics: React.FC = () => {
   const normalizeDailySales = (data: SalesDataItem[], date: Date): SalesDataItem[] => {
     const daysInMonth = getDaysInMonth(date);
 
-    // Map day number (1..31) to value
     const map = new Map<number, SalesDataItem>();
 
     data.forEach(d => {
       let dayNum = 0;
 
-      // Try to extract day number from backend format like "Nov 07"
-      const match = d.name.match(/\d+/); // matches the first number in name
+      const match = d.name.match(/\d+/); 
       if (match) dayNum = parseInt(match[0], 10);
 
       if (dayNum >= 1 && dayNum <= daysInMonth) {
@@ -907,6 +906,43 @@ const Analytics: React.FC = () => {
     });
   };
 
+  function generateBusinessHours(date: Date): number[] {
+    const day = date.getDay(); // 0 = Sunday
+    const startHour = day === 0 ? 9 : 10;
+    const endHour = 22;
+
+    const hours: number[] = [];
+    for (let h = startHour; h <= endHour; h++) {
+      hours.push(h);
+    }
+
+    return hours;
+  }
+
+  const businessHours =
+    filter === 'day'
+      ? generateBusinessHours(new Date(selectedDate))
+      : [];
+
+  const chartData: OrderHour[] =
+    filter === 'day'
+      ? businessHours.map(hour => {
+          const record = ordersPerHour.find(d => d.hour === hour);
+
+          return {
+            hour,
+            orders: record?.orders ?? 0,
+            customers: record?.customers ?? 0,
+            revenue: record?.revenue ?? 0, 
+            day: record?.day ?? '',
+            month: record?.month ?? 0,
+          };
+        })
+      : ordersPerHour;
+
+  const revenueDaySource = chartData; // { hour, revenue, customers }
+  const revenueAggregateSource = salesData; // { name, value }
+
   const forecastStepsMap = {
     "Per Day": 7,
     "Per Month": 7,
@@ -915,32 +951,59 @@ const Analytics: React.FC = () => {
 
   const forecastSteps = forecastStepsMap[view] ?? 7;
 
+  const revenueChartSource =
+  filter === 'day'
+    ? chartData
+    : salesData;
+
   const forecastRevenueData = useMemo(() => {
-    const actual = salesData?.map((d: any) => d.value) ?? [];
+    // Get actual values
+    const actual =
+      filter === 'day'
+        ? revenueDaySource.map(d => d.revenue)
+        : revenueAggregateSource.map(d => d.value);
+
     const forecast = performLinearRegression(actual, forecastSteps);
 
+    // Build chart points
+    const actualSeries =
+      filter === 'day'
+        ? revenueDaySource.map(d => ({
+            label: `${d.hour % 12 === 0 ? 12 : d.hour % 12}${d.hour < 12 ? 'AM' : 'PM'}`,
+            actual: d.revenue,
+          }))
+        : revenueAggregateSource.map(d => ({
+            label: d.name,
+            actual: d.value,
+          }));
+
     return [
-      ...(salesData?.map((d: any) => ({
-        label: d.name,
-        actual: d.value,
-      })) ?? []),
+      ...actualSeries,
       ...forecast.map((v, i) => ({
         label: `+${i + 1}`,
         forecast: v,
       })),
     ];
-  }, [salesData, view]);
+  }, [filter, revenueDaySource, revenueAggregateSource, forecastSteps]);
 
   // Customers Forecast Data
   const forecastCustomerData = useMemo(() => {
-    const actual = customerInsightsData.registrations?.map(r => r.count) ?? [];
+    const actual =
+      filter === 'day'
+        ? chartData.map(d => d.customers)
+        : customerInsightsData.registrations?.map(r => r.count) ?? [];
     const forecast = performLinearRegression(actual, forecastSteps);
 
     return [
-      ...(customerInsightsData.registrations?.map(r => ({
-        label: r.date,
-        actual: r.count,
-      })) ?? []),
+      ...(filter === 'day'
+        ? chartData.map(d => ({
+            label: `${d.hour % 12 === 0 ? 12 : d.hour % 12}${d.hour < 12 ? 'AM' : 'PM'}`,
+            actual: d.customers,
+          }))
+        : customerInsightsData.registrations?.map(r => ({
+            label: r.date,
+            actual: r.count,
+          })) ?? []),
 
       ...forecast.map((v, i) => ({
         label: `+${i + 1}`,
@@ -1861,7 +1924,9 @@ const Analytics: React.FC = () => {
             </h3>
 
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={forecastRevenueData}>
+              <LineChart
+                data={filter === 'day' ? forecastRevenueData : forecastRevenueData}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" />
                 <YAxis />

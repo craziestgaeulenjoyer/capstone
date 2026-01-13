@@ -18,6 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../routes/navigation";
+import { API_BASE } from "../../config/api";
 
 const HomeScreen: React.FC = () => {  
   type HomeNavProp = NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -37,7 +38,7 @@ const HomeScreen: React.FC = () => {
       }
 
       try {
-        const res = await fetch("http://10.0.2.2:5000/api/validate-token", {
+        const res = await fetch(`${API_BASE}/api/validate-token`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

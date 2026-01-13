@@ -782,6 +782,44 @@ class AnalyticsController extends Controller
         }
     }
 
+    public function perDayForecast(Request $request)
+    {
+        $date = Carbon::parse($request->date ?? now());
+
+        $dayOfWeek = $date->dayOfWeek; 
+        // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+        // Business hours
+        if ($dayOfWeek === Carbon::SUNDAY) {
+            $startHour = 9;
+        } else {
+            $startHour = 10;
+        }
+
+        $endHour = 22; // 10 PM
+
+        $sales = DB::table('orders')
+            ->selectRaw('
+                EXTRACT(HOUR FROM created_at) as hour,
+                COUNT(*) as total_orders,
+                SUM(total_amount) as total_revenue
+            ')
+            ->whereDate('created_at', $date)
+            ->whereRaw('EXTRACT(HOUR FROM created_at) BETWEEN ? AND ?', [
+                $startHour,
+                $endHour
+            ])
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->get();
+
+        return response()->json([
+            'start_hour' => $startHour,
+            'end_hour' => $endHour,
+            'data' => $sales
+        ]);
+    }
+
     public function revenuePerDay(Request $request)
     {
         $date = Carbon::parse($request->input('date'));
@@ -816,9 +854,18 @@ class AnalyticsController extends Controller
             ->whereNotNull('user_id')
             ->where('status', 'completed'); // OPTIONAL but correct
 
+        $carbonDate = Carbon::parse($date);
+
+        $startHour = $carbonDate->dayOfWeek === Carbon::SUNDAY ? 9 : 10;
+        $endHour   = 22;
+
         // Apply date filter
         if ($filter === 'day') {
-            $query->whereDate('created_at', $date);
+            $query->whereDate('created_at', $date)
+                ->whereRaw(
+                    'EXTRACT(HOUR FROM created_at) BETWEEN ? AND ?',
+                    [$startHour, $endHour]
+                );
         } elseif ($filter === 'month') {
             $parsed = Carbon::parse($date);
             $query->whereMonth('created_at', $parsed->month)
@@ -838,10 +885,9 @@ class AnalyticsController extends Controller
          * BUSINESS HOURS LOGIC (FIXED)
          */
         if ($filter === 'day') {
-            $dayOfWeek = Carbon::parse($date)->dayOfWeek; // 0 = Sunday
+            $dayOfWeek = Carbon::parse($date)->dayOfWeek; 
             $startHour = $dayOfWeek === 0 ? 9 : 10;
         } else {
-            // per_month / per_year
             $startHour = 9;
         }
 

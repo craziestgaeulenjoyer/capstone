@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EventInquiry extends Model
 {
+    use HasFactory;
     protected $table = 'event_inquiries';
 
     protected $fillable = [
@@ -14,6 +16,7 @@ class EventInquiry extends Model
         'event_type',
         'event_date',
         'estimated_pax',
-        'event_location'
+        'event_location',
+        'status',
     ];
 }

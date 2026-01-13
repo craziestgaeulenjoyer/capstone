@@ -141,34 +141,53 @@ const PopularItems: React.FC = () => {
   /* ---------------- UI ---------------- */
   return (
     <div className="px-6 pt-10 pb-16">
-      {/* Tabs */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
-        <div className="flex flex-wrap gap-3">
-          {categories.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              className={`px-5 py-2 rounded-full border text-sm font-semibold ${
-                activeTab === t
-                  ? "bg-[#8CB662] text-white border-[#8CB662]"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+    {/* Tabs & Search Container */}
+<div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+  
+  <div className="w-full lg:flex-1 overflow-hidden relative">
+    <div 
+      className="flex flex-nowrap items-center gap-2 sm:gap-3 pb-3 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}
+    >
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
 
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-2.5 text-gray-700" size={18} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search popular item..."
-            className="w-full pl-10 pr-4 py-2 text-sm text-gray-700 rounded-full border border-gray-400 focus:ring-2 focus:ring-[#8CB662]"
-          />
-        </div>
-      </div>
+      {categories.map((t) => (
+        <button
+          key={t}
+          onClick={() => setActiveTab(t)}
+          className={`whitespace-nowrap text-xs sm:text-sm font-bold px-5 sm:px-6 py-2.5 rounded-full border transition-all duration-300 flex-shrink-0 ${
+            activeTab === t
+              ? "bg-[#8CB662] text-white border-[#8CB662] shadow-md scale-105"
+              : "border-gray-200 text-gray-600 hover:border-[#8CB662] hover:text-[#8CB662] bg-white"
+          }`}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Search Bar */}
+  <div className="relative w-full lg:w-[300px] xl:w-[400px] flex-shrink-0">
+    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+    <input
+      type="text"
+      placeholder="Search popular item..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      className="w-full pl-11 pr-4 py-2.5 text-sm bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#8CB662]/50 transition-all shadow-sm"
+    />
+  </div>
+</div>
+      
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

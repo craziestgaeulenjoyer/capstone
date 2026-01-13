@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin.only' => \App\Http\Middleware\SuperAdminOnly::class,
             'auth.customer' => \App\Http\Middleware\AuthenticateCustomer::class,
             'customer.verified' => \App\Http\Middleware\CustomerVerified::class,
+            'admin.access' => \App\Http\Middleware\AdminAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

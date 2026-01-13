@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\Admin;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Auth\Events\Verified;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 class AdminAuthController extends Controller
 {
@@ -85,6 +86,19 @@ class AdminAuthController extends Controller
         Log::info('Verification email resent to Admin', ['email' => $user->email]);
 
         return response()->json(['message' => 'Verification email resent successfully.']);
+    }
+    
+    public function verify(EmailVerificationRequest $request)
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect('/admin/dashboard');
+        }
+
+        if ($request->user()->markEmailAsVerified()) {
+            event(new Verified($request->user()));
+        }
+
+        return redirect('/admin/dashboard');
     }
 
     public function profile(Request $request)

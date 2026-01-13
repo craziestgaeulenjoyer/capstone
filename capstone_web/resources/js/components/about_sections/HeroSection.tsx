@@ -1,10 +1,15 @@
 // resources/js/components/aboutus/HeroSection.tsx
-import React from 'react';
-import { motion, useScroll, useTransform, Variants } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, useScroll, useTransform, Variants, AnimatePresence } from 'framer-motion';
 
 const HeroSection: React.FC = () => {
     const { scrollY } = useScroll();
-    
+    const [imagesLoaded, setImagesLoaded] = useState<{ [key: string]: boolean }>({});
+
+    const handleImageLoad = (id: string) => {
+        setImagesLoaded(prev => ({ ...prev, [id]: true }));
+    };
+
     const opacity = useTransform(scrollY, [0, 300], [1, 0]);
     const yTransform = useTransform(scrollY, [0, 400], [0, 80]);
     const rotateImg = useTransform(scrollY, [0, 400], [0, 5]);
@@ -30,9 +35,9 @@ const HeroSection: React.FC = () => {
     };
 
     return (
-        
         <section className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#FAF9F6] pt-24 md:pt-28 lg:pt-32 pb-12">
             
+            {/* BACKGROUND ELEMENTS */}
             <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#fdfcf0] via-[#FAF9F6] to-[#f2f0e4]" />
             <div className="absolute inset-0 opacity-[0.06] z-10 pointer-events-none" 
                  style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }} />
@@ -40,6 +45,7 @@ const HeroSection: React.FC = () => {
             <div className="container mx-auto px-6 sm:px-12 lg:px-20 relative z-20">
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-8">
                     
+                    {/* TEXT CONTENT */}
                     <motion.div
                         style={{ opacity, y: yTransform }}
                         variants={containerVariants}
@@ -77,6 +83,7 @@ const HeroSection: React.FC = () => {
                         </motion.div>
                     </motion.div>
 
+                    {/* IMAGE SECTION */}
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -85,18 +92,48 @@ const HeroSection: React.FC = () => {
                     >
                         <div className="absolute inset-0 bg-[#3d230d]/5 rounded-full blur-[80px] scale-90 -z-10" />
 
+                        {/* SMALL FLOATING IMAGE */}
                         <motion.div 
                             style={{ rotate: rotateImg }}
-                            className="absolute -left-4 sm:left-0 lg:-left-6 top-0 w-32 h-44 md:w-44 md:h-64 lg:w-52 lg:h-72 shadow-2xl z-20 border-[6px] md:border-[8px] border-white overflow-hidden hidden sm:block"
+                            className="absolute -left-4 sm:left-0 lg:-left-6 top-0 w-32 h-44 md:w-44 md:h-64 lg:w-52 lg:h-72 shadow-2xl z-20 border-[6px] md:border-[8px] border-white overflow-hidden hidden sm:block bg-[#f2f0e4]"
                         >
-                            <img src="/images/about-us-1.jpg" alt="Process" className="w-full h-full object-cover" />
+                            <AnimatePresence>
+                                {!imagesLoaded['img1'] && (
+                                    <div className="absolute inset-0 bg-[#f2f0e4] animate-pulse" />
+                                )}
+                            </AnimatePresence>
+                            <motion.img 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: imagesLoaded['img1'] ? 1 : 0 }}
+                                src="/images/about-us-1.jpg" 
+                                alt="Process" 
+                                className="w-full h-full object-cover"
+                                onLoad={() => handleImageLoad('img1')}
+                                fetchPriority="high"
+                            />
                         </motion.div>
 
-                        <div className="w-48 h-64 sm:w-60 sm:h-80 md:w-72 md:h-[420px] lg:w-[320px] lg:h-[460px] shadow-2xl relative z-10 border-[8px] md:border-[10px] border-white overflow-hidden">
-                            <img src="/images/about-us-2.jpg" alt="Our Store" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-[#3d230d]/5 mix-blend-multiply" />
+                        {/* MAIN IMAGE */}
+                        <div className="w-48 h-64 sm:w-60 sm:h-80 md:w-72 md:h-[420px] lg:w-[320px] lg:h-[460px] shadow-2xl relative z-10 border-[8px] md:border-[10px] border-white overflow-hidden bg-[#f2f0e4]">
+                            <AnimatePresence>
+                                {!imagesLoaded['img2'] && (
+                                    <div className="absolute inset-0 bg-[#f2f0e4] animate-pulse" />
+                                )}
+                            </AnimatePresence>
+                            <motion.img 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: imagesLoaded['img2'] ? 1 : 0 }}
+                                src="/images/about-us-2.jpg" 
+                                alt="Our Store" 
+                                className="w-full h-full object-cover"
+                                onLoad={() => handleImageLoad('img2')}
+                                loading="eager"
+                                fetchPriority="high"
+                            />
+                            <div className="absolute inset-0 bg-[#3d230d]/5 mix-blend-multiply pointer-events-none" />
                         </div>
 
+                        {/* LOCATION TAG */}
                         <div className="absolute -bottom-4 right-2 sm:right-6 lg:-right-4 bg-[#3d230d] text-[#FAF9F6] px-4 py-3 md:px-6 md:py-4 shadow-2xl z-30">
                             <p className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] font-bold italic">
                                 Batangas, Philippines
@@ -106,6 +143,7 @@ const HeroSection: React.FC = () => {
                 </div>
             </div>
 
+            {/* SCROLL INDICATOR */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

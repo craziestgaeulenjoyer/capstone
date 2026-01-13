@@ -56,46 +56,68 @@ function DashboardEmailVerificationResend() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-200 p-4 font-inter">
-      <div className="bg-white rounded-xl shadow-2xl overflow-hidden max-w-xl w-full p-10 text-center flex flex-col items-center">
-        {/* Back Button */}
-        <div className="self-start mb-8">
-          <Link href="/" className="text-[#8CB662] hover:text-[#b3f075]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    
+    <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4 font-inter">
+      <div className="bg-white rounded-xl shadow-2xl overflow-hidden max-w-xl w-full p-6 sm:p-10 text-center flex flex-col items-center">
+        
+        {/* Back Button - Responsive alignment */}
+        <div className="self-start mb-6 sm:mb-8">
+          <Link href="/" className="text-[#8CB662] hover:text-[#b3f075] transition-colors inline-block p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-7 sm:w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
         </div>
 
-        {/* Illustration */}
-        <div className="mb-1">
-          <img src="/images/Emails-amico.png" alt="Email Verification Illustration" className="max-w-full h-[200px] drop-shadow-lg" />
+        {/* Illustration - Responsive sizing */}
+        <div className="mb-4 sm:mb-6">
+          <img 
+            src="/images/Emails-amico.png" 
+            alt="Email Verification" 
+            className="w-full max-w-[180px] sm:max-w-[240px] h-auto drop-shadow-lg" 
+          />
         </div>
 
         {/* Title & Text */}
-        <h2 className="text-2xl font-bold text-gray-800 mb-5">Please verify your email address</h2>
-        <p className="text-gray-600 text-md mb-8 leading-relaxed">
-          You're almost there! We sent an email to <span className="font-medium text-[#6eb12c]">{email || 'your email'}</span>.
-          <br />
-          Please check your inbox (and spam folder!) for the verification link.
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-5">
+          Please verify your email address
+        </h2>
+        <p className="text-gray-600 text-sm sm:text-md mb-6 sm:mb-8 leading-relaxed px-2 sm:px-0">
+          You're almost there! We sent an email to <br className="block sm:hidden" />
+          <span className="font-bold text-[#6eb12c] break-all">{email || 'your email'}</span>.
+          <br className="hidden sm:block" />
+          <span className="block mt-2">Please check your inbox (and spam folder!) for the verification link.</span>
         </p>
 
         {/* Resend Button */}
         <button
           onClick={handleResend}
           disabled={loading}
-          className={`w-full max-w-[250px] px-8 py-3 rounded-full border border-[#8CB662] font-bold shadow-sm transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#8CB662] focus:ring-opacity-75 ${
-            loading ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-white text-[#8CB662] hover:bg-[#8CB662] hover:text-white'
+          className={`w-full sm:max-w-[280px] px-8 py-3.5 rounded-full border border-[#8CB662] font-bold shadow-sm transition-all duration-300 ease-in-out transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#8CB662] focus:ring-opacity-75 ${
+            loading 
+              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+              : 'bg-white text-[#8CB662] hover:bg-[#8CB662] hover:text-white hover:shadow-md'
           }`}
         >
-          {loading ? 'Resending...' : 'Resend email'}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Resending...
+            </span>
+          ) : 'Resend email'}
         </button>
 
-        {/* Feedback Message */}
         {message && (
-          <p className={`mt-5 text-sm ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`mt-6 p-3 rounded-lg w-full text-sm font-medium ${
+            status === 'success' 
+              ? 'bg-green-50 text-green-700 border border-green-100' 
+              : 'bg-red-50 text-red-700 border border-red-100'
+          }`}>
             {message}
-          </p>
+          </div>
         )}
       </div>
     </div>
