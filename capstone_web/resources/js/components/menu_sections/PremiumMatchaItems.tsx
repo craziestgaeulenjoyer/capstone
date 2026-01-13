@@ -127,7 +127,7 @@ const PremiumMatcha: React.FC = () => {
               setSelectedItem(item);
               setSelectedOption('');
               setQuantity(1);
-              setSelectedSize('16oz'); // default size
+              setSelectedSize('16oz'); 
             }}
             className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden bg-white border cursor-pointer"
           >

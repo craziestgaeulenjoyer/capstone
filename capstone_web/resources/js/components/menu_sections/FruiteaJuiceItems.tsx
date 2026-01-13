@@ -147,34 +147,52 @@ const FruiteaJuiceItems: React.FC = () => {
 
   return (
     <div className="px-6 pt-10 pb-16">
-      {/* Tabs & Search */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
-        <div className="flex gap-3">
-          {["All", "Lemonade", "Fruit"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`px-5 py-2 rounded-full border ${
-                activeTab === tab
-                  ? "bg-[#8CB662] text-white"
-                  : "border-gray-300"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      {/* Tabs & Search Container */}
+<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+  
+  {/* Tabs Section */}
+  <div className="w-full md:w-auto overflow-hidden">
+    <div 
+      className="flex flex-nowrap gap-3 pb-2 md:pb-0 overflow-x-auto no-scrollbar"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}
+    >
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
 
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-2.5" size={18} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search fruitea juice..."
-            className="w-full pl-10 pr-4 py-2 rounded-full border"
-          />
-        </div>
-      </div>
+      {["All", "Lemonade", "Fruit"].map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab as any)}
+          className={`whitespace-nowrap px-6 py-2.5 rounded-full border text-sm font-bold transition-all duration-200 ${
+            activeTab === tab
+              ? "bg-[#8CB662] text-white border-[#8CB662] shadow-md"
+              : "border-gray-300 text-gray-600 hover:bg-gray-50 bg-white"
+          }`}
+        >
+          {tab}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Search Bar Section */}
+  <div className="relative w-full md:max-w-xs lg:max-w-md">
+    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+    <input
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      placeholder="Search fruitea juice..."
+      className="w-full pl-11 pr-4 py-2.5 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#8CB662]/50 transition-all shadow-sm"
+    />
+  </div>
+</div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
