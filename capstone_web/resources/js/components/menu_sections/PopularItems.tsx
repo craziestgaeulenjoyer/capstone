@@ -1,7 +1,26 @@
-// resources/js/Pages/website_pages/components/PopularItems.tsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Search, X } from "lucide-react";
+import { usePage } from "@inertiajs/react";
+import type { PageProps as InertiaPageProps } from "@inertiajs/core";
+
+interface AuthProps {
+  user: null | {
+    id: number;
+    name: string;
+    email: string;
+  };
+  customer: null | {
+    id: number;
+    name: string;
+    email: string;
+    role: "customer";
+  };
+}
+
+interface PageProps extends InertiaPageProps {
+  auth: AuthProps;
+}
 
 interface MenuItem {
   id: number;
@@ -15,126 +34,111 @@ interface MenuItem {
 }
 
 const PopularItems: React.FC = () => {
+  const { props } = usePage<PageProps>();
+  const auth = props.auth;
+  const isLoggedIn = Boolean(auth?.customer);
+
   const [items, setItems] = useState<MenuItem[]>([]);
-  const [activeTab, setActiveTab] = useState<string>("All");
+  const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
+
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedFlavor, setSelectedFlavor] = useState<string>("");
-  const [selectedAddOn, setSelectedAddOn] = useState<string>("");
+  const [selectedFlavor, setSelectedFlavor] = useState("");
+  const [selectedAddOn, setSelectedAddOn] = useState("");
 
-  // Fetch menu items from backend
+  /* ---------------- FETCH MENU ---------------- */
   useEffect(() => {
     axios
       .get("/api/menu")
-      .then((res) => setItems(res.data))
-      .catch((err) => console.error("Error fetching menu items:", err));
+      .then((res) => setItems(res.data.items || res.data))
+      .catch(console.error);
   }, []);
 
-  // Capitalize first letter of each word
-  const capitalize = (str: string) =>
-    str.replace(/\b\w/g, (l) => l.toUpperCase());
+  /* ---------------- CATEGORY ---------------- */
+  const capitalize = (s: string) =>
+    s.replace(/\b\w/g, (l) => l.toUpperCase());
 
-  // Dynamic categories from DB
   const categories = [
     "All",
     ...Array.from(
-      new Set(
-        items
-          .flatMap((i) => i.categories.map((c) => capitalize(c)))
-          .filter((c) => c !== "Popular") // ⬅ REMOVE "Popular"
-      )
+      new Set(items.flatMap((i) => i.categories.map(capitalize)))
     ),
   ];
 
-  // Filter logic
   const filtered = items.filter((i) => {
-    const matchesCategory =
+    const matchTab =
       activeTab === "All" ||
       i.categories.some((c) => capitalize(c) === activeTab);
-    const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
+    return matchTab && matchSearch;
   });
 
-  // Quantity handlers
-  const handleDecrease = () => quantity > 1 && setQuantity(quantity - 1);
-  const handleIncrease = () => setQuantity(quantity + 1);
-
-  // Helper: map DB category/subcategory to optionsMap key
-  const mapToOptionsKey = (name: string) => {
-    const key = name.toLowerCase().replace(/fruitti/g, "fruit").trim();
-    if (["coffee", "coffees"].includes(key)) return "coffee";
-    if (["milk tea", "milktea"].includes(key)) return "milk tea";
-    if (["premium matcha"].includes(key)) return "premium matcha";
-    if (["specialty coffee"].includes(key)) return "specialty coffee";
-    if (["lemonade and fruit juices", "lemonade and frutti juice"].includes(key))
-      return "lemonade and fruit juices";
-    return key;
-  };
-
-  // Check if item is a drink
-  const isDrinkCategory = (item: MenuItem) => {
-    const drinkKeys = [
-      "coffee",
-      "milk tea",
-      "premium matcha",
-      "specialty coffee",
-      "lemonade and fruit juices",
-    ];
-    const allCats = [...item.categories, ...item.subcategories].map(mapToOptionsKey);
-    return allCats.some((c) => drinkKeys.includes(c));
-  };
-
-  // Get options for item
-  const getOptionsFor = (item: MenuItem) => {
-    const allCats = [...item.categories, ...item.subcategories].map(mapToOptionsKey);
-    const cat = allCats.find((c) => optionsMap[c]);
-    return cat ? optionsMap[cat] : { flavors: [], addOns: [] };
-  };
+  /* ---------------- OPTIONS ---------------- */
+  const normalize = (s: string) => s.toLowerCase().trim();
 
   const optionsMap: Record<string, { flavors: string[]; addOns: string[] }> = {
-    "premium matcha": { flavors: ["Hot", "Cold"], addOns: ["Oat Milk"] },
-    "specialty coffee": { flavors: ["Hot", "Cold"], addOns: ["Oat Milk", "Extra Espresso"] },
-    "lemonade and fruit juices": {
-      flavors: [],
-      addOns: ["Pearls", "Nata", "Coffee Jelly", "Strawberry Popping Bobba"],
+    coffee: { flavors: [], addOns: ["Extra Coffee Shot"] },
+    "specialty coffee": {
+      flavors: ["Hot", "Cold"],
+      addOns: ["Oat Milk", "Extra Espresso"],
     },
-    coffee: { flavors: [], addOns: ["Extra Matcha", "Extra Coffee Shot"] },
     "milk tea": {
       flavors: [],
-      addOns: [
-        "Pearls",
-        "Nata",
-        "Coffee Jelly",
-        "Crushed Oreo",
-        "Cream Cheese",
-        "Cheesecake",
-        "Extra Matcha Shot",
-      ],
+      addOns: ["Pearls", "Nata", "Coffee Jelly"],
+    },
+    "premium matcha": {
+      flavors: ["Hot", "Cold"],
+      addOns: ["Oat Milk"],
     },
   };
 
-  const formatPrice = (price: { regular: string; large?: string }) => {
-    if (!price) return "";
-
-    const values = [
-      price.regular ? `₱${price.regular}` : null,
-      price.large ? `₱${price.large}` : null,
-    ];
-
-    return values.filter(Boolean).join(" | ");
+  const getOptionsFor = (item: MenuItem) => {
+    const all = [...item.categories, ...item.subcategories].map(normalize);
+    const key = all.find((k) => optionsMap[k]);
+    return key ? optionsMap[key] : { flavors: [], addOns: [] };
   };
 
   const getAvailableSizes = (price: { regular?: string; large?: string }) => {
     const sizes: string[] = [];
-
     if (price.regular) sizes.push("16oz");
     if (price.large) sizes.push("22oz");
-
     return sizes;
   };
 
+  /* ---------------- CART ---------------- */
+  const handleAddToCart = async () => {
+    if (!isLoggedIn || !selectedItem) {
+      alert("Please log in to order.");
+      return;
+    }
+
+    try {
+      await axios.post("/cart/add", {
+        product_id: selectedItem.id,
+        product_name: selectedItem.name,
+        quantity,
+        size: selectedSize,
+        instructions: selectedAddOn || selectedFlavor || "",
+        price:
+          selectedSize === "22oz" && selectedItem.price.large
+            ? selectedItem.price.large
+            : selectedItem.price.regular,
+      });
+
+      alert("Item added to cart!");
+      setSelectedItem(null);
+      setQuantity(1);
+      setSelectedSize(null);
+      setSelectedFlavor("");
+      setSelectedAddOn("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add item to cart.");
+    }
+  };
+  /* ---------------- UI ---------------- */
   return (
     <div className="px-6 pt-10 pb-16">
     {/* Tabs & Search Container */}
@@ -187,73 +191,87 @@ const PopularItems: React.FC = () => {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map((item) => {
-          const isDrink = isDrinkCategory(item);
-          const displayPrice = formatPrice(item.price);
-
-          return (
-            <div
-              key={item.id}
-              onClick={() => setSelectedItem(item)}
-              className="rrounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
-            >
-              <div className="bg-[#E1E1E1] p-4 flex justify-center">
-                <img
-                  src={`/storage/${item.image_path}`}
-                  alt={item.name}
-                  className="w-60 h-60 object-contain rounded-xl"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-bold text-[#2E3A2F]">{item.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-                <div className="text-right text-lg text-[#76B13A] font-bold">
-                  {displayPrice}
-                </div>
+        {filtered.map((item) => (
+          <div
+            key={item.id}
+            onClick={() => {
+              setSelectedItem(item);
+              setSelectedSize("16oz");
+              setQuantity(1);
+              setSelectedFlavor("");
+              setSelectedAddOn("");
+            }}
+            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
+          >
+            <div className="bg-[#E1E1E1] p-4 flex justify-center">
+              <img
+                src={`/storage/${item.image_path}`}
+                alt={item.name}
+                className="w-60 h-60 object-contain rounded-xl"
+              />
+            </div>
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-[#2E3A2F]">
+                {item.name}
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">
+                {item.description}
+              </p>
+              <div className="text-right text-lg text-[#76B13A] font-bold">
+                ₱{item.price.regular}
+                {item.price.large && ` | ₱${item.price.large}`}
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
-      {/* Modal */}
+      {/* MODAL — COPIED FROM CoffeeItems */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-4xl rounded p-10 relative">
+          <div className="bg-white w-full max-w-4xl rounded p-8 relative">
             <button
               onClick={() => setSelectedItem(null)}
               className="absolute top-4 right-4 text-gray-500 hover:text-black"
             >
               <X size={24} />
             </button>
+
             <div className="flex flex-col md:flex-row gap-8 text-gray-900">
               <img
                 src={`/storage/${selectedItem.image_path}`}
                 alt={selectedItem.name}
                 className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
               />
+
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-2">{selectedItem.name}</h2>
+                <h2 className="text-xl font-bold mb-2">
+                  {selectedItem.name}
+                </h2>
+
                 <div className="text-[#65B741] font-bold text-xl mb-2">
-                  {formatPrice(selectedItem.price)}
+                  {selectedSize === "22oz" && selectedItem.price.large
+                    ? `₱${selectedItem.price.large}`
+                    : `₱${selectedItem.price.regular}`}
                 </div>
+
                 <p className="text-md text-gray-700 mb-4">
                   {selectedItem.description}
                 </p>
 
                 {/* Quantity */}
                 <div className="mb-4">
-                  <label className="text-base block font-semibold">Quantity</label>
-                  <div className="flex items-center gap-2 mt-1">
+                  <label className="text-sm font-semibold">Quantity</label>
+                  <div className="flex gap-2 mt-1">
                     <button
-                      onClick={handleDecrease}
+                      onClick={() => quantity > 1 && setQuantity(quantity - 1)}
                       className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
                     >
                       -
                     </button>
                     <span>{quantity}</span>
                     <button
-                      onClick={handleIncrease}
+                      onClick={() => setQuantity(quantity + 1)}
                       className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
                     >
                       +
@@ -261,44 +279,45 @@ const PopularItems: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Size (Drinks Only) */}
-                {isDrinkCategory(selectedItem) && (
-                  <div className="mb-4">
-                    <label className="text-sm font-semibold">Cup Size</label>
-                    <div className="h-[2px] bg-[#8CB662] my-2" />
-                    <div className="flex gap-2">
-                      {getAvailableSizes(selectedItem.price).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setSelectedSize(s)}
-                          className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg ${
-                            selectedSize === s
-                              ? "bg-[#8CB662] text-white border-[#8CB662]"
-                              : "hover:bg-[#8CB662] hover:text-white"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
+                {/* Size */}
+                <div className="mb-4">
+                  <label className="text-sm font-semibold">Cup Size</label>
+                  <div className="h-[2px] bg-[#8CB662] my-2" />
+                  <div className="flex gap-2">
+                    {getAvailableSizes(selectedItem.price).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedSize(s)}
+                        className={`w-[95px] h-[30px] border rounded-4xl text-sm font-light shadow-lg ${
+                          selectedSize === s
+                            ? "bg-[#8CB662] text-white border-[#8CB662]"
+                            : "hover:bg-[#8CB662] hover:text-white"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
 
                 {/* Options */}
                 {(() => {
                   const opts = getOptionsFor(selectedItem);
-                  const hasOptions = opts.flavors.length || opts.addOns.length;
-                  if (!hasOptions) return null;
+                  if (!opts.flavors.length && !opts.addOns.length) return null;
 
                   return (
                     <>
                       {opts.flavors.length > 0 && (
                         <div className="mb-4">
-                          <label className="text-sm font-semibold">Options</label>
+                          <label className="text-sm font-semibold">
+                            Options
+                          </label>
                           <div className="h-[2px] bg-[#8CB662] my-2" />
                           <select
                             value={selectedFlavor}
-                            onChange={(e) => setSelectedFlavor(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedFlavor(e.target.value)
+                            }
                             className="border border-[#8CB662] rounded px-2 py-1 text-sm w-[300px]"
                           >
                             <option value="">Select option</option>
@@ -313,11 +332,15 @@ const PopularItems: React.FC = () => {
 
                       {opts.addOns.length > 0 && (
                         <div className="mb-4">
-                          <label className="text-sm font-semibold">Add-ons</label>
+                          <label className="text-sm font-semibold">
+                            Add-ons
+                          </label>
                           <div className="h-[2px] bg-[#8CB662] my-2" />
                           <select
                             value={selectedAddOn}
-                            onChange={(e) => setSelectedAddOn(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedAddOn(e.target.value)
+                            }
                             className="border border-[#8CB662] rounded px-2 py-1 text-sm w-[300px]"
                           >
                             <option value="">Select an add-on</option>
@@ -333,14 +356,19 @@ const PopularItems: React.FC = () => {
                   );
                 })()}
 
-                {/* Buttons */}
                 <div className="flex gap-10 mt-6">
-                  <button className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
-                    Add to Cart
-                  </button>
-                  <button className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
-                    Order Now
-                  </button>
+                  {isLoggedIn ? (
+                    <button
+                      onClick={handleAddToCart}
+                      className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2"
+                    >
+                      Add to Cart
+                    </button>
+                  ) : (
+                    <div className="text-red-500 font-semibold">
+                      Please log in to order.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

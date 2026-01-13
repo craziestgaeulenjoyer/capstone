@@ -28,7 +28,7 @@ const HeroSection: React.FC = () => {
       <section className="relative w-full min-h-[95vh] md:min-h-screen flex flex-col md:flex-row items-center justify-between px-6 sm:px-10 md:px-16 lg:px-24 bg-[#FAF9F6] overflow-hidden pt-28 md:pt-0">
         
         <div className="absolute inset-0 opacity-[0.04] pointer-events-none" 
-             style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }} />
+            style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }} />
 
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
@@ -37,8 +37,8 @@ const HeroSection: React.FC = () => {
           className="hidden lg:flex flex-col items-center absolute left-8 bottom-12 space-y-6 z-20"
         >
           <div className="h-20 w-[1px] bg-[#5C2E0A]/20" />
-          <a href="#" onMouseEnter={playClickSound} className="text-[#5C2E0A]/40 hover:text-[#8CB662] transition-all hover:-translate-y-1"><FaInstagram size={20} /></a>
-          <a href="#" onMouseEnter={playClickSound} className="text-[#5C2E0A]/40 hover:text-[#8CB662] transition-all hover:-translate-y-1"><FaFacebookF size={18} /></a>
+          <a href="https://www.instagram.com/miamore.cml" target="_blank" rel="noopener noreferrer" onMouseEnter={playClickSound} className="text-[#5C2E0A]/40 hover:text-[#8CB662] transition-all hover:-translate-y-1"><FaInstagram size={20} /></a>
+          <a href="https://www.facebook.com/MiAmore.CML" target="_blank" rel="noopener noreferrer" onMouseEnter={playClickSound} className="text-[#5C2E0A]/40 hover:text-[#8CB662] transition-all hover:-translate-y-1"><FaFacebookF size={18} /></a>
           <a href="#" onMouseEnter={playClickSound} className="text-[#5C2E0A]/40 hover:text-[#8CB662] transition-all hover:-translate-y-1"><FaTiktok size={18} /></a>
           <span className="text-[#5C2E0A]/40 text-[10px] uppercase tracking-[0.4em] font-bold vertical-text rotate-180 mb-4">Follow Mi Amore</span>
         </motion.div>

@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Cookie;
-
+use Illuminate\Support\Facades\Auth;
 class CustomerAuthController extends Controller
 {
     /**
@@ -199,35 +199,25 @@ public function login(Request $request)
         return response()->json(['errors' => ['password' => 'Incorrect password.']], 422);
     }
     
-    // ✅ Set remember_token if remember_me is true
-        if ($request->remember_me) {
-            $customer->remember_token = Str::random(60); // generate random token
-            $customer->save();
+    Auth::guard('customer')->login(
+        $customer,
+        $request->boolean('remember_me')
+    );
 
-            // Set HttpOnly cookie
-            Cookie::queue(
-                'remember_customer',
-                $customer->remember_token,
-                60 * 24 * 30, // 30 days
-                null,
-                null,
-                true, // secure if using HTTPS
-                true  // httpOnly
-            );
-        }
-    // ✅ Create Sanctum token
-    $token = $customer->createToken('customer_token')->plainTextToken;
+    // ✅ ADD THIS
+    $request->session()->regenerate();
 
-    return response()->json([
-        'customer_token' => $token,
-        'customer' => [
-            'id' => $customer->id,
-            'full_name' => $customer->full_name,
-            'email' => $customer->email,
-            'avatar' => $customer->avatar,
-        ],
-    ]);
+    // ✅ CHANGE RESPONSE (NO JSON)
+    return redirect()->route('home');
 }
 
+public function logout(Request $request)
+{
+    Auth::guard('customer')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/home');
+}
 
 }

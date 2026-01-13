@@ -5,6 +5,28 @@ use Inertia\Inertia;
 use App\Http\Controllers\CustomerSignupController;
 use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
+use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
+
+use Illuminate\Support\Facades\Auth;
+Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
+    ->name('customer.logout');
+
+
+use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
+use App\Http\Controllers\Cart_Controllers\CartController;
+
+Route::middleware('auth:customer')->group(function () {
+    Route::post('/cart/add', [CartController::class, 'store']);
+    Route::get('/cart/items', [CartController::class, 'items']);
+    Route::get('/cart/count', [CartController::class, 'count']);
+    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+    Route::post('/order/confirm',[PlacedOrderController::class, 'confirm']);
+});
+Route::middleware('auth:customer')->get('/customer/profile', function () {
+    return response()->json([
+        'customer' => auth('customer')->user()
+    ]);
+});
 
 /* ---------------- CUSTOMER AUTHENTICATION LOGIC ---------------- */
 
@@ -45,7 +67,7 @@ Route::get('/email-change', function () {
 
 /* ---------------- CART SECTION ROUTES ---------------- */
 
-Route::get('/customer-cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
+Route::get('/cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
     ->name('shopping.cart');
 
 Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'))

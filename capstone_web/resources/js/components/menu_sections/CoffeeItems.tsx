@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Search, X } from "lucide-react";
+import { usePage } from "@inertiajs/react";
+import type { PageProps as InertiaPageProps } from "@inertiajs/core";
 
 interface MenuItem {
   id: number;
@@ -13,6 +15,24 @@ interface MenuItem {
   image_path: string;
 }
 
+interface AuthProps {
+  user: null | {
+    id: number;
+    name: string;
+    email: string;
+  };
+  customer: null | {
+    id: number;
+    name: string;
+    email: string;
+    role: "customer";
+  };
+}
+
+interface PageProps extends InertiaPageProps {
+  auth: AuthProps;
+}
+
 const CoffeeItems: React.FC = () => {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [search, setSearch] = useState("");
@@ -23,13 +43,10 @@ const CoffeeItems: React.FC = () => {
   const [selectedFlavor, setSelectedFlavor] = useState("");
   const [selectedAddOn, setSelectedAddOn] = useState("");
 
-  // Check if customer is logged in
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem("customer_token");
-    setIsLoggedIn(!!token);
-  }, []);
+  // Use Inertia's auth props to check if customer is logged in
+  const { props } = usePage<PageProps>();
+  const auth = props.auth;
+  const isLoggedIn = Boolean(auth?.customer);
 
   // Fetch menu
   useEffect(() => {
@@ -80,42 +97,35 @@ const CoffeeItems: React.FC = () => {
   };
 
   const handleAddToCart = async () => {
-    const token = localStorage.getItem("customer_token");
-    if (!token || !selectedItem) {
-      alert("Please log in to add items to cart.");
-      return;
-    }
+  if (!isLoggedIn || !selectedItem) {
+    alert("Please log in to add items to cart.");
+    return;
+  }
 
-    try {
-      await axios.post(
-        "/api/cart/add",
-        {
-          product_id: selectedItem.id,
-          product_name: selectedItem.name,
-          size: selectedSize,
-          quantity,
-          instructions: selectedAddOn || selectedFlavor || "",
-          price:
-            selectedSize === "22oz" && selectedItem.price.large
-              ? selectedItem.price.large
-              : selectedItem.price.regular,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      alert("Item added to cart!");
-      setSelectedItem(null);
-      setQuantity(1);
-      setSelectedSize(null);
-      setSelectedFlavor("");
-      setSelectedAddOn("");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to add item to cart.");
-    }
-  };
+  try {
+    await axios.post("/cart/add", {
+      product_id: selectedItem.id,
+      product_name: selectedItem.name,
+      size: selectedSize,
+      quantity,
+      instructions: selectedAddOn || selectedFlavor || "",
+      price:
+        selectedSize === "22oz" && selectedItem.price.large
+          ? selectedItem.price.large
+          : selectedItem.price.regular,
+    });
+    window.dispatchEvent(new Event("cart-updated"));
+    alert("Item added to cart!");
+    setSelectedItem(null);
+    setQuantity(1);
+    setSelectedSize(null);
+    setSelectedFlavor("");
+    setSelectedAddOn("");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to add item to cart.");
+  }
+};
 
   return (
     <div className="px-6 pt-10 pb-16">
@@ -259,15 +269,21 @@ const CoffeeItems: React.FC = () => {
                 })()}
 
                 {/* Buttons */}
-                <div className="flex gap-10 mt-6">
-                  {isLoggedIn ? (
-                    <button onClick={handleAddToCart} className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2">
-                      Add to Cart
-                    </button>
-                  ) : (
-                    <div className="text-red-500 font-semibold">Please log in to order.</div>
-                  )}
-                </div>
+               {/* Add to Cart */}
+<div className="flex gap-10 mt-6">
+  {isLoggedIn ? (
+    <button
+      onClick={handleAddToCart}
+      className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
+    >
+      Add to Cart
+    </button>
+  ) : (
+    <div className="text-red-500 font-semibold">
+      Please log in to order.
+    </div>
+  )}
+</div>
               </div>
             </div>
           </div>
