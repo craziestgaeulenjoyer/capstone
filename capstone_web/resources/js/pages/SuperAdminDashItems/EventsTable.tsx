@@ -1,11 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from "react-dom";
+import React, { useState, useEffect } from 'react';
 import { 
     MoreHorizontal, ChevronLeft, ChevronRight, Search, Calendar, 
     MapPin, Phone, Eye, Download, Inbox, Filter, CheckCircle2, Clock, AlertCircle,
     SearchX, Users, X
 } from "lucide-react";
 import axios from 'axios';
+import { createPortal } from "react-dom";
+
+const DropdownPortal = ({ children }: { children: React.ReactNode }) => {
+    return createPortal(children, document.body);
+};
 
 // --- INTERFACES ---
 interface EventItem {
@@ -29,14 +33,11 @@ const EventsTable: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
     // --- MODAL STATES ---
     const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
-    // --- REFS & UI POSITIONS ---
-    const buttonRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({});
-    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
     
     const brandGreen = "#5A8531"; 
     const brandBrown = "#2D1A11"; 
@@ -48,14 +49,6 @@ const EventsTable: React.FC = () => {
             document.body.style.overflow = 'unset';
         }
     }, [isModalOpen]);
-
-    const exampleData: EventItem[] = [
-        { id: 101, full_name: "Maria Leonora Santos", phone_number: "+63 917 123 4567", event_type: "Wedding Reception", event_date: "2024-06-15", estimated_pax: 150, venue_location: "Grand Terrace Hall, Quezon City", status: "Confirmed" },
-        { id: 102, full_name: "Juan Dela Cruz", phone_number: "+63 920 987 6543", event_type: "Corporate Seminar", event_date: "2024-07-20", estimated_pax: 50, venue_location: "BGC High Street Conference Center", status: "Pending" },
-        { id: 103, full_name: "Elena Rodriguez", phone_number: "+63 918 555 0199", event_type: "18th Birthday Debut", event_date: "2024-05-30", estimated_pax: 100, venue_location: "Blue Leaf Events Pavilion", status: "Cancelled" },
-        { id: 104, full_name: "Roberto Gomez", phone_number: "+63 915 444 8822", event_type: "Anniversary Party", event_date: "2024-08-12", estimated_pax: 80, venue_location: "Fernwood Gardens, Tagaytay", status: "Confirmed" },
-        { id: 105, full_name: "Sophia Villanueva", phone_number: "+63 908 333 7711", event_type: "Christening", event_date: "2024-09-05", estimated_pax: 40, venue_location: "Palazzo Verde, Las Piñas", status: "Pending" }
-    ];
 
     const StatusBadge = ({ status }: { status: EventItem['status'] }): React.JSX.Element => {
         const styles = {
@@ -76,18 +69,57 @@ const EventsTable: React.FC = () => {
         );
     };
 
+    const getApiRolePrefix = () => {
+        const role = sessionStorage.getItem('dashboard_role');
+
+        if (role === 'super_admin') return 'superadmin';
+        if (role === 'admin') return 'admin';
+
+        // fallback safety
+        return 'admin';
+    };
+
+    const normalizeStatus = (status: string): EventItem['status'] => {
+        switch (status.toLowerCase()) {
+            case 'pending':
+                return 'Pending';
+            case 'confirmed':
+                return 'Confirmed';
+            case 'cancelled':
+            case 'canceled':
+                return 'Cancelled';
+            default:
+                return 'Pending'; 
+        }
+    };
+
     const fetchEvents = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            if (!token) { setTableData(exampleData); return; }
-            const response = await axios.get('/api/superadmin/events', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const data = response.data.events || [];
-            setTableData(data.length > 0 ? data : exampleData);
+            const rolePrefix = getApiRolePrefix();
+
+            const response = await axios.get(
+                `/api/${rolePrefix}/events`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            const mapped = response.data.events.map((item: any) => ({
+                id: item.id,
+                full_name: item.name,
+                phone_number: item.phone,
+                event_type: item.event_type,
+                event_date: item.event_date,
+                estimated_pax: item.estimated_pax,
+                venue_location: item.event_location,
+                status: normalizeStatus(item.status),
+            }));
+
+            setTableData(mapped);
         } catch (error) {
-            setTableData(exampleData);
+            console.error("Failed to fetch inquiries", error);
         } finally {
             setLoading(false);
         }
@@ -95,9 +127,37 @@ const EventsTable: React.FC = () => {
 
     useEffect(() => { fetchEvents(); }, []);
 
-    const updateStatus = async (id: number, newStatus: EventItem['status']) => {
-        setTableData(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
-        setActiveDropdown(null);
+    const updateStatus = async (
+        id: number,
+        newStatus: EventItem['status']
+    ) => {
+        try {
+            const token = localStorage.getItem("token");
+            const rolePrefix = getApiRolePrefix();
+
+            await axios.patch(
+                `/api/${rolePrefix}/events/${id}/status`,
+                { status: newStatus },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                    },
+                }
+            );
+
+            setTableData(prev =>
+                prev.map(item =>
+                    item.id === id ? { ...item, status: newStatus } : item
+                )
+            );
+
+            if (selectedEvent?.id === id) {
+                setSelectedEvent({ ...selectedEvent, status: newStatus });
+            }
+        } catch (error) {
+            console.error("Failed to update inquiry status", error);
+        }
     };
 
     const handleViewDetails = (id: number) => {
@@ -124,24 +184,91 @@ const EventsTable: React.FC = () => {
     const paginatedData = filteredData.slice((currentPage - 1) * entriesPerPage, currentPage * entriesPerPage);
     const totalPages = Math.ceil(filteredData.length / entriesPerPage);
 
-    const handleDropdownToggle = (id: number) => {
-        if (activeDropdown === id) { setActiveDropdown(null); return; }
-        const btn = buttonRefs.current[id];
-        if (!btn) return;
-        const rect = btn.getBoundingClientRect();
-        
-        const isMobile = window.innerWidth < 768;
-        setDropdownPosition({ 
-            top: rect.bottom + window.scrollY + 8, 
-            left: isMobile ? (window.innerWidth / 2) - 128 : rect.left + window.scrollX - 180 
+    const handleDropdownToggle = (
+        id: number,
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        e.stopPropagation();
+
+        if (activeDropdown === id) {
+            setActiveDropdown(null);
+            setDropdownPos(null);
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+
+        setDropdownPos({
+            top: rect.bottom + window.scrollY + 8,
+            left: rect.right + window.scrollX - 256, // dropdown width
         });
+
         setActiveDropdown(id);
     };
 
-    const DropdownPortal = ({ children }: { children: React.ReactNode }) => {
-        const el = document.getElementById("dropdown-root") || document.body;
-        return createPortal(children, el);
+    const exportToCSV = () => {
+        if (!tableData.length) return;
+
+        const headers = [
+            'ID',
+            'Customer Name',
+            'Phone Number',
+            'Event Type',
+            'Event Date',
+            'Estimated Pax',
+            'Venue Location',
+            'Status',
+        ];
+
+        const rows = tableData.map(item => [
+            item.id,
+            `"${item.full_name}"`,
+            `"${item.phone_number}"`,
+            `"${item.event_type}"`,
+            item.event_date,
+            item.estimated_pax,
+            `"${item.venue_location}"`,
+            item.status,
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(',')),
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute(
+            'download',
+            `event_inquiries_${new Date().toISOString().split('T')[0]}.csv`
+        );
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (!activeDropdown) return;
+
+            if (!(e.target as HTMLElement).closest('[data-dropdown]')) {
+                setActiveDropdown(null);
+                setDropdownPos(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [activeDropdown]);
+
+    useEffect(() => {
+        console.log("Dashboard role:", sessionStorage.getItem('dashboard_role'));
+        fetchEvents();
+    }, []);
 
     return (
         <div className="p-4 md:p-10 bg-[#F8F8F6] min-h-screen font-sans text-slate-900">
@@ -167,7 +294,10 @@ const EventsTable: React.FC = () => {
                             <div className="w-0.5 h-4 bg-slate-200 mx-2"></div>
                             <input type="date" className="text-xs font-bold outline-none bg-transparent text-slate-700 w-full" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                         </div>
-                        <button className="flex items-center justify-center gap-2 px-6 py-3 bg-[#2D1A11] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg hover:opacity-90 transition-all w-full sm:w-auto">
+                        <button
+                            onClick={exportToCSV}
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-[#2D1A11] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg hover:opacity-90 transition-all w-full sm:w-auto"
+                        >
                             <Download size={18} /> Export CSV
                         </button>
                     </div>
@@ -197,7 +327,7 @@ const EventsTable: React.FC = () => {
             </div>
 
             {/* --- DATA DISPLAY --- */}
-            <div className="bg-white rounded-b-3xl border-2 border-slate-200 shadow-xl overflow-hidden">
+            <div className="bg-white rounded-b-3xl border-2 border-slate-200 shadow-xl">
                 {filteredData.length > 0 ? (
                     <>
                         {/* Desktop View */}
@@ -239,10 +369,10 @@ const EventsTable: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <button 
-                                                    ref={(el) => { buttonRefs.current[item.id] = el; }} 
-                                                    onClick={() => handleDropdownToggle(item.id)} 
+                                            <td className="px-8 py-6 text-right relative">
+                                                <button
+                                                    data-dropdown
+                                                    onClick={(e) => handleDropdownToggle(item.id, e)}
                                                     className="w-10 h-10 border-2 border-slate-100 rounded-xl flex items-center justify-center ml-auto hover:border-slate-900 transition-all text-slate-600"
                                                 >
                                                     <MoreHorizontal size={20} />
@@ -264,8 +394,8 @@ const EventsTable: React.FC = () => {
                                             <div className="text-blue-600 font-bold text-xs mt-1 flex items-center gap-1.5"><Phone size={12}/> {item.phone_number}</div>
                                         </div>
                                         <button 
-                                            ref={(el) => { buttonRefs.current[item.id] = el; }} 
-                                            onClick={() => handleDropdownToggle(item.id)} 
+                                            data-dropdown
+                                            onClick={(e) => handleDropdownToggle(item.id, e)}
                                             className="p-2 border-2 border-slate-100 rounded-xl text-slate-600"
                                         >
                                             <MoreHorizontal size={20} />
@@ -310,32 +440,51 @@ const EventsTable: React.FC = () => {
                 )}
             </div>
 
-            {/* --- DROPDOWN PORTAL --- */}
-            {activeDropdown && dropdownPosition && (
+            {/* --- DETAILS MODAL --- */}
+            {activeDropdown && dropdownPos && (
                 <DropdownPortal>
-                    <div 
-                        className="fixed z-100 bg-white w-64 rounded-2xl shadow-2xl border-2 border-[#2D1A11] overflow-hidden flex flex-col" 
-                        style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+                    <div
+                        data-dropdown
+                        style={{
+                            position: "absolute",
+                            top: dropdownPos.top,
+                            left: dropdownPos.left,
+                            zIndex: 9998,
+                        }}
+                        className="bg-white w-64 rounded-2xl shadow-2xl border-2 border-[#2D1A11]"
                     >
-                        <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                            Manage Inquiry
-                        </div>
-                        <button 
-                            onClick={() => handleViewDetails(activeDropdown)}
-                            className="flex items-center gap-4 w-full px-5 py-4 text-[11px] font-black uppercase text-slate-700 border-b border-slate-200 hover:bg-slate-50 text-left transition-colors"
-                        >
-                            <Eye size={16} className="text-[#5A8531]"/> View Full Details
-                        </button>
-                        <div className="p-2 flex flex-col gap-1">
-                            <button onClick={() => updateStatus(activeDropdown, 'Confirmed')} className="flex items-center gap-3 w-full px-4 py-3 text-[11px] font-black uppercase rounded-xl hover:bg-emerald-50 text-emerald-700 transition-all text-left">
-                                <CheckCircle2 size={16}/> Confirm Inquiry
+                        <div className="rounded-[14px] overflow-hidden bg-white">
+                            <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                                Manage Inquiry
+                            </div>
+
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();    
+                                    handleViewDetails(activeDropdown);
+                                }}
+                                className="flex items-center gap-4 w-full px-5 py-4 text-[11px] font-black uppercase text-slate-700 border-b border-slate-200 hover:bg-slate-50 text-left"
+                            >
+                                <Eye size={16} className="text-[#5A8531]" /> View Full Details
                             </button>
-                            <button onClick={() => updateStatus(activeDropdown, 'Cancelled')} className="flex items-center gap-3 w-full px-4 py-3 text-[11px] font-black uppercase rounded-xl hover:bg-rose-50 text-rose-700 transition-all text-left">
-                                <AlertCircle size={16}/> Cancel Inquiry
-                            </button>
+
+                            <div className="p-2 flex flex-col gap-1">
+                                <button
+                                    onClick={() => updateStatus(activeDropdown, 'Confirmed')}
+                                    className="flex items-center gap-3 w-full px-4 py-3 text-[11px] font-black uppercase rounded-xl hover:bg-emerald-50 text-emerald-700 text-left"
+                                >
+                                    <CheckCircle2 size={16} /> Confirm Inquiry
+                                </button>
+
+                                <button
+                                    onClick={() => updateStatus(activeDropdown, 'Cancelled')}
+                                    className="flex items-center gap-3 w-full px-4 py-3 text-[11px] font-black uppercase rounded-xl hover:bg-rose-50 text-rose-700 text-left"
+                                >
+                                    <AlertCircle size={16} /> Cancel Inquiry
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div className="fixed inset-0 z-90 bg-black/5" onClick={() => setActiveDropdown(null)} />
                 </DropdownPortal>
             )}
 
