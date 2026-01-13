@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Menu,
   Bell,
+  MessageSquare,
   ChevronDown,
   LucideIcon,
 } from "lucide-react";
@@ -668,6 +669,7 @@ const Admin_Navbar: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     { name: "Events", icon: Calendar, route: "/admin/dashboard/events" },
     { name: "Reports", icon: BarChart2, route: "/admin/dashboard/reports" },
     { name: "Analytics", icon: PieChart, route: "/admin/dashboard/analytics" },
+    { name: "Reviews", icon: MessageSquare, route: "/admin/dashboard/reviews" },
     { name: "Manage Items", icon: Settings, route: "/admin/dashboard/manage-items" },
   ];
 

@@ -14,6 +14,7 @@ import {
   Menu,
   Bell,
   ChevronDown,
+  MessageSquare,
   LucideIcon,
 } from "lucide-react";
 
@@ -669,6 +670,7 @@ const SuperAdminNavbar: React.FC<{ children: React.ReactNode }> = ({ children })
     { name: "Events", icon: Calendar, route: "/superadmin/dashboard/events" },
     { name: "Reports", icon: BarChart2, route: "/superadmin/dashboard/reports" },
     { name: "Analytics", icon: PieChart, route: "/superadmin/dashboard/analytics" },
+    { name: "Reviews", icon: MessageSquare, route: "/superadmin/dashboard/reviews" },
     { name: "Manage Items", icon: Settings, route: "/superadmin/dashboard/manage-items" },
     { name: "Teams", icon: Users2, route: "/superadmin/dashboard/teams" },
   ];
