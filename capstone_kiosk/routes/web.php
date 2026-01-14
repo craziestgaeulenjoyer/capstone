@@ -4,10 +4,23 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\Kiosk\KioskCartController;
 use App\Http\Controllers\Kiosk\KioskOrderController;
 
-Route::post('/kioskorders', [KioskOrderController::class, 'store'])->name('kioskorders.store');
+Route::post('/kiosk/cart/add', [KioskCartController::class, 'add']);
+Route::get('/kiosk/cart', [KioskCartController::class, 'get']);
+Route::delete('/kiosk/cart/clear', [KioskCartController::class, 'clear']);
 
+Route::post('/kioskorder', [KioskOrderController::class, 'store']);
+
+Route::post('/kiosk/customer', function (\Illuminate\Http\Request $request) {
+    session([
+        'kiosk_customer_name' => $request->customerName,
+        'kiosk_payment_method' => $request->paymentMethod,
+    ]);
+
+    return response()->json(['ok' => true]);
+});
 
 /* ---------- Kiosk Featured Pages ---------- */
 

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { router } from "@inertiajs/react";
 import { QrCode, Banknote, RotateCcw } from "lucide-react";
 
+
 export default function PaymentSelection() {
   const [paymentMethod, setPaymentMethod] = useState("QR Pay");
   const [activeButton, setActiveButton] = useState(null);
@@ -18,12 +19,21 @@ export default function PaymentSelection() {
   const brandGreen = "#8CB662";
   const brandBrown = "#3D2317";
 
+  
+
   useEffect(() => {
-    const storedCart = JSON.parse(localStorage.getItem("kiosk_cart_items") || "[]");
-    setCartItems(storedCart);
-    const total = storedCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  axios.get("/kiosk/cart").then(res => {
+    setCartItems(res.data);
+
+    const total = res.data.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
     setTotalPrice(total);
-  }, []);
+  });
+}, []);
+
 
   const handleButtonClick = (button) => {
     setActiveButton(button);
@@ -36,9 +46,14 @@ export default function PaymentSelection() {
         setNameError(true);
         return;
       }
-      localStorage.setItem("customer_name", customerName);
-      localStorage.setItem("payment_method", paymentMethod);
-      paymentMethod === "QR Pay" ? router.visit("/qrcode") : router.visit("/ordernumber");
+     // ✅ SAVE BEFORE NAVIGATION
+  localStorage.setItem("customer_name", customerName);
+  localStorage.setItem("payment_method", paymentMethod);
+
+  router.visit(
+    paymentMethod === "QR Pay" ? "/qrcode" : "/ordernumber"
+  );
+
     }
   };
 
@@ -158,9 +173,17 @@ export default function PaymentSelection() {
               <div key={idx} className="flex justify-between items-start border-b border-dashed border-gray-100 pb-4">
                 <div className="flex flex-col">
                   <span className="text-xl font-black italic" style={{ color: brandBrown }}>{item.quantity}x {item.name}</span>
-                  <span className="text-xs font-bold uppercase tracking-widest opacity-60" style={{ color: brandGreen }}>
-                    {item.size} {item.addOns?.length > 0 ? `| ${item.addOns.join(", ")}` : ""}
-                  </span>
+                 <span
+  className="text-xs font-bold uppercase tracking-widest opacity-60"
+  style={{ color: brandGreen }}
+>
+  {item.details?.size ? item.details.size : ""}
+  {item.details?.temp ? ` | ${item.details.temp}` : ""}
+  {item.details?.addOns?.length > 0
+    ? ` | ${item.details.addOns.map(a => a.name).join(", ")}`
+    : ""}
+</span>
+
                 </div>
                 <span className="text-xl font-black" style={{ color: brandBrown }}>₱{(item.price * item.quantity).toFixed(2)}</span>
               </div>

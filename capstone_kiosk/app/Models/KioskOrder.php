@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class KioskOrder extends Model
 {
-    use HasFactory;
+    protected $table = 'kiosk_orders';
 
     protected $fillable = [
         'order_number',
@@ -15,10 +14,10 @@ class KioskOrder extends Model
         'payment_method',
         'total_price',
         'cart_items',
+        'status'
     ];
 
     protected $casts = [
         'cart_items' => 'array',
     ];
 }
-
