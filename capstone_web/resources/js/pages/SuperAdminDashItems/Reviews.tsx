@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import { Star, Smartphone, Globe, CheckCircle, Clock, AlertTriangle, MoreVertical, ThumbsUp, ThumbsDown } from 'lucide-react';
-
-// Mock Data
-const initialReviews = [
-  { id: 1, user: "Juan Dela Cruz", rating: 5, comment: "Best coffee in town! Highly recommended.", status: "pending", date: "2023-10-24", source: "Mobile" },
-  { id: 2, user: "Maria Clara", rating: 4, comment: "Love the ambiance, but the pastry was a bit dry.", status: "approved", date: "2023-10-23", source: "Website" },
-  { id: 3, user: "Simoun Ibarra", rating: 2, comment: "Too slow service during peak hours.", status: "rejected", date: "2023-10-22", source: "Mobile" },
-];
+import axios from 'axios';
 
 export default function ReviewDashboard() {
-  const [reviews, setReviews] = useState(initialReviews);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [filter, setFilter] = useState('all');
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,15 +27,56 @@ export default function ReviewDashboard() {
     setActiveDropdown(null);
   };
 
-  const confirmAction = () => {
-    if (selectedAction) {
-      setReviews(reviews.map(r => r.id === selectedAction.id ? { ...r, status: selectedAction.status } : r));
+  const token = localStorage.getItem('token');
+
+  const api = axios.create({
+    headers: {
+      Authorization: token ? `Bearer ${token}` : '',
+    },
+  });
+
+  const confirmAction = async () => {
+    if (!selectedAction || !apiRole) return;
+
+    try {
+      await api.patch(
+        `/api/${apiRole}/feedback/${selectedAction.id}/status`,
+        { status: selectedAction.status }
+      );
+
+      setReviews(prev =>
+        prev.map(r =>
+          r.id === selectedAction.id
+            ? { ...r, status: selectedAction.status }
+            : r
+        )
+      );
+    } catch (err) {
+      console.error('Failed to update feedback status', err);
+    } finally {
       setIsModalOpen(false);
       setSelectedAction(null);
     }
   };
 
   const filteredReviews = filter === 'all' ? reviews : reviews.filter(r => r.status === filter);
+
+  const rawRole = sessionStorage.getItem('dashboard_role');
+
+  const apiRole =
+    rawRole === 'super_admin'
+      ? 'superadmin'
+      : rawRole === 'admin'
+      ? 'admin'
+      : null;
+
+  useEffect(() => {
+    if (!apiRole) return;
+
+    api.get(`/api/${apiRole}/feedback`)
+      .then(res => setReviews(res.data))
+      .catch(err => console.error('Failed to fetch feedback', err));
+  }, [apiRole]);
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter relative pb-20">
@@ -56,18 +92,33 @@ export default function ReviewDashboard() {
               </div>
               <h3 className="text-xl font-bold text-[#3d230d]">Confirm Action</h3>
               <p className="text-gray-500 text-sm mt-2">
-                Do you want to <span className="font-bold uppercase tracking-tight">{selectedAction?.status}</span> this review?
+                Do you want to{" "}
+                <span className="font-bold">
+                  {selectedAction?.status === "approved" ? "approve" : "reject"}
+                </span>{" "}
+                this review?
               </p>
               <div className="flex gap-3 w-full mt-6">
-                <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm">Cancel</button>
-                <button onClick={confirmAction} className={`flex-1 px-4 py-3 rounded-xl text-white font-bold text-sm shadow-lg ${selectedAction?.status === 'approved' ? 'bg-[#8CB662]' : 'bg-red-500'}`}>Confirm</button>
+                <button onClick={() => setIsModalOpen(false)} className="cursor-pointer flex-1 px-4 py-3 rounded-xl bg-gray-200 text-gray-600 font-bold text-sm transition hover:bg-gray-300">Cancel</button>
+                <button 
+                  onClick={confirmAction} 
+                  className={`cursor-pointer flex-1 px-4 py-3 rounded-xl text-white font-bold text-sm shadow-lg transition
+                    ${
+                      selectedAction?.status === "approved"
+                        ? "bg-[#8CB662] hover:bg-[#9FC97A]"
+                        : "bg-red-500 hover:bg-red-400"
+                    }
+                  `}
+                  >
+                    Confirm
+                  </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="p-3 sm:p-6 lg:p-8 w-full max-w-[1400px] mx-auto">
+      <div className="p-3 sm:p-6 lg:p-8 w-full max-w-[1100px] mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
@@ -103,7 +154,6 @@ export default function ReviewDashboard() {
                 <tr className="bg-gray-50/50 border-b border-gray-100 font-bold text-[11px] uppercase tracking-widest text-gray-400">
                   <th className="px-8 py-5">Reviewer</th>
                   <th className="px-6 py-5">Comment</th>
-                  <th className="px-6 py-5 text-center">Source</th>
                   <th className="px-6 py-5 text-center">Status</th>
                   <th className="px-8 py-5 text-right">Action</th>
                 </tr>
@@ -113,7 +163,9 @@ export default function ReviewDashboard() {
                   <tr key={review.id} className="group hover:bg-gray-50/50 transition-colors">
                     <td className="px-8 py-6">
                       <div className="font-bold text-[#3d230d]">{review.user}</div>
-                      <div className="text-[10px] text-gray-400 font-medium">{review.date}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">
+                        {new Date(review.created_at).toLocaleString()}
+                      </div>
                     </td>
                     <td className="px-6 py-6">
                       <div className="flex text-yellow-400 mb-1">
@@ -121,13 +173,22 @@ export default function ReviewDashboard() {
                       </div>
                       <p className="text-sm text-gray-600 line-clamp-2 max-w-xs">{review.comment}</p>
                     </td>
-                    <td className="px-6 py-6 text-center"><SourceBadge source={review.source} /></td>
                     <td className="px-6 py-6 text-center"><StatusBadge status={review.status} /></td>
                     <td className="px-8 py-6 text-right relative">
                       {review.status === 'pending' && (
                         <div className="inline-block text-left">
                           <button 
-                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === review.id ? null : review.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+                              setDropdownPos({
+                                top: rect.bottom + 8,
+                                left: rect.right - 160,
+                              });
+
+                              setActiveDropdown(review.id);
+                            }}
                             className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#3d230d]"
                           >
                             <MoreVertical size={20} />
@@ -195,6 +256,26 @@ export default function ReviewDashboard() {
             ))}
           </div>
         </div>
+
+        {activeDropdown !== null && dropdownPos && (
+          <div
+            className="fixed z-[9999] w-40 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+          >
+            <button
+              onClick={(e) => openConfirmation(activeDropdown, 'approved', e)}
+              className="w-full px-4 py-3 text-left text-sm font-bold text-green-600 hover:bg-green-50 flex items-center gap-2"
+            >
+              <ThumbsUp size={16} /> Approve
+            </button>
+            <button
+              onClick={(e) => openConfirmation(activeDropdown, 'rejected', e)}
+              className="w-full px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
+            >
+              <ThumbsDown size={16} /> Reject
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -220,5 +301,12 @@ const StatusBadge = ({ status }: { status: string }) => {
     pending: "bg-orange-50 text-orange-600 border-orange-100",
     rejected: "bg-red-50 text-red-600 border-red-100",
   };
-  return <span className={`text-[9px] uppercase font-black px-2.5 py-1 rounded-full border ${styles[status]}`}>{status}</span>;
+
+  return (
+    <span
+      className={`text-[11px] sm:text-xs uppercase font-bold px-3 py-1 rounded-full border ${styles[status]}`}
+    >
+      {status}
+    </span>
+  );
 };
