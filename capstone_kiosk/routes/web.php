@@ -24,6 +24,8 @@ Route::delete('/kiosk/customer', function (\Illuminate\Http\Request $request) {
 
 /* ---------- Kiosk Featured Pages ---------- */
 
+Route::get('/', fn() => redirect('/bubble-welcome'));
+
 Route::get('/bubble-welcome', function () {
     return Inertia::render('kiosk_pages/Welcome');
 });
