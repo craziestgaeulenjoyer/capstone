@@ -31,7 +31,6 @@ interface CheckoutTabProps {
   setFulfillmentMethod: (v: "delivery" | "pickup") => void;
   handleCheckout: () => Promise<{ order_code: string } | false>;
   onEditAddress: () => void;
-  clearCheckedItems: () => void;
   cartItems: any[];
   initialStep?: number | string;
 }
@@ -49,7 +48,6 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
   onEditAddress,
   cartItems,
   initialStep,
-  clearCheckedItems,
 }) => {
   const navigation = useNavigation<any>();
 
@@ -75,6 +73,13 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
 
+  const paidItems = cartItems.filter(item => !item.is_free);
+
+  const uiSubtotal = paidItems.reduce(
+    (sum, item) => sum + Number(item.price) * Number(item.quantity),
+    0
+  );
+
   // Step 1 → Proceed button
   const proceedToPayment = () => {
     setStep(2);
@@ -89,7 +94,9 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
 
     if (selectedPayment === "GCash") {
       setGcashModalVisible(true);
-    } else if (selectedPayment === "Pay on Pickup") {
+    } else if (selectedPayment === "Pay on Pickup" ||
+      selectedPayment === "Cash on Delivery"
+    ) {
       setStep(3);
     } else {
       Alert.alert("Select Payment", "Please choose a payment method.");
@@ -188,9 +195,6 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
       const checkoutResult = await handleCheckout();
       if (!checkoutResult) return;
 
-      // 🔒 FAILSAFE — MARK CART AS CLEARED
-      await AsyncStorage.setItem("cartCleared", "true");
-
       // 🔹 GCash payment flow
       if (selectedPayment === "GCash") {
         const res = await authFetch(`${API_BASE}/api/paymongo/gcash`, {
@@ -214,8 +218,6 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
         return; // ❗ DO NOT CLEAR CART HERE AGAIN
       }
 
-      // 🔹 Pay on Pickup
-      clearCheckedItems();
       setOrderConfirmed(true);
 
       setTimeout(() => {
@@ -258,7 +260,6 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
         setOrderConfirmed(true); 
 
         setTimeout(() => {
-          clearCheckedItems();   
           navigation.reset({
             index: 0,
             routes: [{ name: "Home" }],
@@ -339,10 +340,14 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
                   {item.product_name}
                   {item.type ? ` (${item.type})` : ""}
                 </Text>
-                <Text style={styles.orderQty}>x{item.quantity}</Text>
-                {item.is_free && (
-                  <Text style={{ color: "#76B13A", fontWeight: "bold", marginLeft: 8 }}>Free</Text>
-                )}
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={styles.orderQty}>x{item.quantity}</Text>
+                  {item.is_free && (
+                    <Text style={{ color: "#76B13A", fontWeight: "700", fontSize: 12 }}>
+                      Free Reward
+                    </Text>
+                  )}
+                </View>
               </View>
             ))
           ) : (
@@ -417,6 +422,32 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
           />
         </TouchableOpacity>
 
+        {/* Cash on Delivery */}
+        <TouchableOpacity
+          style={[
+            styles.paymentOptionRow,
+            selectedPayment === "Cash on Delivery" && styles.paymentOptionSelected,
+          ]}
+          onPress={() => setSelectedPayment("Cash on Delivery")}
+        >
+          <View style={styles.paymentLeftRow}>
+            <Icon name="cash-outline" size={28} color="#76B13A" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={styles.paymentName}>Cash on Delivery</Text>
+              <Text style={styles.paymentDesc}>Pay in cash when your order arrives.</Text>
+            </View>
+          </View>
+          <Icon
+            name={
+              selectedPayment === "Cash on Delivery"
+                ? "radio-button-on-outline"
+                : "radio-button-off-outline"
+            }
+            size={22}
+            color={selectedPayment === "Cash on Delivery" ? "#76B13A" : "#999"}
+          />
+        </TouchableOpacity>
+    
         <Text style={styles.paymentLabel}>Fulfillment Method</Text>
 
         {/* To Deliver */}
@@ -467,11 +498,11 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
         <View style={styles.amountBox}>
           <View style={styles.amountRow}>
             <Text style={styles.amountText}>Delivery Charge</Text>
-            <Text style={styles.amountValue}>₱0.00</Text>
+            <Text style={styles.amountValue}>Cash on Delivery</Text>
           </View>
           <View style={styles.amountRow}>
             <Text style={styles.amountText}>Subtotal</Text>
-            <Text style={styles.amountValue}>₱{subtotal.toFixed(2)}</Text>
+            <Text style={styles.amountValue}>₱{uiSubtotal.toFixed(2)}</Text>
           </View>
           <View style={styles.amountRow}>
             <Text style={styles.amountTotal}>Total Amount</Text>
@@ -527,8 +558,14 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
                 <Text style={styles.orderName}>
                   {item.product_name}
                   {item.type ? ` (${item.type})` : ""}
+                  {item.is_free && (
+                    <Text style={{ color: "#76B13A", fontWeight: "700" }}> • Free</Text>
+                  )}
                 </Text>
-                <Text style={styles.orderQty}>x{item.quantity}</Text>
+
+                <Text style={styles.orderQty}>
+                  x{item.quantity} {item.is_free ? "(₱0.00)" : ""}
+                </Text>
               </View>
             ))
           ) : (
@@ -540,11 +577,11 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
         <View style={styles.amountBox}>
           <View style={styles.amountRow}>
             <Text style={styles.amountText}>Delivery Charge</Text>
-            <Text style={styles.amountValue}>₱0.00</Text>
+            <Text style={styles.amountValue}>Cash on Deilvery</Text>
           </View>
           <View style={styles.amountRow}>
             <Text style={styles.amountText}>Subtotal</Text>
-            <Text style={styles.amountValue}>₱{subtotal.toFixed(2)}</Text>
+            <Text style={styles.amountValue}>₱{uiSubtotal.toFixed(2)}</Text>
           </View>
           <View style={styles.amountRow}>
             <Text style={styles.amountTotal}>Total Amount</Text>

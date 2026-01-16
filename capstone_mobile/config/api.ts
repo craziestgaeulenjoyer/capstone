@@ -8,7 +8,7 @@ export const API_BASE =
   Platform.OS === "android"
     ? __DEV__
       ? `http://${LAN_IP}:5000` // physical phone
-      : "https://your-production-api.com"
+      : "https://miamorecafe.com"
     : "http://localhost:5000";
 
 /**

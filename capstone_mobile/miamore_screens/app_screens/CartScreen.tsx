@@ -40,6 +40,11 @@ const CartScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<CartRouteProp>();
 
+  const getImageSource = (uri?: string | null) =>
+  uri && (uri.startsWith("http://") || uri.startsWith("https://"))
+    ? { uri }
+    : require("../../assets/MiAmore2.png");
+
   const initialStep =
   route.params?.checkoutStep === "confirm" ? 3 : 1;
 
@@ -151,52 +156,23 @@ const CartScreen: React.FC = () => {
 
   useEffect(() => {
     const handleDeepLink = async ({ url }: { url: string }) => {
-      console.log("🔗 Deep link received:", url);
-
-      // prevent double execution
-      if (gcashHandled) return;
+      if (!url) return;
 
       if (url.includes("payment-success")) {
-        setGcashHandled(true);
-
-        // 1️⃣ Extract order_code from PayMongo redirect
-        const match = url.match(/order_code=([^&]+)/);
-        const returnedOrderCode = match?.[1];
-
-        if (!returnedOrderCode) {
-          console.warn("No order_code found in redirect URL");
-          return;
-        }
-
-        setOrderCode(returnedOrderCode);
-
-        // 2️⃣ CLEAR CART IN BACKEND (THIS WAS MISSING)
-        await authFetch(`${API_BASE}/api/orders/clear-cart-after-order`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderCode: returnedOrderCode }),
-        });
-
-        // 3️⃣ Refresh cart (should now be EMPTY)
+        await clearCheckedItems(); // ✅ ONLY checked items
         await fetchCartItems();
-
-        // 4️⃣ Show success modal
         setShowOrderModal(true);
       }
     };
 
-    // Listen while app is running
-    const subscription = Linking.addEventListener("url", handleDeepLink);
+    const sub = Linking.addEventListener("url", handleDeepLink);
 
-    // Handle cold start (app was closed)
-    Linking.getInitialURL().then((url) => {
+    Linking.getInitialURL().then(url => {
       if (url) handleDeepLink({ url });
     });
 
-    return () => {
-      subscription.remove();
-    };
-  }, [gcashHandled]);
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     const loadLoyalty = async () => {
@@ -300,6 +276,8 @@ const CartScreen: React.FC = () => {
         return;
       }
 
+      console.log("🛒 CART ITEMS FROM API:", data);
+
       if (!res.ok) {
         console.warn("Cart fetch failed:", data?.message || res.status);
         return;
@@ -341,7 +319,7 @@ const CartScreen: React.FC = () => {
 
     // Build selectedCartItems cleanly with correct fields
     const selectedCartItems = cartItems
-      .filter((item) => selectedItems.includes(item.id))
+      .filter((item) => selectedItems.includes(item.id) || item.is_free)
       .map((item) => ({
         id: item.id,
         product_id: item.product_id || item.id,
@@ -352,22 +330,12 @@ const CartScreen: React.FC = () => {
         price: Number(item.price),
         image: item.image,
         instructions: item.instructions || "",
+        is_free: Boolean(item.is_free),
       }));
-
-    const freeDrinks = Array.from({ length: loyaltyRewards }).map((_, i) => ({
-      product_id: 0,
-      product_name: `Free Drink #${i + 1}`,
-      size: "medium",
-      quantity: 1,
-      price: 0,
-      image: "BrewedIcedCoffee.png",
-      is_free: true,
-      instructions: "Loyalty Reward",
-    }));
 
     // Prepare and log payload for debugging
     const payload = {
-      cartItems: [...selectedCartItems, ...freeDrinks],
+      cartItems: selectedCartItems,
       paymentMethod: selectedPayment,
       totalAmount, 
       address,
@@ -451,18 +419,8 @@ const CartScreen: React.FC = () => {
       console.log("Checkout response (Pay on Pickup):", data);
 
       if (response.ok) {
-        // Remove selected items from backend cart
-        for (const id of selectedItems) {
-          await authFetch(`${API_BASE}/api/cart/${id}`, {
-            method: "DELETE",
-          });
-        }
+        await clearCheckedItems(); 
 
-        // Update UI
-        setCartItems((prev) =>
-          prev.filter((item) => !selectedItems.includes(item.id))
-        );
-        setSelectedItems([]);
         setTransactionId(data.transaction_id);
         setOrderCode(data.order_code);
         setUserData({ full_name: data.full_name, email: data.email });
@@ -488,11 +446,15 @@ const CartScreen: React.FC = () => {
   };
 
   const toggleTrashItem = (id: number) => {
+    const item = cartItems.find(i => i.id === id);
+    if (item?.is_free) return; 
+
     setToggledTrashItems((prev) => {
-      const updated = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
+      const updated = prev.includes(id)
+        ? prev.filter((i) => i !== id)
+        : [...prev, id];
 
       setShowRemoveBtn(updated.length > 0);
-
       return updated;
     });
   };
@@ -501,16 +463,14 @@ const CartScreen: React.FC = () => {
     try {
       if (selectedItems.length === 0) return;
 
-      // selectedItems contains cart_item IDs
       await authFetch(`${API_BASE}/api/cart/clear-checked`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ cartItemIds: selectedItems }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cartItemIds: selectedItems, // ✅ ONLY checked items
+        }),
       });
 
-      // ✅ Update UI
       setCartItems(prev =>
         prev.filter(item => !selectedItems.includes(item.id))
       );
@@ -522,6 +482,8 @@ const CartScreen: React.FC = () => {
   };
 
   const updateQuantity = async (item: CartItem, newQty: number) => {
+    if (item.is_free) return; 
+
     const token = await AsyncStorage.getItem("token");
 
     if (newQty <= 0) {
@@ -546,7 +508,7 @@ const CartScreen: React.FC = () => {
   };
 
   const openEditModal = (item: CartItem) => {
-    setEditItem(item);
+    if (item.is_free) return; 
     setEditModalVisible(true);
   };
 
@@ -604,10 +566,7 @@ const CartScreen: React.FC = () => {
     return Math.floor(totalDrinks / threshold);
   };
 
-  const displayedCartItems = [
-    ...freeItems,
-    ...cartItems.filter(i => !i.is_free),
-  ];
+  const displayedCartItems = cartItems;
 
   function setSelectedOrder(order: any) {
     setSelectedOrderState(order);
@@ -646,8 +605,8 @@ const CartScreen: React.FC = () => {
     return null;
   }
 
-  const selectedCartItemsForCheckout = cartItems.filter(item =>
-    selectedItems.includes(item.id)
+  const selectedCartItemsForCheckout = cartItems.filter(
+    item => selectedItems.includes(item.id) || item.is_free
   );
 
   const itemsWithDates = displayedCartItems.map((item: any) => {
@@ -868,20 +827,9 @@ const CartScreen: React.FC = () => {
                       </Text>
 
                       {group.items.map((item: any) => {
-                        let imageSource: any = require("../../assets/MiAmore2.png");
-                        if (item.image) {
-                          if (
-                            typeof item.image === "string" &&
-                            (item.image.startsWith("http://") ||
-                              item.image.startsWith("https://"))
-                          ) {
-                            imageSource = { uri: item.image };
-                          } else if (IMAGE_MAP[item.image]) {
-                            imageSource = IMAGE_MAP[item.image];
-                          }
-                        }
+                        const imageSource = getImageSource(item.image);
 
-                        const isSelected = selectedItems.includes(item.id);
+                        const isSelected = item.is_free || selectedItems.includes(item.id);
 
                         return (
                           <View
@@ -894,7 +842,9 @@ const CartScreen: React.FC = () => {
                             {/* Checkbox */}
                             <TouchableOpacity
                               style={[styles.checkbox, isSelected && styles.checkboxChecked]}
-                              onPress={() => toggleSelectItem(item.id)}
+                              onPress={() => {
+                                if (!item.is_free) toggleSelectItem(item.id);
+                              }}
                             >
                               {isSelected && <Icon name="checkmark" size={14} color="#fff" />}
                             </TouchableOpacity>
@@ -910,7 +860,11 @@ const CartScreen: React.FC = () => {
                               }}
                             >
                               <TouchableOpacity
-                                style={[styles.editIconContainer, { marginRight: 10 }]}
+                                style={[
+                                  styles.editIconContainer,
+                                  { marginRight: 10, opacity: item.is_free ? 0.4 : 1 },
+                                ]}
+                                disabled={item.is_free}
                                 onPress={() => openEditModal(item)}
                               >
                                 <Icon name="create-outline" size={20} color="#000" />
@@ -935,7 +889,14 @@ const CartScreen: React.FC = () => {
                               <Image source={imageSource} style={styles.itemImage} />
 
                               <View style={{ flex: 1, marginLeft: 10 }}>
-                                <Text style={styles.itemTitle}>{item.product_name}</Text>
+                                <Text style={styles.itemTitle}>
+                                  {item.product_name}
+                                  {item.is_free && (
+                                    <Text style={{ color: "#76B13A", fontWeight: "600" }}>
+                                      {" "}• Free Reward
+                                    </Text>
+                                  )}
+                                </Text>
                                 <Text style={styles.itemDesc}>
                                   {item.instructions || "No special instructions"}
                                 </Text>
@@ -946,15 +907,33 @@ const CartScreen: React.FC = () => {
 
                               <View style={styles.editCardQtyControls}>
                                 <TouchableOpacity
+                                  disabled={item.is_free}
                                   onPress={() => updateQuantity(item, item.quantity - 1)}
                                 >
-                                  <Text style={styles.qtyCardBtn}>-</Text>
+                                  <Text
+                                    style={[
+                                      styles.qtyCardBtn,
+                                      item.is_free && { opacity: 0.4 },
+                                    ]}
+                                  >
+                                    -
+                                  </Text>
                                 </TouchableOpacity>
+
                                 <Text style={styles.qtyCardValue}>{item.quantity}</Text>
+
                                 <TouchableOpacity
+                                  disabled={item.is_free}
                                   onPress={() => updateQuantity(item, item.quantity + 1)}
                                 >
-                                  <Text style={styles.qtyCardBtn}>+</Text>
+                                  <Text
+                                    style={[
+                                      styles.qtyCardBtn,
+                                      item.is_free && { opacity: 0.4 },
+                                    ]}
+                                  >
+                                    +
+                                  </Text>
                                 </TouchableOpacity>
                               </View>
                             </View>

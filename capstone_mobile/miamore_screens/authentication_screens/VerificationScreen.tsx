@@ -150,10 +150,6 @@ const VerificationScreen = () => {
       style={styles.container}
       behavior={Platform.select({ ios: 'padding', android: undefined })}
     >
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backArrow}>←</Text>
-      </TouchableOpacity>
-
       <Image
         source={require('../../assets/two-factor-auth.png')} 
         style={styles.image}
