@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { authFetch } from "../../utils/authFetch";
 import { API_BASE } from "../../config/api";
+import { useEffect } from "react";
 
 interface CheckoutTabProps {
   userData: any;
@@ -28,10 +29,11 @@ interface CheckoutTabProps {
   setSelectedPayment: (v: string) => void;
   fulfillmentMethod: "delivery" | "pickup" | null;  
   setFulfillmentMethod: (v: "delivery" | "pickup") => void;
-  handleCheckout: () => void;
+  handleCheckout: () => Promise<{ order_code: string } | false>;
   onEditAddress: () => void;
   clearCheckedItems: () => void;
   cartItems: any[];
+  initialStep?: number | string;
 }
 
 const CheckoutTab: React.FC<CheckoutTabProps> = ({
@@ -46,16 +48,29 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
   handleCheckout,
   onEditAddress,
   cartItems,
+  initialStep,
+  clearCheckedItems,
 }) => {
-
   const navigation = useNavigation<any>();
 
-  const [step, setStep] = useState(1);
+  const stepMap: Record<string, number> = {
+    details: 1,
+    payment: 2,
+    confirm: 3,
+  };
+
+  const [step, setStep] = useState(() => {
+    if (typeof initialStep === "number") return initialStep;
+    if (typeof initialStep === "string") return stepMap[initialStep] ?? 1;
+    return 1;
+  });
+
   const [gcashNumber, setGcashNumber] = useState("");
   const [gcashError, setGcashError] = useState("");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
   const [gcashModalVisible, setGcashModalVisible] = useState(false);
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
@@ -131,59 +146,28 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
       setOtpError("Enter a valid 6-digit OTP.");
       return;
     }
+
     setOtpError("");
     setLoading(true);
+
     try {
-      const token = await AsyncStorage.getItem("token");
       const res = await authFetch(`${API_BASE}/api/gcash/verify-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: userData?.email, otp }),
+        body: JSON.stringify({
+          email: userData?.email,
+          otp,
+        }),
       });
+
       const data = await res.json();
 
       if (data.verified) {
+        setSelectedPayment("GCash");
         setOtpModalVisible(false);
-
-        if (!totalAmount || !gcashNumber) {
-          console.log("⚠️ Missing amount or GCash number:", { totalAmount, gcashNumber });
-          Alert.alert("Error", "Please enter your GCash number and ensure amount is valid.");
-          setLoading(false);
-          return;
-        }
-
-        console.log("🚀 Sending PayMongo GCash request with:", {
-          amount: totalAmount,
-          phone_number: gcashNumber,
-        });
-
-        const payRes = await authFetch(`${API_BASE}/api/paymongo/gcash`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: totalAmount,
-            phone_number: gcashNumber,
-          }),
-        });
-
-        const payData = await payRes.json();
-        console.log("payRes.status:", payRes.status, "payData:", payData);
-
-        // Treat 200 or 201 as success (PayMongo sometimes returns 201)
-        if (payRes.status === 200 || payRes.status === 201) {
-          if (payData.redirect_url && !__DEV__) {
-            Linking.openURL(payData.redirect_url);
-          } else {
-            setStep(3);
-          }
-        } else {
-          // Real failure — show alert
-          Alert.alert("Payment Error", payData.message || "Unable to start GCash payment.");
-        }
+        setStep(3);
       } else {
         setOtpError("Invalid OTP. Please try again.");
       }
@@ -196,15 +180,51 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
   };
 
   const handleConfirmOrder = async () => {
+    if (loading) return;
+
     setLoading(true);
+
     try {
-      await handleCheckout();
+      const checkoutResult = await handleCheckout();
+      if (!checkoutResult) return;
+
+      // 🔒 FAILSAFE — MARK CART AS CLEARED
+      await AsyncStorage.setItem("cartCleared", "true");
+
+      // 🔹 GCash payment flow
+      if (selectedPayment === "GCash") {
+        const res = await authFetch(`${API_BASE}/api/paymongo/gcash`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: Math.round(totalAmount * 100),
+            phone_number: gcashNumber,
+            order_code: checkoutResult.order_code,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.redirect_url) {
+          Alert.alert("Payment Error", "Unable to start GCash payment.");
+          return;
+        }
+
+        Linking.openURL(data.redirect_url);
+        return; // ❗ DO NOT CLEAR CART HERE AGAIN
+      }
+
+      // 🔹 Pay on Pickup
+      clearCheckedItems();
       setOrderConfirmed(true);
 
       setTimeout(() => {
-        setOrderConfirmed(false);
-        navigation.navigate("Home"); 
-      }, 2000);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Home" }],
+        });
+      }, 1500);
+
     } catch (err) {
       console.error("Checkout error:", err);
       Alert.alert("Error", "Something went wrong confirming your order.");
@@ -229,6 +249,38 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
       </View>
     );
   };
+
+  useEffect(() => {
+    const handleDeepLink = (url: string) => {
+      if (!url) return;
+
+      if (url.includes("payment-success")) {
+        setOrderConfirmed(true); 
+
+        setTimeout(() => {
+          clearCheckedItems();   
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" }],
+          });
+        }, 1500); 
+      }
+
+      if (url.includes("payment-failed")) {
+        Alert.alert("Payment Failed", "GCash payment was not completed.");
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
+
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleDeepLink(event.url);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // -------- STEP SCREENS ---------
   const renderStep1 = () => (
@@ -283,7 +335,10 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
                   item.is_free && { borderColor: "#76B13A", borderWidth: 1, borderRadius: 8, padding: 8 },
                 ]}
               >
-                <Text style={styles.orderName}>{item.product_name}</Text>
+                <Text style={styles.orderName}>
+                  {item.product_name}
+                  {item.type ? ` (${item.type})` : ""}
+                </Text>
                 <Text style={styles.orderQty}>x{item.quantity}</Text>
                 {item.is_free && (
                   <Text style={{ color: "#76B13A", fontWeight: "bold", marginLeft: 8 }}>Free</Text>
@@ -427,7 +482,23 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
 
       {/* Sticky bottom button */}
       <View style={styles.footerButtonContainer}>
-        <TouchableOpacity style={styles.nextBtn} onPress={handleProceedPayment}>
+        <TouchableOpacity
+          style={[
+            styles.nextBtn,
+            isInitiatingPayment && { opacity: 0.6 }
+          ]}
+          disabled={isInitiatingPayment}
+          onPress={async () => {
+            if (isInitiatingPayment) return;
+            setIsInitiatingPayment(true);
+
+            try {
+              await handleProceedPayment();
+            } finally {
+              setIsInitiatingPayment(false);
+            }
+          }}
+        >
           <Text style={styles.nextBtnText}>Confirm Your Order</Text>
         </TouchableOpacity>
       </View>
@@ -453,7 +524,10 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
           {cartItems.length > 0 ? (
             cartItems.map((item, index) => (
               <View key={index} style={styles.orderRow}>
-                <Text style={styles.orderName}>{item.product_name}</Text>
+                <Text style={styles.orderName}>
+                  {item.product_name}
+                  {item.type ? ` (${item.type})` : ""}
+                </Text>
                 <Text style={styles.orderQty}>x{item.quantity}</Text>
               </View>
             ))
@@ -481,7 +555,14 @@ const CheckoutTab: React.FC<CheckoutTabProps> = ({
 
       {/* Sticky bottom button */}
       <View style={styles.footerButtonContainer}>
-        <TouchableOpacity style={styles.nextBtn} onPress={handleConfirmOrder}>
+        <TouchableOpacity
+          style={[
+            styles.nextBtn,
+            loading && { opacity: 0.6 }
+          ]}
+          disabled={loading}
+          onPress={handleConfirmOrder}
+        >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (

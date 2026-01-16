@@ -17,6 +17,16 @@ function authenticateToken(req, res, next) {
   });
 }
 
+function normalizeText(str) {
+  return str
+    .toLowerCase()
+    .replace(/iced/g, "ice")
+    .replace(/snow/g, "ice")
+    .replace(/one/g, "1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const dotenv = require('dotenv'); 
 dotenv.config({ path: __dirname + '/.env' }); 
 
@@ -35,14 +45,99 @@ const upload = multer({ dest: "uploads/" });
 const fs = require("fs");
 const axios = require("axios");
 const FormData = require("form-data");
+const crypto = require("crypto");
 
 console.log("Email user:", process.env.EMAIL_USER);
 console.log("Email pass exists:", !!process.env.EMAIL_PASS);
 
 const app = express();
+
+app.get("/__ping", (req, res) => {
+  res.send("PING OK - PAYMONGO SERVER");
+});
+
 app.use(cors());
+
+app.post("/api/paymongo/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const event = req.body;
+
+      if (event?.data?.attributes?.type !== "payment.paid") {
+        return res.sendStatus(200);
+      }
+
+      const payment = event.data.attributes.data;
+
+      const transactionId = payment.id; // pay_...
+      const sourceId = payment.attributes.source.id;
+
+      await pool.query(
+        `
+        UPDATE orders
+        SET transaction_id = $1,
+            status = 'completed'
+        WHERE source_id = $2
+        `,
+        [transactionId, sourceId]
+      );
+
+      console.log("✅ GCash payment confirmed:", {
+        transactionId,
+        sourceId,
+      });
+
+      res.sendStatus(200);
+    } catch (err) {
+      console.error("❌ Webhook error:", err);
+      res.sendStatus(400);
+    }
+  }
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ✅ PayMongo redirect SUCCESS
+app.get("/api/paymongo/redirect/success", (req, res) => {
+  console.log("✅ PayMongo redirect SUCCESS hit");
+
+  res.setHeader("Content-Type", "text/html");
+  res.send(`
+    <html>
+      <head>
+        <title>Payment Successful</title>
+      </head>
+      <body>
+        <p>Payment successful. Redirecting back to app...</p>
+        <script>
+          window.location.href = "capstone://payment-success";
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+// ❌ PayMongo redirect FAILED
+app.get("/api/paymongo/redirect/failed", (req, res) => {
+  console.log("❌ PayMongo redirect FAILED hit");
+
+  res.setHeader("Content-Type", "text/html");
+  res.send(`
+    <html>
+      <head>
+        <title>Payment Failed</title>
+      </head>
+      <body>
+        <p>Payment failed. Returning to app...</p>
+        <script>
+          window.location.href = "capstone://payment-failed";
+        </script>
+      </body>
+    </html>
+  `);
+});
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -67,6 +162,21 @@ const PUBLIC_URL = process.env.PUBLIC_URL;
 
 const otpStore = {};
 
+const resolveImageUrl = (imagePath, req) => {
+  if (!imagePath) return null;
+
+  // Already absolute URL
+  if (imagePath.startsWith("http")) {
+    return imagePath;
+  }
+
+  const cleanPath = imagePath.startsWith("/")
+    ? imagePath
+    : `/${imagePath}`;
+
+  return `${req.protocol}://${req.headers.host}${cleanPath}`;
+};
+
 // Start of Routes
 
 app.post("/api/register", async (req, res) => {
@@ -82,10 +192,20 @@ app.post("/api/register", async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO customers (full_name, email, password_hash, email_verified)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, full_name, email, email_verified`,
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, full_name, email, email_verified`,
       [full_name, email, hashedPassword, true]
     );
+
+    const newCustomerId = result.rows[0].id;
+
+    await pool.query(
+      `
+      INSERT INTO loyalty (customer_id, drink_count, free_drinks)
+      VALUES ($1, 0, 0)
+      `,
+      [newCustomerId]
+    ); 
 
     res.status(201).json({
       message: "User registered successfully",
@@ -134,9 +254,6 @@ app.post('/api/login', async (req, res) => {
 
     const otpToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
     res.json({ message: 'OTP sent to email.', otp_token: otpToken });
-
-    // no expiry check here
-    res.json({ message: 'OTP sent to email.', otp_token: otpToken });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error.' });
@@ -161,8 +278,19 @@ app.post('/api/google-login', async (req, res) => {
     if (user.rows.length === 0) {
       user = await pool.query(
         `INSERT INTO customers (full_name, email, password_hash, email_verified)
-         VALUES ($1, $2, $3, $4) RETURNING *`,
+        VALUES ($1, $2, $3, $4)
+        RETURNING *`,
         [name, email, '', true]
+      );
+
+      const newCustomerId = user.rows[0].id;
+
+      await pool.query(
+        `
+        INSERT INTO loyalty (customer_id, drink_count, free_drinks)
+        VALUES ($1, 0, 0)
+        `,
+        [newCustomerId]
       );
     }
 
@@ -456,104 +584,371 @@ app.get('/api/menu-items', async (req, res) => {
   }
 });
 
+const PRODUCT_ALIASES = {
+  /* =======================
+     DRINKS
+  ======================= */
+
+  "sea salt honey": [
+    "sea salt honey",
+    "seasalt honey",
+    "salt honey",
+    "sea honey",
+  ],
+
+  "iced snow coffee": [
+    "iced snow coffee",
+    "ice snow coffee",
+    "snow coffee",
+    "iced coffee snow",
+  ],
+
+  "white chocolate mocha": [
+    "white chocolate mocha",
+    "white mocha",
+    "white choco mocha",
+    "white chocolate",
+  ],
+
+  "dulce de leche": [
+    "dulce de leche",
+    "dulce leche",
+    "dulce",
+  ],
+
+  "classic lemonade": [
+    "classic lemonade",
+    "lemonade",
+    "classic lemon",
+  ],
+
+  "strawberry lemonade": [
+    "strawberry lemonade",
+    "strawberry lemon",
+    "strawberry lemon drink",
+  ],
+
+  "watermelon with strawberry popping bobba": [
+    "watermelon strawberry",
+    "watermelon with strawberry",
+    "watermelon bobba",
+    "watermelon boba",
+    "watermelon popping boba",
+    "watermelon strawberry boba",
+  ],
+
+  "okinawa": [
+    "okinawa",
+    "okinawa milk tea",
+  ],
+
+  "oreo cheesecake overload": [
+    "oreo cheesecake",
+    "oreo cheesecake overload",
+    "oreo cake",
+  ],
+
+  "wintermelon": [
+    "winter melon",
+    "wintermelon",
+    "winter melon tea",
+  ],
+
+  "oreo": [
+    "oreo",
+    "oreo milk tea",
+  ],
+
+  "pure matcha oat latte": [
+    "pure matcha oat latte",
+    "matcha oat latte",
+    "matcha oat",
+    "oat matcha",
+  ],
+
+  "specialty matcha": [
+    "specialty matcha",
+    "speciality matcha",
+    "special matcha",
+    "premium matcha",
+    "matcha",
+  ],
+
+  "peach iced tea": [
+    "peach iced tea",
+    "peach ice tea",
+    "peach tea",
+  ],
+
+  /* =======================
+     FOOD
+  ======================= */
+
+  "fries": [
+    "fries",
+    "french fries",
+    "chips",
+  ],
+
+  "cheese sticks": [
+    "cheese sticks",
+    "cheesy sticks",
+    "cheese stick",
+  ],
+
+  "cheesy corndogs": [
+    "cheesy corndogs",
+    "cheesy corn dogs",
+    "corn dogs",
+    "corn dog",
+    "corndogs",
+  ],
+
+  "platter 3": [
+    "platter three",
+    "platter number three",
+    "platter 3",
+    "combo platter",
+  ],
+
+  "beef quesadillas": [
+    "beef quesadillas",
+    "beef quesadilla",
+    "quesadilla",
+  ],
+
+  "biscoff croffle": [
+    "biscoff croffle",
+    "biscoff cruffle",
+    "biscoff crumple",
+    "biscoff waffle",
+    "croffle",
+    "cruffle",
+  ],
+
+  "croffle with whipped cream syrup": [
+    "croffle with whipped cream",
+    "croffle with syrup",
+    "plain croffle",
+    "croffle",
+  ],
+};
+
 app.post("/api/voice-order", authenticateToken, async (req, res) => {
-  const { transcript } = req.body;
-
-  if (!transcript) {
-    return res.status(400).json({ message: "Transcript required" });
-  }
-
   try {
-    const menuResult = await pool.query(`
+    const { transcript } = req.body;
+
+    console.log("VOICE ORDER BODY:", req.body);
+    console.log("🎙️ VOICE TRANSCRIPT:", transcript);
+
+    /* -------------------------
+       0️⃣ Validate input
+    ------------------------- */
+    if (!transcript || typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(400).json({ message: "No text provided" });
+    }
+
+    const normalized = transcript.toLowerCase();
+
+    /* -------------------------
+       1️⃣ Quantity (default 1)
+    ------------------------- */
+    let quantity = 1;
+    if (/\bone\b/.test(normalized)) quantity = 1;
+    if (/\btwo\b/.test(normalized)) quantity = 2;
+    if (/\bthree\b/.test(normalized)) quantity = 3;
+    if (/\bfour\b/.test(normalized)) quantity = 4;
+    if (/\bfive\b/.test(normalized)) quantity = 5;
+
+    /* -------------------------
+       2️⃣ Size (ONLY regular / large)
+    ------------------------- */
+    let size = "regular";
+    if (/\blarge\b/.test(normalized)) size = "large";
+
+    /* -------------------------
+       3️⃣ Fetch ALL menu items
+    ------------------------- */
+    const itemsRes = await pool.query(`
       SELECT id, name, price, image_path
       FROM menu_items
     `);
 
-    const menuItems = menuResult.rows;
+    /* -------------------------
+       4️⃣ FUZZY PRODUCT MATCH
+    ------------------------- */
 
-    // Normalization
-    const normalize = (str = "") =>
-      str
-        .toLowerCase()
-        .replace(/\b(iced|ice|snow|eye)\b/g, "ice")
-        .replace(/\b(one|isa|isang|isa'ng)\b/g, "")
-        .replace(/\b(no|none)\b/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
+    /* -------------------------
+      4️⃣ PRODUCT MATCH (ALIASES + FUZZY)
+    ------------------------- */
 
-    const normalizedTranscript = normalize(transcript);
+    const clean = (str) =>
+      str.toLowerCase().replace(/[^a-z0-9\s]/g, "");
 
-    // Quantity detection (EN + TL)
-    const quantityMap = {
-      one: 1, isa: 1,
-      two: 2, dalawa: 2,
-      three: 3, tatlo: 3,
-      four: 4, apat: 4,
-      five: 5, lima: 5,
-    };
+    const cleanedTranscript = clean(normalized);
 
-    let quantity = 1;
-    for (const word of transcript.toLowerCase().split(" ")) {
-      if (quantityMap[word]) {
-        quantity = quantityMap[word];
-        break;
+    let match = null;
+
+    /* ---- 4A️⃣ Alias match (HIGH CONFIDENCE) ---- */
+    for (const item of itemsRes.rows) {
+      const normalizeKey = (str) =>
+        str
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, "")
+          .trim();
+
+      const itemKey = normalizeKey(item.name);
+      const aliases = PRODUCT_ALIASES[itemKey];
+      if (!aliases) continue;
+
+      for (const alias of aliases) {
+        const aliasWords = clean(alias).split(" ");
+
+        const hit = aliasWords.every(word =>
+          cleanedTranscript.includes(word)
+        );
+
+        if (hit) {
+          match = item;
+          break;
+        }
+      }
+      if (match) break;
+    }
+
+    /* ---- 4B️⃣ Fallback fuzzy match ---- */
+    if (!match) {
+      const tokenize = (str) =>
+        str
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, "")
+          .split(/\s+/)
+          .filter(w => w.length > 2);
+
+      const transcriptWords = tokenize(cleanedTranscript);
+
+      let bestScore = 0;
+
+      for (const item of itemsRes.rows) {
+        const nameWords = tokenize(item.name);
+
+        const score = nameWords.filter(word =>
+          transcriptWords.includes(word)
+        ).length;
+
+        if (score > bestScore) {
+          bestScore = score;
+          match = item;
+        }
+      }
+
+      if (!match || bestScore === 0) {
+        return res.status(404).json({
+          message: "The following product isn't available or recognized",
+        });
       }
     }
 
-    // Fuzzy item matching
-    const matchedItem = menuItems.find(item => {
-      const normalizedItemName = normalize(item.name);
-      return normalizedTranscript.includes(normalizedItemName);
-    });
+    /* -------------------------
+       5️⃣ Resolve price by size
+    ------------------------- */
+    const priceObj = match.price || {};
+    const finalSize = priceObj[size] ? size : "regular";
+    const price = priceObj[finalSize];
 
-    if (!matchedItem) {
-      return res.status(404).json({
-        message: "No matching menu item found",
-        transcript,
+    if (!price) {
+      return res.status(400).json({
+        message: "Invalid size for this product",
       });
     }
 
-    // Add to cart
-    const insert = await pool.query(
-      `INSERT INTO cart_items
-       (customer_id, product_id, product_name, quantity, price, image, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [
-        req.userId,
-        matchedItem.id,
-        matchedItem.name,
-        quantity,
-        matchedItem.price,
-        matchedItem.image_path,
-      ]
-    );
+    /* -------------------------
+       6️⃣ Resolve image path (FIXED)
+    ------------------------- */
+    const resolvedImage = resolveImageUrl(match.image_path, req);
 
-    res.json({
-      message: "Item added via voice order",
-      item: insert.rows[0],
+    /* -------------------------
+       7️⃣ Return parsed result
+    ------------------------- */
+    return res.json({
+      product: {
+        product_id: match.id,
+        product_name: match.name,
+        size: finalSize,
+        quantity,
+        price,
+        image: resolvedImage,
+      },
     });
 
   } catch (err) {
-    console.error("Voice order error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Voice order error:", err);
+    res.status(500).json({ message: "Voice order failed" });
+  }
+});
+
+app.post("/api/orders/clear-cart-after-order", authenticateToken, async (req, res) => {
+  const userId = req.userId;
+  const { orderId } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Order ID required" });
+  }
+
+  try {
+    await pool.query(
+      `
+      DELETE FROM cart_items
+      WHERE customer_id = $1
+        AND product_id IN (
+          SELECT product_id
+          FROM order_items
+          WHERE order_id = $2
+        )
+      `,
+      [userId, orderId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Failed to clear cart:", err);
+    res.status(500).json({ message: "Failed to clear cart" });
   }
 });
 
 // Adding Items to Cart
 app.post('/api/cart', authenticateToken, async (req, res) => {
-  const { product_id, product_name, size, quantity, instructions, price, image } = req.body;
+  const {
+    product_id,
+    product_name,
+    size,
+    quantity,
+    instructions,
+    price,
+    image,
+    is_free = false,
+  } = req.body;
 
   try {
     const result = await pool.query(
       `INSERT INTO cart_items 
-        (customer_id, product_id, product_name, size, quantity, instructions, price, image, created_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) 
+       (customer_id, product_id, product_name, size, quantity, instructions, price, image, is_free, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
        RETURNING *`,
-      [req.userId, product_id, product_name, size, quantity, instructions, Number(price), image]
+      [
+        req.userId,
+        product_id,
+        product_name,
+        size,
+        quantity,
+        instructions,
+        Number(price),
+        image,
+        is_free,
+      ]
     );
 
-    res.json({ message: "Added to cart", item: result.rows[0] });
+    res.json({ item: result.rows[0] });
   } catch (err) {
     console.error("Error adding to cart:", err);
     res.status(500).json({ message: "Server error" });
@@ -564,23 +959,56 @@ app.post('/api/cart', authenticateToken, async (req, res) => {
 app.get('/api/cart', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, customer_id, product_id, product_name, size, quantity,
-              instructions, price::numeric(10,2) AS price, image, created_at
-       FROM cart_items
-       WHERE customer_id = $1
-       ORDER BY created_at DESC`,
-      [req.userId]
+      `
+      SELECT
+        ci.id,
+        ci.product_id,
+        mi.name AS product_name,
+        mi.type,
+        ci.size,
+        ci.quantity,
+        ci.instructions,
+        ci.price::numeric(10,2) AS price,
+        ci.image,
+        ci.is_free,
+        ci.created_at
+      FROM cart_items ci
+      JOIN menu_items mi ON mi.id = ci.product_id
+      WHERE ci.customer_id = $1
+      ORDER BY ci.created_at DESC
+      `,
+      [req.userId]   
     );
-
-    console.log("Sending cart items:", result.rows.map(r => ({
-      id: r.id,
-      created_at: r.created_at,
-    })));
 
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching cart:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.delete("/api/cart/clear-checked", authenticateToken, async (req, res) => {
+  const userId = req.userId;
+  const { productIds } = req.body;
+
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({ message: "No product IDs provided" });
+  }
+
+  try {
+    await pool.query(
+      `
+      DELETE FROM cart_items
+      WHERE customer_id = $1
+        AND product_id = ANY($2::int[])
+      `,
+      [userId, productIds]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Clear checked cart error:", err);
+    res.status(500).json({ message: "Failed to clear checked items" });
   }
 });
 
@@ -669,7 +1097,7 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     ? fulfillmentMethod
     : null;
     
-  console.log("Raw checkout body:", req.body);
+  console.log("Raw checkout body:", req.body); 
 
   try {
     // -----------------------------
@@ -709,23 +1137,58 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     const orderStatus = "pending";
 
     let transactionId = null;
+    
     if (paymentMethod === "Pay on Pickup") {
-      transactionId = "TXN-" + Math.floor(100000 + Math.random() * 900000);
+      transactionId = "TXN-" + crypto.randomUUID();
     }
+
+    // -----------------------------
+    // Fetch product types from menu_items
+    // -----------------------------
+    const productIds = [
+      ...new Set(
+        cartItems
+          .filter(i => i.product_id || i.id)
+          .map(i => Number(i.product_id ?? i.id))
+      )
+    ];
+
+    const menuResult = await pool.query(
+      `SELECT id, type FROM menu_items WHERE id = ANY($1)`,
+      [productIds]
+    );
+
+    const typeMap = {};
+    menuResult.rows.forEach(row => {
+      typeMap[row.id] = row.type;
+    });
 
     // -----------------------------
     // Build items JSON (STRICT)
     // -----------------------------
-    const orderItems = cartItems.map((i) => ({
-      id: i.product_id ?? i.id,
-      name: i.product_name ?? i.name,
-      size: i.size ?? null,
-      quantity: Number(i.quantity),
-      price: Number(i.price),
-      image: i.image ?? null,
-      instructions: i.instructions ?? "",
-      is_free: Boolean(i.is_free),
-    }));
+    const orderItems = cartItems.map((i) => {
+    const productId = Number(i.product_id ?? i.id);
+
+      return {
+        id: productId,
+        name: i.product_name ?? i.name,
+        type: typeMap[productId] ?? "food", 
+        size: i.size ?? null,
+        quantity: Number(i.quantity) || 0,  
+        price: Number(i.price) || 0,
+        image: i.image ?? null,
+        instructions: i.instructions ?? "",
+        is_free: Boolean(i.is_free),
+      };
+    });
+
+    // -----------------------------
+    // Recalculate total (exclude free items)
+    // -----------------------------
+    const recalculatedTotal = orderItems.reduce((sum, i) => {
+      if (i.is_free) return sum;           // 👈 FREE DRINKS = ₱0
+      return sum + i.price * i.quantity;
+    }, 0);
 
     const safeItems = JSON.stringify(orderItems); 
     const safeFulfillmentMethod = fulfillmentMethod ?? null;
@@ -775,15 +1238,15 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     const orderResult = await pool.query(insertOrderQuery, [
       userId,                  // $1
       paymentMethod,           // $2
-      totalAmount,             // $3
+      recalculatedTotal,       // $3
       orderStatus,             // $4
       transactionId,           // $5
       orderCode,               // $6
       user.full_name,          // $7
       user.email,              // $8
       address || null,         // $9
-      safeItems,               // $10 ✅ items
-      safeFulfillmentMethod,   // $11 ✅ fulfillment_method
+      safeItems,               // $10 
+      safeFulfillmentMethod,   // $11 
     ]);
 
     console.log("✅ Order saved correctly:", orderResult.rows[0]);
@@ -810,18 +1273,58 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
 
 // GCash Payment Intent via PayMongo
 app.post("/api/paymongo/gcash", authenticateToken, async (req, res) => {
-  const { amount, phone_number } = req.body;
-  const userId = req.userId;
-  const userAgent = req.headers["user-agent"] || "";
-  const isMobileApp = /okhttp|reactnative|mobile/i.test(userAgent);
+    if (!PUBLIC_URL || !PUBLIC_URL.startsWith("https://")) {
+    console.error("❌ INVALID PUBLIC_URL:", PUBLIC_URL);
+    return res.status(500).json({
+      message: "Server misconfiguration: PUBLIC_URL is invalid",
+    });
+  }
 
-  console.log("Received from frontend:", { amount, phone_number });
+  const { amount, phone_number, order_code } = req.body;
 
-  if (!amount || !phone_number) {
-    return res.status(400).json({ message: "Amount and phone number are required." });
+  console.log("GCash init request:", { amount, phone_number, order_code });
+
+  if (!amount || !phone_number || !order_code) {
+    return res.status(400).json({
+      message: "Amount, phone number, and order_code are required.",
+    });
   }
 
   try {
+    // 🔹 GET CUSTOMER DETAILS FROM ORDER
+    const orderResult = await pool.query(
+      `
+      SELECT customer_name, customer_email
+      FROM orders
+      WHERE order_code = $1
+      `,
+      [order_code]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    const { customer_name, customer_email } = orderResult.rows[0];
+
+    if (!customer_name || !customer_email) {
+      await pool.query(
+        `UPDATE orders SET status = 'canceled' WHERE order_code = $1`,
+        [order_code]
+      );
+
+      return res.status(400).json({
+        message: "Customer name or email is missing. Please complete your profile."
+      });
+    }
+
+    console.log("Using billing info:", {
+      name: customer_name.trim(),
+      email: customer_email.trim(),
+      phone: `+63${phone_number.slice(-10)}`,
+    });
+
+    // 🔹 CREATE PAYMONGO SOURCE
     const response = await fetch(`${PAYMONGO_URL}/sources`, {
       method: "POST",
       headers: {
@@ -833,183 +1336,124 @@ app.post("/api/paymongo/gcash", authenticateToken, async (req, res) => {
         data: {
           attributes: {
             amount: Math.round(amount * 100),
-            redirect: {
-              success: `${PUBLIC_URL}/api/paymongo/success`,
-              failed: `${PUBLIC_URL}/api/paymongo/failed`,
-            },
-            type: "gcash",
             currency: "PHP",
+            type: "gcash",
+            redirect: {
+              success: `${PUBLIC_URL}/api/paymongo/redirect/success`,
+              failed: `${PUBLIC_URL}/api/paymongo/redirect/failed`,
+            },
             billing: {
-              name: "Customer",
-              phone: phone_number,
-              email: "test@example.com",
+              name: customer_name.trim(),
+              email: customer_email.trim(),
+              phone: `+63${phone_number.slice(-10)}`,
             },
           },
         },
       }),
     });
 
-    const data = await response.json();
+    const paymongoData = await response.json();
 
-    if (!response.ok) return res.status(400).json(data);
-    const sourceId = data.data.id;
+    if (!response.ok) {
+      console.error("❌ PayMongo source failed:", paymongoData);
 
+      await pool.query(
+        `UPDATE orders SET status = 'canceled' WHERE order_code = $1`,
+        [order_code]
+      );
+
+      return res.status(400).json({
+        message: "Unable to initiate GCash payment.",
+      });
+    }
+
+    const sourceId = paymongoData.data.id;
+    const redirectUrl = paymongoData.data.attributes.redirect.checkout_url;
+
+    console.log("✅ PayMongo source created:", { sourceId });
+
+    // ✅ SAVE SOURCE ID
     await pool.query(
-      `UPDATE orders SET source_id = $1 WHERE user_id = $2 AND status = 'pending' AND source_id IS NULL`,
-      [sourceId, userId]
+      `
+      UPDATE orders
+      SET source_id = $1
+      WHERE order_code = $2
+      `,
+      [sourceId, order_code]
     );
 
-    res.status(200).json({
-      redirect_url: isMobileApp ? null : data.data.attributes.redirect.checkout_url,
+    return res.status(200).json({
       source_id: sourceId,
-      message: isMobileApp
-        ? "GCash payment initialized. Wait for webhook confirmation."
-        : "GCash redirect available for browser checkout.",
+      redirect_url: redirectUrl,
     });
   } catch (err) {
-    console.error("PayMongo GCash error:", err);
-    res.status(500).json({ message: "GCash payment failed." });
+    console.error("❌ GCash error:", err);
+
+    // ❌ FAIL SAFE
+    await pool.query(
+      `UPDATE orders SET status = 'canceled' WHERE order_code = $1`,
+      [req.body.order_code]
+    );
+
+    return res.status(500).json({
+      message: "GCash payment failed.",
+    });
   }
 });
 
 // Get total drinks purchased (completed orders)
 app.get("/api/loyalty/progress", authenticateToken, async (req, res) => {
   try {
-    // Fetch completed orders for the user
-    const ordersRes = await pool.query(
-      `SELECT items
-       FROM orders
-       WHERE user_id = $1 AND status = 'completed'`,
-      [req.userId]
+    const userId = req.userId;
+
+    const result = await pool.query(
+      `
+      SELECT
+        COALESCE(drink_count, 0) AS drink_count,
+        COALESCE(free_drinks, 0) AS free_drinks
+      FROM loyalty
+      WHERE customer_id = $1
+      `,
+      [userId]
     );
 
-    if (ordersRes.rows.length === 0) {
-      return res.json({ totalDrinks: 0 });
-    }
+    const row = result.rows[0] || { drink_count: 0, free_drinks: 0 };
 
-    let totalDrinks = 0;
-
-    // Loop through orders and parse items
-    for (const row of ordersRes.rows) {
-      let items = [];
-
-      if (typeof row.items === "string") {
-        try {
-          items = JSON.parse(row.items);
-        } catch (err) {
-          console.warn("Skipping invalid items JSON in order:", row.items);
-          continue;
-        }
-      } else if (Array.isArray(row.items)) {
-        items = row.items;
-      }
-
-      for (const item of items) {
-        const name = (item.name || item.product_name || "").toLowerCase();
-        const cat = (item.category || "").toLowerCase();
-        const type = (item.type || "").toLowerCase();
-
-        // Count it if it's a drink
-        if (
-          name.includes("coffee") ||
-          cat.includes("drink") ||
-          type === "drink"
-        ) {
-          totalDrinks += Number(item.quantity || 0);
-        }
-      }
-    }
-
-    console.log(`🥤 Total completed drinks for user ${req.userId}:`, totalDrinks);
-    res.json({ totalDrinks });
+    res.json({
+      progress: row.drink_count % 10,
+      freeDrinksEarned: row.free_drinks,
+    });
   } catch (err) {
-    console.error("Error in /api/loyalty/progress:", err);
-    res.status(500).json({ message: "Server error calculating loyalty progress." });
+    console.error("Failed to load loyalty progress:", err);
+    res.status(200).json({
+      progress: 0,
+      freeDrinksEarned: 0,
+    });
   }
 });
 
-// Webhook from PayMongo
-app.post("/api/paymongo/webhook", async (req, res) => {
+app.get("/api/loyalty/status", authenticateToken, async (req, res) => {
   try {
-    console.log("Webhook received:", JSON.stringify(req.body, null, 2));
+    const userId = req.userId;
 
-    const event = req.body.data;
-    const { type, data } = event;
+    const result = await pool.query(
+      `
+      SELECT
+        COALESCE(free_drinks, 0) AS free_drinks
+      FROM loyalty
+      WHERE customer_id = $1
+      `,
+      [userId]
+    );
 
-    // Triggered when the GCash source becomes chargeable
-    if (type === "source.chargeable") {
-      const sourceId = data.id;
-      console.log("GCash payment source chargeable:", sourceId);
-    }
-
-    // Triggered when the payment is fully paid
-    else if (type === "payment.paid") {
-      const payment = data.attributes;
-      const txnId = payment.id;
-      const sourceId = payment.source.data.id;
-
-      // Update order status
-      const result = await pool.query(
-        "UPDATE orders SET status = 'paid', transaction_id = $1 WHERE source_id = $2 RETURNING *",
-        [txnId, sourceId]
-      );
-
-      if (result.rowCount > 0) {
-        console.log("Payment confirmed via webhook:", result.rows[0]);
-
-        // (Optional) You can send confirmation email/notification here
-      } else {
-        console.warn("No matching pending order found for this payment.");
-      }
-    }
-
-    res.status(200).json({ success: true });
+    // ✅ ALWAYS return JSON
+    res.json({
+      free_drinks: result.rows.length > 0 ? Number(result.rows[0].free_drinks) : 0,
+    });
   } catch (err) {
-    console.error("Webhook processing error:", err);
-    res.status(500).json({ success: false });
+    console.error("Failed to load loyalty status:", err);
+    res.status(200).json({ free_drinks: 0 }); // ⬅ prevent HTML error
   }
-});
-
-// PayMongo success redirect
-app.get("/api/paymongo/success", (req, res) => {
-  res.send("Payment successful. You may close this window.");
-  res.status(200).send(`
-    <html>
-      <head>
-        <title>Payment Successful</title>
-        <style>
-          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0fdf4; color: #166534; }
-          h1 { font-size: 2em; }
-          p { font-size: 1.2em; }
-        </style>
-      </head>
-      <body>
-        <h1>✅ Payment Successful!</h1>
-        <p>You can now close this window or return to the app.</p>
-      </body>
-    </html>
-  `);
-});
-
-// PayMongo failed or cancelled redirect
-app.get("/api/paymongo/failed", (req, res) => {
-  res.send("Payment failed or cancelled.");
-  res.status(400).send(`
-    <html>
-      <head>
-        <title>Payment Failed</title>
-        <style>
-          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #fef2f2; color: #991b1b; }
-          h1 { font-size: 2em; }
-          p { font-size: 1.2em; }
-        </style>
-      </head>
-      <body>
-        <h1>❌ Payment Failed</h1>
-        <p>Something went wrong or you cancelled the payment.<br>Please try again.</p>
-      </body>
-    </html>
-  `);
 });
 
 // Get Pending Orders
@@ -1032,12 +1476,17 @@ app.get("/api/orders/pending", authenticateToken, async (req, res) => {
 // Send OTP for GCash
 app.post("/api/gcash/send-otp", authenticateToken, async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ message: "Email required." });
+
+  console.log("📨 OTP request received:", email);
+
+  if (!email) {
+    console.warn("❌ OTP failed: email missing");
+    return res.status(400).json({ message: "Email required." });
+  }
 
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email] = otpCode;
 
-  // Send via email
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: email,
@@ -1045,7 +1494,12 @@ app.post("/api/gcash/send-otp", authenticateToken, async (req, res) => {
     text: `Your GCash OTP is: ${otpCode}`,
   });
 
-  console.log("Sent GCash OTP to", email, otpCode);
+  console.log("✅ Sent GCash OTP:", {
+    email,
+    otp: otpCode,
+    time: new Date().toISOString(),
+  });
+
   res.json({ message: "OTP sent to your email." });
 });
 
@@ -1152,56 +1606,6 @@ app.post("/api/voice-transcribe", authenticateToken, upload.single("audio"), asy
   } catch (error) {
     console.error("Transcription error:", error);
     res.status(500).json({ message: "Error transcribing audio." });
-  }
-});
-
-// Voice order processing
-app.post("/api/voice-order", authenticateToken, async (req, res) => {
-  const { text } = req.body;
-
-  if (!text || text.trim() === "") {
-    return res.status(400).json({ message: "No text provided." });
-  }
-
-  try {
-    // Ask GPT to extract structured order info
-    const aiResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a voice order assistant. Extract food order details (product, quantity, size, special instructions) from user speech.",
-        },
-        { role: "user", content: text },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const parsed = JSON.parse(aiResponse.choices[0].message.content);
-    const { product_name, quantity, size, instructions } = parsed;
-
-    if (!product_name) {
-      return res.status(404).json({ message: "Could not match product." });
-    }
-
-    // Example price base logic
-    const priceBase = { small: 50, medium: 60, large: 70 };
-    const totalPrice = priceBase[size] * quantity;
-
-    // Save to DB
-    const result = await pool.query(
-      `INSERT INTO cart_items (customer_id, product_name, size, quantity, instructions, price)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [req.userId, product_name, size, quantity, instructions || "", totalPrice]
-    );
-
-    res.json({
-      message: "Voice order added to cart!",
-      recognized: result.rows[0],
-    });
-  } catch (err) {
-    console.error("AI voice order error:", err);
-    res.status(500).json({ message: "Failed to process voice order." });
   }
 });
 

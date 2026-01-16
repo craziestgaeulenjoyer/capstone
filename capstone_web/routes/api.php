@@ -99,8 +99,9 @@ Route::prefix('superadmin')->group(function () {
         /* Admin Creation */
         Route::post('/create/request-otp', [AdminsCreationController::class, 'requestOtp']);
         Route::post('/create/verify-otp', [AdminsCreationController::class, 'verifyOtp']);
+        Route::post('/create/resend-otp', [AdminsCreationController::class, 'resendOtp']);
+        
         Route::get('/admins', [AdminsCreationController::class, 'getAllAdmins']);
-
         Route::put('/admins/{id}', [AdminManagementController::class, 'update']);
 
         /* Profile */
@@ -133,6 +134,10 @@ Route::prefix('superadmin')->group(function () {
             '/sales_orders/archived',
             [SalesOrderController::class, 'archived']
         )->name('superadmin.sales_orders.archived');
+        Route::get(
+            '/sales_orders/{orderCode}',
+            [SalesOrderController::class, 'show']
+        )->name('superadmin.sales_orders.show');
         Route::put(
             '/sales_orders/{orderCode}/status',
             [SalesOrderController::class, 'updateStatus']
@@ -206,6 +211,10 @@ Route::prefix('admin')->group(function () {
             '/sales_orders/archived',
             [SalesOrderController::class, 'archived']
         )->name('admin.sales_orders.archived');
+        Route::get(
+            '/sales_orders/{orderCode}',
+            [SalesOrderController::class, 'show']
+        )->name('admin.sales_orders.show');
         Route::put(
             '/sales_orders/{orderCode}/status',
             [SalesOrderController::class, 'updateStatus']

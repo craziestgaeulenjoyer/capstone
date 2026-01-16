@@ -2,12 +2,23 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, SlidersHorizontal, Download, MoreHorizontal, List, History, Utensils, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 
+interface OrderItem {
+  name: string;
+  type: string;
+  size?: string;
+  quantity: number;
+  price: number;
+  is_free: boolean;
+  instructions?: string;
+}
+
 interface OrderRow {
   orderId: string;
   customerName: string;
   orderDate: string;
   orderType: string;
   items: number;
+  itemsRaw?: OrderItem[]; 
   totalAmount: string;
   paymentMethod: string;
   status: string;
@@ -16,6 +27,7 @@ interface OrderRow {
 
 interface PaymentRow {
   transactionId: string;
+  orderId?: string;
   customer: string;
   paymentDate: string;
   amount: string;
@@ -39,6 +51,14 @@ const SalesOrder = () => {
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [newStatus, setNewStatus] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [detailsOrder, setDetailsOrder] = useState<OrderRow | null>(null);
+
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +91,18 @@ const SalesOrder = () => {
       .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
+  const storedRole = sessionStorage.getItem('dashboard_role');
+  const apiRoleSegment =
+    storedRole === 'super_admin' ? 'superadmin' : 'admin';
+
+  const token = localStorage.getItem('token') ?? '';
+
   useEffect(() => {
+    if (activeTab === 'Archived Orders') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const storedRole = sessionStorage.getItem('dashboard_role');
     const apiRoleSegment = storedRole === 'super_admin' ? 'superadmin' : 'admin';
@@ -87,6 +118,7 @@ const SalesOrder = () => {
             .filter((o: any) => o.status === 'completed' || o.status === 'paid')
             .map((o: any) => ({
               transactionId: o.transaction_id ?? '—',
+              orderId: o.order_code, 
               customer: o.customer_name,
               paymentDate: new Date(o.created_at).toLocaleDateString(),
               amount: `₱${Number(o.total_amount).toFixed(2)}`,
@@ -115,6 +147,7 @@ const SalesOrder = () => {
           orderDate: new Date(o.created_at).toLocaleDateString(),
           orderType: formatFulfillment(o.fulfillment_method),
           items: Array.isArray(o.items) ? o.items.length : 0,
+          itemsRaw: Array.isArray(o.items) ? o.items : [], 
           totalAmount: `₱${Number(o.total_amount).toFixed(2)}`,
           paymentMethod: o.payment_method,
           status: statusLabelMap[o.status] ?? o.status,
@@ -189,11 +222,11 @@ const SalesOrder = () => {
       orderId: o.order_code,
       customerName: o.customer_name,
       orderDate: new Date(o.created_at).toLocaleDateString(),
-      orderType: o.fulfillment_method ?? '—',
+      orderType: formatFulfillment(o.fulfillment_method),
       items: Array.isArray(o.items) ? o.items.length : 0,
+      itemsRaw: Array.isArray(o.items) ? o.items : [],
       totalAmount: `₱${Number(o.total_amount).toFixed(2)}`,
       paymentMethod: o.payment_method ?? '—',
-
       status: 'ARCHIVED_UI_ONLY',
     }));
 
@@ -417,33 +450,24 @@ const SalesOrder = () => {
               onMouseDown={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+
+                  setDropdownPosition({
+                    top: rect.bottom + 6,
+                    left: rect.right - 180,
+                    width: 180,
+                  });
+
                   setOpenDropdownId(
                     openDropdownId === dropdownId ? null : dropdownId
-                  )
-                }
+                  );
+                }}
                 className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
               >
                 <MoreHorizontal size={18} />
               </button>
-
-              {openDropdownId === dropdownId && (
-                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-30">
-                  <div className="py-1">
-                    {/* Example action */}
-                    <button
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => {
-                        alert(`Viewing payment ${payment.transactionId}`);
-                        setOpenDropdownId(null);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </td>
         </tr>
@@ -492,50 +516,23 @@ const SalesOrder = () => {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() =>
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+
+                setDropdownPosition({
+                  top: rect.bottom + 6,
+                  left: rect.right - 180,
+                  width: 180,
+                });
+
                 setOpenDropdownId(
                   openDropdownId === dropdownId ? null : dropdownId
-                )
-              }
+                );   
+              }}
               className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
             >
               <MoreHorizontal size={20} />
             </button>
-
-            {openDropdownId === dropdownId && (
-              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-30">
-                <div className="py-1">
-                  {activeTab !== 'Archived Orders' && (
-                    <>
-                      <button
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={() => handleActionClick('Edit', order.orderId)}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={() => handleActionClick('Archive', order.orderId)}
-                        className="w-full px-4 py-2 text-left text-sm text-yellow-700 hover:bg-yellow-50"
-                      >
-                        Archive
-                      </button>
-                    </>
-                  )}
-
-                  {/* Trash is allowed everywhere */}
-                  <button
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => handleActionClick('Trash', order.orderId)}
-                    className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50"
-                  >
-                    Move to Trash
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </td>
       </tr>
@@ -549,7 +546,7 @@ const SalesOrder = () => {
     }
 
     let headers: string[] = [];
-    let rows: any[] = [];
+    let rows: (string | number)[][] = [];
 
     if (activeTab === 'Payment History') {
       headers = [
@@ -722,7 +719,7 @@ const SalesOrder = () => {
           )}
 
           {/* TABLE */}
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <div className="overflow-x-auto overflow-y-visible rounded-xl border border-gray-200 relative z-0">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-[#e0f2f7]">
                 <tr>
@@ -738,7 +735,7 @@ const SalesOrder = () => {
                 </tr>
               </thead>
 
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 relative overflow-visible">
                 {loading ? (
                   <tr>
                     <td colSpan={currentTableHeaders.length} className="text-center py-4">
@@ -877,6 +874,174 @@ const SalesOrder = () => {
                 className="px-5 py-2 rounded-full bg-[#6CB74A] text-white hover:bg-green-600 disabled:opacity-50"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDetailsOpen && detailsOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Order Details — {detailsOrder.orderId}
+            </h2>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {detailsOrder.itemsRaw?.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="border rounded-xl p-4 flex flex-col gap-2"
+                >
+                  <div className="flex justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{item.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {item.type} {item.size ? `• ${item.size}` : ''}
+                      </p>
+                    </div>
+                    <div className="text-right text-sm">
+                      <p className="text-gray-900">Qty: {item.quantity}</p>
+                      <p className="text-gray-900">₱{item.price.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    {item.is_free && (
+                      <span className="inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 mr-2">
+                        Free Item
+                      </span>
+                    )}
+                  </div>
+
+                  {item.instructions && (
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">Instructions:</span>{' '}
+                      {item.instructions}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsDetailsOpen(false)}
+                className="cursor-pointer px-4 py-2 rounded-full border text-gray-600 hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openDropdownId && dropdownPosition && (
+        <div
+          className="fixed z-[9999]"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            width: dropdownPosition.width,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+            <div className="py-1">
+              {activeTab !== 'Payment History' && (
+                <button
+                  onClick={async () => {
+                    if (!openDropdownId) return;
+
+                    const row = tableData.find(
+                      (r): r is OrderRow =>
+                        'orderId' in r &&
+                        typeof r.orderId === 'string' &&
+                        openDropdownId.includes(r.orderId)
+                    );
+
+                    if (!row) return;
+
+                    try {
+                      const res = await axios.get(
+                        `/api/${apiRoleSegment}/sales_orders/${row.orderId}`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+
+                      setDetailsOrder({
+                        orderId: res.data.orderId,
+                        customerName: res.data.customerName,
+                        orderDate: res.data.orderDate,
+                        orderType: res.data.orderType,
+                        items: res.data.itemsRaw.length,
+                        itemsRaw: res.data.itemsRaw,
+                        totalAmount: res.data.totalAmount,
+                        paymentMethod: res.data.paymentMethod,
+                        status: res.data.status,
+                      });
+
+                      setIsDetailsOpen(true);
+                      setOpenDropdownId(null);
+                    } catch (err) {
+                      console.error('Failed to load order details', err);
+                    }
+                  }}
+                  className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100"
+                >
+                  View Details
+                </button>
+              )}
+
+              {activeTab !== 'Payment History' && activeTab !== 'Archived Orders' && (
+                <>
+                  <button
+                    onClick={() => {
+                      const order = tableData.find(
+                        (r): r is OrderRow =>
+                          'orderId' in r &&
+                          typeof r.orderId === 'string' &&
+                          openDropdownId?.includes(r.orderId)
+                      );
+                      if (!order) return;
+                      handleActionClick('Edit', order.orderId);
+                    }}
+                    className="cursor-pointer w-full px-4 py-2 text-left text-gray-900 text-sm hover:bg-gray-100"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const order = tableData.find(
+                        (r): r is OrderRow =>
+                          'orderId' in r &&
+                          typeof r.orderId === 'string' &&
+                          openDropdownId?.includes(r.orderId)
+                      );
+                      if (!order) return;
+                      handleActionClick('Archive', order.orderId);
+                    }}
+                    className="cursor-pointer w-full px-4 py-2 text-left text-sm text-yellow-700 hover:bg-yellow-50"
+                  >
+                    Archive
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => {
+                  const order = tableData.find(
+                    (r): r is OrderRow =>
+                      'orderId' in r &&
+                      typeof r.orderId === 'string' &&
+                      openDropdownId?.includes(r.orderId)
+                  );
+                  if (!order) return;
+                  handleActionClick('Trash', order.orderId);
+                }}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50"
+              >
+                Move to Trash
               </button>
             </div>
           </div>

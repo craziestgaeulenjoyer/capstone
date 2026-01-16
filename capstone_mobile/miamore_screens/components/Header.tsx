@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { NativeEventEmitter, NativeModules } from "react-native";
 import * as VoiceToText from "@ascendtis/react-native-voice-to-text";
 import { API_BASE } from "../../config/api";
 import { authFetch } from "../../utils/authFetch";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 async function requestMicPermission() {
   if (Platform.OS === "android") {
@@ -34,7 +35,10 @@ async function requestMicPermission() {
 }
 
 type SpeechResultEvent = {
-  value?: string[];
+  value?: string | string[];
+  results?: {
+    transcriptions?: { text: string }[];
+  };
 };
 
 const Header = ({ title, active = true }: { title: string; active?: boolean }) => {
@@ -43,8 +47,16 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
   const [recognizedText, setRecognizedText] = useState("");
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
 
+  const lastTranscriptRef = useRef("");
+
   const startListening = async () => {
     try {
+      const hasPermission = await requestMicPermission();
+      if (!hasPermission) {
+        Alert.alert("Permission denied", "Microphone access is required.");
+        return;
+      }
+
       setIsListening(true);
       setRecognizedText("- listening -");
 
@@ -77,63 +89,101 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
     ? new NativeEventEmitter(VoiceModule)
     : null;
 
+  const handleConfirmVoiceOrder = async () => {
+    const transcript = lastTranscriptRef.current?.trim();
+
+    // 🔍 DEBUG LOG (ADD THIS)
+    console.log("CONFIRM TRANSCRIPT SENT:", transcript);
+
+    if (!transcript) {
+      Alert.alert("No order", "Please speak your order first.");
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      
+      const parseRes = await fetch(`${API_BASE}/api/voice-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ transcript }),
+      });
+
+      const parsed = await parseRes.json();
+
+      if (!parseRes.ok) {
+        Alert.alert("Voice Order Failed", parsed.message);
+        return;
+      }
+
+      const p = parsed.product;
+
+      // Insert into cart
+      await authFetch(`${API_BASE}/api/cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: p.product_id,
+          product_name: p.product_name,
+          size: p.size,
+          quantity: p.quantity,
+          price: p.price,
+          image: p.image,
+          instructions: "",
+        }),
+      });
+
+      Alert.alert(
+        "Added to Cart",
+        `${p.quantity} ${p.size} ${p.product_name}`
+      );
+    } catch (err) {
+      console.error("Voice order error:", err);
+      Alert.alert("Error", "Failed to process voice order.");
+    }
+  };
+
   /* ================= EVENT LISTENERS ================= */
   useEffect(() => {
     if (!voiceEmitter) return;
 
     const resultListener = voiceEmitter.addListener(
       "onSpeechResults",
-      (e: SpeechResultEvent) => {
-        const handleSpeechResult = async () => {
-          if (isProcessingVoice) return; // 🔒 prevent duplicates
-          setIsProcessingVoice(true);
+      async (e: SpeechResultEvent) => {
+        if (isProcessingVoice) return; // 🔒 prevent duplicates
+        setIsProcessingVoice(true);
 
-          console.log("📝 Speech result:", e);
+        console.log("📝 Speech result:", e);
 
-          let text = "";
+        let text = "";
 
-          if (typeof e?.value === "string") {
-            text = e.value;
-          } else if (Array.isArray(e?.value) && e.value.length > 0) {
-            text = e.value[0];
-          }
+        // Prefer transcription text
+        if (e?.results?.transcriptions?.length) {
+          text = e.results.transcriptions[0].text;
+        } 
+        // Fallbacks
+        else if (typeof e?.value === "string") {
+          text = e.value;
+        } 
+        else if (Array.isArray(e?.value) && e.value.length > 0) {
+          text = e.value[0];
+        }
 
-          if (!text.trim()) {
-            setIsProcessingVoice(false);
-            return;
-          }
+        text = text.trim();
 
-          setRecognizedText(text);
-          await stopListening();
+        if (!text) {
+          setIsProcessingVoice(false);
+          return;
+        }
 
-          try {
-            const response = await authFetch(`${API_BASE}/api/voice-order`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ transcript: text }),
-            });
+        lastTranscriptRef.current = text;
+        setRecognizedText(text);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-              Alert.alert(
-                "Voice Order Failed",
-                data.message || "No matching item found."
-              );
-            } else {
-              Alert.alert("Added to Cart", data.message);
-            }
-          } catch (err) {
-            console.error("Voice order error:", err);
-            Alert.alert("Error", "Failed to process voice order.");
-          } finally {
-            setIsProcessingVoice(false);
-          }
-        };
-
-        handleSpeechResult();
+        await stopListening();
+        setIsProcessingVoice(false);
       }
     );
 
@@ -142,6 +192,7 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
       (e: unknown) => {
         console.error("❌ Speech error:", e);
         stopListening();
+        setIsProcessingVoice(false);
       }
     );
 
@@ -169,10 +220,6 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
           >
             <Icon name="mic-outline" size={24} color="#000" />
           </TouchableOpacity>
-
-          <TouchableOpacity>
-            <Icon name="notifications-outline" size={24} color="#000" />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -199,7 +246,7 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
 
             <Text style={styles.voiceTitle}>Voice Ordering</Text>
             <Text style={styles.voiceSubtitle}>
-              Just speak your order, and we'll handle the rest.
+              Just speak your order, and we'll handle the rest and put it in your cart.
             </Text>
 
             <TouchableOpacity
@@ -227,10 +274,22 @@ const Header = ({ title, active = true }: { title: string; active?: boolean }) =
 
             <View style={styles.actionsRow}>
               <TouchableOpacity
-                style={[styles.actionBtn, styles.confirmBtn]}
-                onPress={() => setShowVoiceModal(false)}
+                disabled={isProcessingVoice}
+                style={[
+                  styles.actionBtn,
+                  styles.confirmBtn,
+                  isProcessingVoice && { opacity: 0.6 },
+                ]}
+                onPress={async () => {
+                  setIsProcessingVoice(true);
+                  await handleConfirmVoiceOrder();
+                  setIsProcessingVoice(false);
+                  setShowVoiceModal(false);
+                }}
               >
-                <Text style={styles.btnText}>Confirm Order</Text>
+                <Text style={styles.btnText}>
+                  {isProcessingVoice ? "Processing..." : "Confirm Order"}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -259,7 +318,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: "10%",
     paddingVertical: 10,
     paddingHorizontal: 15,
     backgroundColor: "#fff",
@@ -274,7 +332,7 @@ const styles = StyleSheet.create({
 
   headerIcons: {
     flexDirection: "row",
-    width: 60,
+    width: 30,
     justifyContent: "space-between",
   },
 

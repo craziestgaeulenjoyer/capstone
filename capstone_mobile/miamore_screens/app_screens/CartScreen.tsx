@@ -19,6 +19,10 @@ import Header from "../components/Header";
 import CheckoutTab from "../components/CheckoutTab";
 import { authFetch } from "../../utils/authFetch";
 import { API_BASE } from "../../config/api";
+import { RouteProp, useRoute } from "@react-navigation/native";
+import type { RootStackParamList } from "../../routes/navigation";
+
+type CartRouteProp = RouteProp<RootStackParamList, "Cart">;
 
 const IMAGE_MAP: { [key: string]: any } = {
   "BrewedHotCoffee.png": require("../../assets/BrewedHotCoffee.png"),
@@ -34,6 +38,10 @@ const IMAGE_MAP: { [key: string]: any } = {
 
 const CartScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<CartRouteProp>();
+
+  const initialStep =
+  route.params?.checkoutStep === "confirm" ? 3 : 1;
 
   interface UserData {
     id?: number;
@@ -47,6 +55,7 @@ const CartScreen: React.FC = () => {
     customer_id?: number;
     product_id: number;
     product_name: string;
+    type: string;
     phone_number?: string;
     size?: string;
     quantity: number;
@@ -67,7 +76,6 @@ const CartScreen: React.FC = () => {
   const [selectedOrder, setSelectedOrderState] = useState<any | null>(null);
   
   const [modalMessage, setModalMessage] = useState("");
-  const [promoCode, setPromoCode] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("");
   const [orderCode, setOrderCode] = useState<string>("");
   const [transactionId, setTransactionId] = useState<string>("");
@@ -84,6 +92,7 @@ const CartScreen: React.FC = () => {
   const [showCheckoutTab, setShowCheckoutTab] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [gcashHandled, setGcashHandled] = useState(false);
   const [showPending, setShowPending] = useState(false);
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [sortDropdownVisible, setSortDropdownVisible] = useState(false);
@@ -141,6 +150,70 @@ const CartScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const handleDeepLink = async ({ url }: { url: string }) => {
+      console.log("🔗 Deep link received:", url);
+
+      // prevent double execution
+      if (gcashHandled) return;
+
+      if (url.includes("payment-success")) {
+        setGcashHandled(true);
+
+        // 1️⃣ Extract order_code from PayMongo redirect
+        const match = url.match(/order_code=([^&]+)/);
+        const returnedOrderCode = match?.[1];
+
+        if (!returnedOrderCode) {
+          console.warn("No order_code found in redirect URL");
+          return;
+        }
+
+        setOrderCode(returnedOrderCode);
+
+        // 2️⃣ CLEAR CART IN BACKEND (THIS WAS MISSING)
+        await authFetch(`${API_BASE}/api/orders/clear-cart-after-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderCode: returnedOrderCode }),
+        });
+
+        // 3️⃣ Refresh cart (should now be EMPTY)
+        await fetchCartItems();
+
+        // 4️⃣ Show success modal
+        setShowOrderModal(true);
+      }
+    };
+
+    // Listen while app is running
+    const subscription = Linking.addEventListener("url", handleDeepLink);
+
+    // Handle cold start (app was closed)
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [gcashHandled]);
+
+  useEffect(() => {
+    const loadLoyalty = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/api/loyalty/status`);
+        const data = await res.json();
+
+        setFreeDrinkAllowance(Number(data.free_drinks || 0));
+      } catch (err) {
+        console.error("Failed to load loyalty:", err);
+      }
+    };
+
+    loadLoyalty();
+  }, []);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await authFetch(`${API_BASE}/api/profile`);
@@ -158,19 +231,11 @@ const CartScreen: React.FC = () => {
     const fetchLoyaltyProgress = async () => {
       try {
         const res = await authFetch(`${API_BASE}/api/loyalty/progress`);
+        const data = await res.json();
 
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          if (res.ok && data.totalDrinks !== undefined) {
-            const totalDrinks = data.totalDrinks;
-            setLoyaltyProgress(totalDrinks % 10);
-            setLoyaltyRewards(Math.floor(totalDrinks / 10));
-          } else {
-            console.error("Unexpected data format:", data);
-          }
-        } catch (jsonErr) {
-          console.error("Response was not JSON:", text);
+        if (res.ok) {
+          setLoyaltyProgress(data.progress);
+          setLoyaltyRewards(data.freeDrinksEarned);
         }
       } catch (err) {
         console.error("Error fetching loyalty progress:", err);
@@ -211,17 +276,15 @@ const CartScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const filtered = cartItems.filter(item => selectedItems.includes(item.id));
-    setSelectedCartItems(filtered);
-  }, [cartItems, selectedItems]);
+    const selectedTotal = cartItems
+      .filter(item => selectedItems.includes(item.id))
+      .reduce(
+        (sum, item) => sum + Number(item.price) * Number(item.quantity),
+        0
+      );
 
-  useEffect(() => {
-    const drinksQty = cartItems
-      .filter(item => item.product_name.toLowerCase().includes("coffee") || item.category === "Drink")
-      .reduce((sum, item) => sum + item.quantity, 0);
-    const freeDrinksEarned = Math.floor(drinksQty / 10);
-    setLoyaltyRewards(freeDrinksEarned);
-  }, [cartItems]);
+    setTotalAmount(selectedTotal);
+  }, [cartItems, selectedItems]);
 
   const fetchCartItems = async () => {
     try {
@@ -251,7 +314,6 @@ const CartScreen: React.FC = () => {
         );
 
         setSubtotal(subtotalCalc);
-        setTotalAmount(subtotalCalc); // add delivery fee later if needed
       }
     } catch (err) {
       console.error("Error fetching cart:", err);
@@ -284,6 +346,7 @@ const CartScreen: React.FC = () => {
         id: item.id,
         product_id: item.product_id || item.id,
         product_name: item.product_name,
+        type: item.type,
         size: item.size,
         quantity: item.quantity,
         price: Number(item.price),
@@ -322,29 +385,24 @@ const CartScreen: React.FC = () => {
 
       // GCash branch
       if (selectedPayment === "GCash") {
-        // Step 1: Create pending order first
+        // Create order first (pending)
         const orderRes = await authFetch(`${API_BASE}/api/checkout`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
         const orderData = await orderRes.json();
-        console.log("Checkout API response:", orderData);
 
         if (!orderRes.ok) {
           Alert.alert("Error", orderData.message || "Checkout failed");
           return;
         }
 
-        // Step 2: Initialize PayMongo GCash
+        // 2️⃣ Start GCash payment
         const payRes = await authFetch(`${API_BASE}/api/paymongo/gcash`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: totalAmount,
             phone_number: userData?.phone_number,
@@ -353,27 +411,29 @@ const CartScreen: React.FC = () => {
         });
 
         const payData = await payRes.json();
-        console.log("CartScreen payRes.status:", payRes.status, "payData:", payData);
 
-        if (payRes.status === 200 || payRes.status === 201) {
-          if (payData.redirect_url) {
-            Linking.openURL(payData.redirect_url);
-          } else {
-            // Clear cart if payment succeeded
-            for (const id of selectedItems) {
-              await authFetch(`${API_BASE}/api/cart/${id}`, {
-                method: "DELETE",
-              });
-            }
-            setCartItems((prev) =>
-              prev.filter((item) => !selectedItems.includes(item.id))
-            );
-            setSelectedItems([]);
-            setShowOrderModal(true);
-          }
-        } else {
-          Alert.alert("Error", payData.message || "Unable to initiate GCash.");
+        console.log("💳 GCash response:", payRes.status, payData);
+
+        // ❌ Payment init failed → STOP
+        if (!payRes.ok) {
+          Alert.alert(
+            "GCash Payment Failed",
+            payData.message || "Unable to initiate GCash payment."
+          );
+          return false;
         }
+
+        // ✅ Redirect to GCash
+        if (payData.redirect_url) {
+          Linking.openURL(payData.redirect_url);
+          return false; 
+        }
+
+        // Safety fallback
+        Alert.alert(
+          "Payment Pending",
+          "Your order was created. Please complete payment via GCash."
+        );
 
         return;
       }
@@ -407,8 +467,11 @@ const CartScreen: React.FC = () => {
         setOrderCode(data.order_code);
         setUserData({ full_name: data.full_name, email: data.email });
         setShowOrderModal(true);
+
+        return true;
       } else {
         Alert.alert("Error", data.message || "Checkout failed. Try again.");
+        return false;
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -434,13 +497,28 @@ const CartScreen: React.FC = () => {
     });
   };
 
-  const clearCheckedItems = () => {
-    const remaining = cartItems.filter(
-      (item) => !selectedCartItems.some((sel) => sel.product_id === item.product_id)
-    );
-    setCartItems(remaining);
-    setSelectedItems([]); 
-    setSelectedCartItems([]); 
+  const clearCheckedItems = async () => {
+    try {
+      if (selectedItems.length === 0) return;
+
+      // selectedItems contains cart_item IDs
+      await authFetch(`${API_BASE}/api/cart/clear-checked`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cartItemIds: selectedItems }),
+      });
+
+      // ✅ Update UI
+      setCartItems(prev =>
+        prev.filter(item => !selectedItems.includes(item.id))
+      );
+
+      setSelectedItems([]);
+    } catch (err) {
+      console.error("Failed to clear checked items:", err);
+    }
   };
 
   const updateQuantity = async (item: CartItem, newQty: number) => {
@@ -568,6 +646,10 @@ const CartScreen: React.FC = () => {
     return null;
   }
 
+  const selectedCartItemsForCheckout = cartItems.filter(item =>
+    selectedItems.includes(item.id)
+  );
+
   const itemsWithDates = displayedCartItems.map((item: any) => {
     const parsed = parseBackendTimestamp(item.created_at);
     const ms = parsed && !isNaN(parsed.getTime()) ? parsed.getTime() : 0;
@@ -618,6 +700,27 @@ const CartScreen: React.FC = () => {
 
   // Debug group order
   console.log("groupedArray order (dateKey => dateMs):", groupedArray.map(g => [g.dateKey, g.dateMs]));
+
+  useEffect(() => {
+    const loadLoyalty = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/api/loyalty/status`);
+        const text = await res.text();
+
+        console.log("LOYALTY STATUS RAW:", text);
+
+        if (!res.ok) return;
+
+        const data = JSON.parse(text);
+        setFreeDrinkAllowance(Number(data.free_drinks || 0));
+      } catch (err) {
+        console.error("Failed to load loyalty:", err);
+        setFreeDrinkAllowance(0);
+      }
+    };
+
+    loadLoyalty();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -897,8 +1000,18 @@ const CartScreen: React.FC = () => {
                   >
                     <Text style={styles.loyaltyBtnText}>Collect points. Enjoy rewards.</Text>
                   </TouchableOpacity>
-                  <Text style={styles.rightCaret}>{`>>`}</Text>
                 </View>
+
+                {loyaltyEnabled && freeDrinkAllowance > 0 && (
+                  <TouchableOpacity
+                    style={styles.rewardBtn}
+                    onPress={() => navigation.navigate("Menu", { useReward: true })}
+                  >
+                    <Text style={styles.rewardBtnText}>
+                      Choose Reward ({freeDrinkAllowance})
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 {/* Summary Row */}
                 <View style={styles.summaryRow}>
@@ -916,20 +1029,13 @@ const CartScreen: React.FC = () => {
 
                 {/* Checkout Button */}
                 <TouchableOpacity
+                  disabled={selectedItems.length === 0}
                   style={[
                     styles.checkoutBtn,
                     selectedItems.length === 0 && { opacity: 0.5 },
                   ]}
                   onPress={() => {
-                    if (selectedItems.length === 0) {
-                      Alert.alert(
-                        "No Items Selected",
-                        "Please select at least one item to proceed to checkout."
-                      );
-                      return;
-                    }
-
-                    setFulfillmentMethod(null); 
+                    setFulfillmentMethod(null);
                     setShowCheckoutTab(true);
                   }}
                 >
@@ -1060,6 +1166,7 @@ const CartScreen: React.FC = () => {
         </ScrollView>
       ) : showCheckoutTab && !showOrderConfirmTab ? (
         <CheckoutTab
+          initialStep={initialStep}
           userData={userData}
           address={address}
           setAddress={setAddress}
@@ -1078,7 +1185,7 @@ const CartScreen: React.FC = () => {
           }
           onEditAddress={() => setShowAddressModal(true)}
           clearCheckedItems={clearCheckedItems}
-          cartItems={selectedCartItems}
+          cartItems={selectedCartItemsForCheckout} 
         />
       ) : null}
 
@@ -1120,7 +1227,7 @@ const CartScreen: React.FC = () => {
               </Text>
               <Text style={styles.confirmText}>
                 <Text style={styles.confirmLabel}>Estimated Time: </Text>
-                <Text style={styles.confirmLink}>25–30 minutes</Text>
+                <Text style={styles.confirmLink}>5-10 minutes</Text>
               </Text>
             </View>
 
@@ -1402,7 +1509,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff" 
   },
   checkoutHeader: {
-    marginTop: 40,
+    marginTop: 2,
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
@@ -1588,6 +1695,23 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: "#76B13A", 
     borderColor: "#76B13A",    
+  },
+  rewardBtn: {
+    backgroundColor: "#76B13A",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2, // Android shadow
+  },
+
+  rewardBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
   
   qtyBtn: {
