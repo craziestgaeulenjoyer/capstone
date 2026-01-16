@@ -216,15 +216,24 @@ const [popup, setPopup] = useState<{
 
               <motion.div variants={itemVariants} className="relative group">
                 <input
-                  id="phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value })
-                  }
-                  placeholder=" "
-                  className="peer w-full px-0 py-4 bg-transparent border-b border-[#5C2E0A]/10 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A]"
-                />
+  id="phone"
+  type="tel"
+  value={form.phone}
+  onChange={(e) => {
+    // remove non-numbers
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+
+    // limit to 11 characters
+    if (digitsOnly.length <= 11) {
+      setForm({ ...form, phone: digitsOnly });
+    }
+  }}
+  placeholder="09XXXXXXXXX"
+  maxLength={11}
+  inputMode="numeric"
+  className="peer w-full px-0 py-4 bg-transparent border-b border-[#5C2E0A]/10 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A]"
+/>
+
                 <label
                   htmlFor="phone"
                   className="absolute left-0 top-4 text-[#5C2E0A]/40 text-sm transition-all duration-300 pointer-events-none 

@@ -53,7 +53,9 @@ Route::prefix('customer')->group(function () {
 
     Route::post('/login', [CustomerAuthController::class, 'login'])
         ->name('login.authenticate');
-
+    
+Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
+    ->name('customer.logout');
 });
 
 /* ---------------- CUSTOMER AUTHENTICATION LOGIC ---------------- */

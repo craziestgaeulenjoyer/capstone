@@ -199,7 +199,7 @@ const BookCartSection: React.FC = () => {
                   <div className="flex flex-col gap-1.5">
                     <label className="font-bold text-[#5C2E0A] text-[10px] tracking-[0.2em] uppercase ml-1 opacity-70">Phone Number</label>
                     <div className="relative">
-                      <Phone size={16} className="absolute left-0 top-1/2 -translate-y-1/2 text-[#8CB662] opacity-60" />
+                      <Phone size={11} className="absolute left-0 top-1/2 -translate-y-1/2 text-[#8CB662] opacity-60" />
                       <input
                         type="text"
                         className={`w-full bg-transparent border-b border-[#5C2E0A]/20 py-2 pl-7 outline-none focus:border-[#8CB662] transition-all text-[#5C2E0A] ${errors.phone ? "border-red-400" : ""}`}

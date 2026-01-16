@@ -165,7 +165,19 @@ const SignUpForm: React.FC = () => {
                 </div>
                 <div className="relative">
                   <label className="text-[10px] uppercase tracking-widest font-black text-[#4A5D45] block mb-2 ml-1">Phone (Optional)</label>
-                  <input type="tel" value={data.phone_number} onChange={(e) => setData('phone_number', e.target.value)} placeholder="0912..." className="w-full bg-white border border-[#4A5D45]/10 rounded-xl px-5 py-3 text-sm text-[#3d230d] focus:border-[#C5A059] outline-none shadow-sm" />
+                 <input
+  type="tel"
+  value={data.phone_number}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setData("phone_number", value);
+  }}
+  placeholder="09123456789"
+  maxLength={11}
+  inputMode="numeric"
+  className="w-full bg-white border border-[#4A5D45]/10 rounded-xl px-5 py-3 text-sm text-[#3d230d] focus:border-[#C5A059] outline-none shadow-sm"
+/>
+
                 </div>
             </div>
 
