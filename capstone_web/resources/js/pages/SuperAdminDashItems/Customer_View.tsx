@@ -150,9 +150,10 @@ const Customer_View = () => {
 
       setLoyaltyModal({
         customer_id: id,
-        stamps: res.data?.stamps ?? 0,
-        free_drink_available: res.data?.free_drink_available ?? false,
-        free_drink_redeemed: res.data?.free_drink_redeemed ?? false,
+        stamps: res.data.stamps, // already 0–9
+        freeDrinksAvailable: res.data.free_drinks_available,
+        freeDrinksEarned: res.data.free_drinks_earned,
+        freeDrinksRedeemed: res.data.free_drinks_redeemed,
       });
 
     } catch (error) {
@@ -587,15 +588,24 @@ const Customer_View = () => {
                 </span>
               ) : (
                 <span className="px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-600">
-                  {10 - loyaltyModal.stamps} more stamps to unlock reward
+                  {loyaltyModal.stamps === 0 && loyaltyModal.freeDrinksAvailable > 0
+                    ? 'Free drink available!'
+                    : `${10 - loyaltyModal.stamps} more stamps to unlock reward`}
                 </span>
               )}
             </div>
 
+            {loyaltyModal.freeDrinksAvailable > 0 && (
+              <div className="mt-2 text-sm text-green-700 text-center font-medium">
+                🎁 {loyaltyModal.freeDrinksAvailable} free drink
+                {loyaltyModal.freeDrinksAvailable > 1 ? 's' : ''} available
+              </div>
+            )}
+
             {/* STAMP CIRCLES */}
             <div className="grid grid-cols-5 gap-3 mt-6 justify-center">
               {Array.from({ length: 10 }).map((_, i) => {
-                const filled = i < loyaltyModal.stamps;
+                const filled = i < Math.min(loyaltyModal.stamps, 10);
 
                 return (
                   <div

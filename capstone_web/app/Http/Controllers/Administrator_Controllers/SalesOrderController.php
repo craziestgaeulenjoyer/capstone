@@ -40,8 +40,8 @@ class SalesOrderController extends Controller
                     'total_amount' => $order->total_amount,
                     'status' => $order->status,
                     'transaction_id' => $order->transaction_id,
-                    'items' => $order->items,
-                    'fulfillment_method' => $order->fulfillment_method,  
+                    'items' => $order->items ?? [],
+                    'fulfillment_method' => $order->fulfillment_method,
                     'created_at' => $order->created_at->toDateTimeString(),
                 ];
             });
@@ -55,20 +55,46 @@ class SalesOrderController extends Controller
         }
     }
 
+    public function show(string $orderCode)
+    {
+        $order = Order::where('order_code', $orderCode)->firstOrFail();
+
+        return response()->json([
+            'orderId' => $order->order_code,
+            'customerName' => $order->customer_name,
+            'orderDate' => $order->created_at,
+            'orderType' => $order->fulfillment_method,
+            'itemsRaw' => collect($order->items)->map(fn ($item) => [
+                'id' => $item['id'] ?? null,
+                'name' => $item['name'] ?? '',
+                'type' => $item['type'] ?? '',
+                'size' => $item['size'] ?? '',
+                'quantity' => $item['quantity'] ?? 1,
+                'price' => (float) ($item['price'] ?? 0),
+                'is_free' => (bool) ($item['is_free'] ?? false),
+                'instructions' => $item['instructions'] ?? '',
+                'image' => $item['image'] ?? null,
+            ])->values(),
+            'totalAmount' => $order->total_amount,
+            'paymentMethod' => $order->payment_method,
+            'status' => $order->status,
+        ]);
+    }
+
+
     public function paymentHistory()
     {
-        $payments = DB::table('orders')
-            ->whereNotNull('payment_method')
-            ->select(
-                'order_code as transaction_id',
+        $payments = Order::whereNotNull('payment_method')
+            ->orderBy('created_at', 'desc')
+            ->get([
+                'order_code',
                 'customer_name',
                 'created_at',
                 'total_amount as amount',
                 'payment_method as method',
-                'status'
-            )
-            ->orderBy('created_at', 'desc')
-            ->get();
+                'status',
+                'transaction_id'
+            ]);
 
         return response()->json($payments);
     }
@@ -131,18 +157,11 @@ class SalesOrderController extends Controller
 
     public function archived()
     {
-        try {
-            $orders = Order::whereNotNull('archived_at')
+        return response()->json(
+            Order::whereNotNull('archived_at')
                 ->orderBy('archived_at', 'desc')
-                ->get();
-
-            return response()->json($orders, 200);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'message' => 'Failed to fetch archived orders',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+                ->get()
+        );
     }
 
     public function destroy($orderCode)

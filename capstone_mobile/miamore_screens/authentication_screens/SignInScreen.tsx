@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../routes/navigation';
 import React, { useState, useRef, useEffect } from 'react';
-import { Animated } from 'react-native';
+import { Animated, ScrollView } from 'react-native';
 // @ts-ignore: react-native-fbsdk-next may not have type declarations in this project
 import {
   View,
@@ -11,6 +11,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Linking
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -50,6 +53,8 @@ const SignInScreen = () => {
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
 
   //Fade animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -281,7 +286,7 @@ const SignInScreen = () => {
             </View>
           </View>
         </Modal>
-        <Text style={styles.headerText}>Let’s get you signed in!</Text>
+        <Text style={styles.headerText}>Let's get you started!</Text>
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -316,192 +321,185 @@ const SignInScreen = () => {
         </View>
       </View>
 
-      <Animated.View style={[ styles.form, 
+      <Animated.View
+        style={[
+          styles.form,
           {
             opacity: fadeAnim,
             transform: [{ translateX: slideAnim }],
           },
         ]}
       >
-        {activeTab === 'signIn' ? (
-          <>
-            <Text style={styles.categoriesFirstText}>Email</Text>
-            <TextInput
-              placeholder="example@gmail.com"
-              style={[
-                styles.input,
-                focusedInput === 'email' && styles.focusedInput,
-                loginError ? styles.errorInput : null, 
-              ]}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              onFocus={() => setFocusedInput('email')}
-              onBlur={() => setFocusedInput(null)}
-              autoCapitalize="none"
-            />
-            <Text style={styles.categoriesText}>Password</Text>
-            <View
-              style={[
-                styles.passwordContainer,
-                focusedInput === 'password' && { borderColor: '#92e3a9', borderWidth: 2 },
-                loginError ? { borderColor: 'red', borderWidth: 2 } : {},
-              ]}
-            >
-              <TextInput
-                placeholder="Password"
-                style={styles.passwordInput}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                onFocus={() => setFocusedInput('password')}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
+            {activeTab === 'signIn' ? (
+              <>
+                {/* ================= SIGN IN ================= */}
+                <Text style={styles.categoriesFirstText}>Email</Text>
+                <TextInput
+                  placeholder="example@gmail.com"
+                  style={[
+                    styles.input,
+                    focusedInput === 'email' && styles.focusedInput,
+                    loginError ? styles.errorInput : null,
+                  ]}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  onFocus={() => setFocusedInput('email')}
+                  onBlur={() => setFocusedInput(null)}
+                  autoCapitalize="none"
+                />
 
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checked]}>
-                  {rememberMe && <FontAwesome name="check" size={16} color="#fff" />}
+                <Text style={styles.categoriesText}>Password</Text>
+                <View
+                  style={[
+                    styles.passwordContainer,
+                    focusedInput === 'password' && { borderColor: '#92e3a9', borderWidth: 2 },
+                    loginError ? { borderColor: 'red', borderWidth: 2 } : {},
+                  ]}
+                >
+                  <TextInput
+                    placeholder="Password"
+                    style={styles.passwordInput}
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.rememberMeText}>Remember me</Text>
-              </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text style={styles.forgotText}>Forgot your password?</Text>
-              </TouchableOpacity>
-            </View>
+                {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
+                <View style={styles.row}>
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setRememberMe(!rememberMe)}
+                  >
+                    <View style={[styles.checkbox, rememberMe && styles.checked]}>
+                      {rememberMe && <FontAwesome name="check" size={16} color="#fff" />}
+                    </View>
+                    <Text style={styles.rememberMeText}>Remember me</Text>
+                  </TouchableOpacity>
 
-            {/* Or login with */}
-            <View style={styles.separator}>
-              <View style={styles.line} />
-              <Text style={styles.orText}>Or login with</Text>
-              <View style={styles.line} />
-            </View>
+                  <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+                    <Text style={styles.forgotText}>Forgot your password?</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.socialIcons}>
-              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn}>
-                <FontAwesome name="google" size={20} color="#DB4437" />
-                <Text style={styles.iconText}>Sign In using Google</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <>
-            {/* Full Name Register Field */}
-            <Text style={styles.categoriesFirstText}>Full Name</Text>
-            <TextInput
-              placeholder="John Doe"
-              style={[
-                styles.input,
-                focusedInput === "fullName" && styles.focusedInput,
-                registerGeneralError && !fullName.trim() ? styles.errorInput : {},
-              ]}
-              value={fullName}
-              onChangeText={setFullName}
-              onFocus={() => setFocusedInput("fullName")}
-              onBlur={() => setFocusedInput(null)}
-              autoCapitalize="words"
-              autoCorrect={false}
-              keyboardType="default"
-              inputMode="text"
-            />
-            {/* Email Register Field */}
-            <Text style={styles.categoriesText}>Email</Text>
-            <TextInput
-              placeholder="example@gmail.com"
-              style={[
-                styles.input,
-                focusedInput === 'regEmail' && styles.focusedInput,
-                registerGeneralError && !regEmail.trim() ? styles.errorInput : null,
-              ]}
-              value={regEmail}
-              onChangeText={setRegEmail}
-              keyboardType="email-address"
-              onFocus={() => setFocusedInput('regEmail')}
-              onBlur={() => setFocusedInput(null)}
-              autoCapitalize="none"
-            />
-            <Text style={styles.categoriesText}>Password</Text>
-            {/* Password Register Field */} 
-            <View
-              style={[
-                styles.passwordContainer,
-                focusedInput === 'regPassword' && { borderColor: '#92e3a9', borderWidth: 2 },
-                registerGeneralError && !regPassword.trim() ? { borderColor: 'red', borderWidth: 2 } : {},
-              ]}
-            >
-              <TextInput
-                placeholder="Password"
-                style={styles.passwordInput}
-                secureTextEntry={!showPassword}
-                value={regPassword}
-                onChangeText={setRegPassword}
-                onFocus={() => setFocusedInput('regPassword')}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.categoriesText}>Confirm Password</Text>
-            {/* Confirm Password Register Field */} 
-            <View
-              style={[
-                styles.passwordContainer,
-                focusedInput === 'confirmPassword' && { borderColor: '#92e3a9', borderWidth: 2 },
-                registerGeneralError && !confirmPassword.trim() ? { borderColor: 'red', borderWidth: 2 } : {},
-              ]}
-            >
-              <TextInput
-                placeholder="Confirm Password"
-                style={styles.passwordInput}
-                secureTextEntry={!showConfirmPassword}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                onFocus={() => setFocusedInput('confirmPassword')}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            
-            {registerGeneralError ? (
-              <Text style={styles.errorText}>{registerGeneralError}</Text>
-            ) : null}
+                <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                  <Text style={styles.loginButtonText}>Login</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {/* ================= REGISTER ================= */}
+                <Text style={styles.categoriesFirstText}>Full Name</Text>
+                <TextInput
+                  placeholder="John Doe"
+                  style={[
+                    styles.input,
+                    focusedInput === 'fullName' && styles.focusedInput,
+                    registerGeneralError && !fullName.trim() ? styles.errorInput : {},
+                  ]}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  onFocus={() => setFocusedInput('fullName')}
+                  onBlur={() => setFocusedInput(null)}
+                />
 
-            <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-              <Text style={styles.registerButtonText}>Register</Text>
-            </TouchableOpacity>
+                <Text style={styles.categoriesText}>Email</Text>
+                <TextInput
+                  placeholder="example@gmail.com"
+                  style={[
+                    styles.input,
+                    focusedInput === 'regEmail' && styles.focusedInput,
+                    registerGeneralError && !regEmail.trim() ? styles.errorInput : null,
+                  ]}
+                  value={regEmail}
+                  onChangeText={setRegEmail}
+                  keyboardType="email-address"
+                  onFocus={() => setFocusedInput('regEmail')}
+                  onBlur={() => setFocusedInput(null)}
+                  autoCapitalize="none"
+                />
 
-            {/* Or register with */}
-            <View style={styles.separator}>
-              <View style={styles.line} />
-              <Text style={styles.orText}>Or register with</Text>
-              <View style={styles.line} />
-            </View>
+                <Text style={styles.categoriesText}>Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    placeholder="Password"
+                    style={styles.passwordInput}
+                    secureTextEntry={!showPassword}
+                    value={regPassword}
+                    onChangeText={setRegPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.socialIcons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <FontAwesome name="google" size={20} color="#DB4437" />
-                <Text style={styles.iconText}>Register using Google</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+                <Text style={styles.categoriesText}>Confirm Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    placeholder="Confirm Password"
+                    style={styles.passwordInput}
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+
+                {registerGeneralError && (
+                  <Text style={styles.errorText}>{registerGeneralError}</Text>
+                )}
+
+                {/* PRIVACY POLICY */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setAgreedToPrivacy(!agreedToPrivacy)}
+                    style={[styles.checkbox, agreedToPrivacy && styles.checked]}
+                  >
+                    {agreedToPrivacy && <FontAwesome name="check" size={14} color="#fff" />}
+                  </TouchableOpacity>
+
+                  <Text style={{ marginLeft: 8, fontSize: 13 }}>
+                    I agree to Mi Amore’s{' '}
+                    <Text
+                      style={{ color: '#76B13A', textDecorationLine: 'underline' }}
+                      onPress={() =>
+                        Linking.openURL('https://miamorecafe.com/privacypolicy')
+                      }
+                    >
+                      Privacy Policy
+                    </Text>
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.registerButton, { opacity: agreedToPrivacy ? 1 : 0.5 }]}
+                  onPress={handleRegister}
+                  disabled={!agreedToPrivacy}
+                >
+                  <Text style={styles.registerButtonText}>Register</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Animated.View>
     </View>
   );
@@ -657,9 +655,11 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 24,
+    flex: 1,
   },
   input: {
     backgroundColor: '#f1f1f1',
+    color: "black",
     borderRadius: 10,
     padding: 14,
     fontSize: 16,

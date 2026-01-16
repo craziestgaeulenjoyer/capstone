@@ -21,19 +21,19 @@ const { width, height } = Dimensions.get('window');
 const slides = [
   {
     key: '1',
-    image: require('../../assets/MiAmore2.png'),
+    image: require('../../assets/about-us-1.jpg'),
     title: 'All Your Favorite Flavors',
     description: 'From comforting brews to delicious bites, Mi Amore Cafe brings you the flavors you love, made fresh every day!',
   },
   {
     key: '2',
-    image: require('../../assets/MiAmore2.png'),
+    image: require('../../assets/Event-Images1.jpg'),
     title: 'Crafted With Care',
     description: 'Every cup is crafted with passion and care, using the finest ingredients.',
   },
   {
     key: '3',
-    image: require('../../assets/MiAmore2.png'),
+    image: require('../../assets/MiAmoreCafe.png'),
     title: 'A Place to Unwind',
     description: 'Whether you’re working or relaxing, Mi Amore is your cozy go-to spot.',
   },
@@ -70,7 +70,9 @@ const SelectionScreen = () => {
           scrollEventThrottle={16}
           renderItem={({ item }) => (
             <View style={styles.slide}>
-              <Image source={item.image} style={styles.slideImage} />
+              <View style={styles.imageCircle}>
+                <Image source={item.image} style={styles.slideImage} />
+              </View>
               <Text style={styles.slideTitle}>{item.title}</Text>
               <Text style={styles.slideDescription}>{item.description}</Text>
             </View>
@@ -140,11 +142,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  slideImage: {
+  imageCircle: {
     width: 200,
     height: 200,
-    resizeMode: 'contain',
+    borderRadius: 100,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff', 
     marginBottom: 20,
+  },
+  slideImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   slideTitle: {
     fontSize: 18,

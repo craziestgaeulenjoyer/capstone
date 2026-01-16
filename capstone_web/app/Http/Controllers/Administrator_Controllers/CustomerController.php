@@ -95,7 +95,7 @@ class CustomerController extends Controller
         ]);
     }
 
-    // Get loyalty progress (number of completed orders)
+    // Get loyalty progress (based on drink quantities)
     public function getLoyalty($id)
     {
         $customer = DB::table('customers')->where('id', $id)->first();
@@ -103,14 +103,40 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
-        $completedOrders = DB::table('orders')
+        // Get completed orders only
+        $orders = DB::table('orders')
             ->where('user_id', $id)
             ->where('status', 'completed')
-            ->count();
+            ->select('items')
+            ->get();
+
+        $totalDrinks = 0;
+
+        foreach ($orders as $order) {
+            $items = json_decode($order->items, true);
+
+            if (!is_array($items)) continue;
+
+            foreach ($items as $item) {
+                if (
+                    isset($item['type'], $item['quantity']) &&
+                    $item['type'] === 'drink'
+                ) {
+                    $totalDrinks += (int) $item['quantity'];
+                }
+            }
+        }
+
+        // Loyalty math
+        $freeDrinksEarned = intdiv($totalDrinks, 10); // every 10 drinks
+        $remainingStamps = $totalDrinks % 10;         // 0–9 only
 
         return response()->json([
             'customer_id' => $id,
-            'stamps' => $completedOrders,
+            'total_drinks' => $totalDrinks,
+            'stamps' => $remainingStamps,
+            'free_drinks_earned' => $freeDrinksEarned,
+            'free_drinks_available' => $freeDrinksEarned, // adjust later if you track redemption
         ]);
     }
 }

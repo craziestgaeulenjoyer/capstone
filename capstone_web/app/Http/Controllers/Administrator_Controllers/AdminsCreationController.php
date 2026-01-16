@@ -15,15 +15,19 @@ use Illuminate\Support\Str;
 class AdminsCreationController extends Controller
 {
     /**
-     * Send OTP to email for admin/super admin creation.
+     * Send OTP to LOGGED-IN SUPER ADMIN email
      */
     public function requestOtp(Request $request)
     {
+        $superAdmin = auth()->user();
+
+        if (!$superAdmin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
         $request->merge(['name' => $request->fullName]);
 
-        Log::info('OTP request received:', $request->all());
-
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:admins,username|unique:super_admins,username',
             'email' => 'required|email|unique:admins,email|unique:super_admins,email',
@@ -31,129 +35,117 @@ class AdminsCreationController extends Controller
             'branch' => 'required_if:role,admin|string|nullable',
         ]);
 
-        Log::info("OTP request for creating user", [
-            'role' => $request->role,
-            'name' => $request->name,
-            'username' => $request->username,
-            'email' => $request->email,
-            'branch' => $request->branch ?? null,
-            'requested_by' => auth()->id() ?? null,
-        ]);
+        $otp = random_int(100000, 999999);
 
-        $otp = rand(100000, 999999);
-        $expiresAt = now()->addMinutes(5);
+        Cache::put(
+            'create_user_data_' . $superAdmin->id,
+            [
+                'otp' => (string) $otp,
+                'data' => $validated,
+            ],
+            now()->addMinutes(5)
+        );
 
-        Cache::put('create_user_otp_' . $request->email, $otp, $expiresAt);
-
-        Mail::raw("Your Mi Amore Admin verification code is: {$otp}", function ($message) use ($request) {
-            $message->to($request->email)
-                ->subject('User Creation OTP - Mi Amore');
-        });
-
-        Log::info("OTP sent to {$request->email}");
+        Mail::raw(
+            "Your Mi Amore Admin verification code is: {$otp}",
+            fn ($message) =>
+                $message->to($superAdmin->email)
+                        ->subject('User Creation OTP - Mi Amore')
+        );
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP sent successfully.',
-            'expires_in_seconds' => $expiresAt->diffInSeconds(now()),
+            'message' => 'OTP sent successfully',
         ]);
     }
 
-    /**
-     * Verify OTP and create user without a default password.
-     */
     public function verifyOtp(Request $request)
     {
-        Log::info('OTP verification request received:', $request->all());
+        $superAdmin = auth()->user();
+
+        if (!$superAdmin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
         $request->validate([
-            'name' => 'required|string|max:255',
-            'username' => 'required|string|max:50|unique:admins,username|unique:super_admins,username',
-            'email' => 'required|email',
-            'role' => 'required|in:admin,super_admin',
-            'branch' => 'required_if:role,admin|string|nullable',
-            'otp' => 'required|string|max:6',
+            'otp' => 'required|string|size:6',
         ]);
 
-        $cachedOtp = Cache::get('create_user_otp_' . $request->email);
+        $cached = Cache::get('create_user_data_' . $superAdmin->id);
 
-        if (!$cachedOtp) {
-            return response()->json(['success' => false, 'message' => 'OTP has expired'], 400);
+        if (!$cached) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User creation data expired. Please restart the process.'
+            ], 400);
         }
 
-        if (trim((string)$cachedOtp) !== trim((string)$request->otp)) {
-            return response()->json(['success' => false, 'message' => 'OTP is invalid'], 400);
+        if ($cached['otp'] !== $request->otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP'
+            ], 400);
         }
 
-        // OTP is valid — remove it from cache
-        Cache::forget('create_user_otp_' . $request->email);
+        $data = $cached['data'];
 
-        $user = null;
+        Cache::forget('create_user_data_' . $superAdmin->id);
 
-        Log::info("Creating user", [
-            'role' => $request->role,
-            'name' => $request->name,
-            'username' => $request->username,
-            'email' => $request->email,
-            'branch' => $request->branch ?? null,
-        ]);
-
-        if ($request->role === 'admin') {
+        if ($data['role'] === 'admin') {
             $user = Admin::create([
-                'name' => $request->name,
-                'username' => $request->username,
-                'email' => $request->email,
+                'name' => $data['name'],
+                'username' => $data['username'],
+                'email' => $data['email'],
                 'password' => Hash::make(Str::random(16)),
                 'role' => 'admin',
-                'branch' => $request->branch,
+                'branch' => $data['branch'],
             ]);
-        } elseif ($request->role === 'super_admin') {
+        } else {
             $user = SuperAdmin::create([
-                'name' => $request->name,
-                'username' => $request->username,
-                'email' => $request->email,
+                'name' => $data['name'],
+                'username' => $data['username'],
+                'email' => $data['email'],
                 'password' => Hash::make(Str::random(16)),
                 'role' => 'super_admin',
             ]);
         }
 
-        Log::info("User successfully created", [
-            'id' => $user->id,
-            'role' => $user->role,
-            'name' => $user->name,
-            'username' => $user->username,
-            'email' => $user->email,
-        ]);
-
         return response()->json([
             'success' => true,
-            'message' => ucfirst($request->role) . ' successfully created. The user can set their password via the forgot password link.',
+            'message' => ucfirst($data['role']) . ' created successfully.',
             'data' => $user
         ]);
     }
 
     /**
-     * Resend OTP for admin/super admin creation.
+     * Resend OTP to LOGGED-IN SUPER ADMIN email
      */
-    public function resendOtp(Request $request)
+    public function resendOtp()
     {
-        Log::info('OTP resend request received:', $request->all());
+        $superAdmin = auth()->user();
 
-        $request->validate([
-            'email' => 'required|email',
-        ]);
+        if (!$superAdmin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
-        $otp = rand(100000, 999999);
+        $otp = random_int(100000, 999999);
         $expiresAt = now()->addMinutes(5);
 
-        Cache::put('create_user_otp_' . $request->email, $otp, $expiresAt);
+        Cache::put(
+            'create_user_otp_' . $superAdmin->id,
+            $otp,
+            $expiresAt
+        );
 
-        Mail::raw("Your Mi Amore Admin verification code is: {$otp}", function ($message) use ($request) {
-            $message->to($request->email)
-                ->subject('Resent User Creation OTP - Mi Amore');
-        });
+        Mail::raw(
+            "Your Mi Amore Admin verification code is: {$otp}",
+            function ($message) use ($superAdmin) {
+                $message->to($superAdmin->email)
+                    ->subject('Resent User Creation OTP - Mi Amore');
+            }
+        );
 
-        Log::info("Resent OTP to {$request->email}");
+        Log::info("OTP resent to super admin", ['email' => $superAdmin->email]);
 
         return response()->json([
             'success' => true,
@@ -162,23 +154,46 @@ class AdminsCreationController extends Controller
         ]);
     }
 
-    public function getAllAdmins()
+    public function getAllAdmins(Request $request)
     {
         try {
-            $admins = Admin::select('id', 'name', 'username', 'email', 'branch', 'role', 'created_at')
-                ->orderBy('created_at', 'desc')
-                ->get();
+            // Fetch admins
+            $admins = Admin::select(
+                    'id',
+                    'name',
+                    'username',
+                    'email',
+                    'branch',
+                    'role',
+                    'status',
+                    'created_at'
+                )
+                ->get()
+                ->map(function ($admin) {
+                    return [
+                        'id' => $admin->id,
+                        'name' => $admin->name,
+                        'email' => $admin->email,
+                        'role' => $admin->role,
+                        'branch' => $admin->branch,
+                        'status' => $admin->status ?? 'active',
+                        'last_active' => optional($admin->updated_at)->toDateTimeString(),
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
                 'data' => $admins
             ]);
         } catch (\Exception $e) {
-            \Log::error('Failed to fetch admins: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            \Log::error('Failed to fetch admins', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Server error while fetching admins.',
-                'error' => $e->getMessage()
+                'message' => 'Failed to fetch admins'
             ], 500);
         }
     }

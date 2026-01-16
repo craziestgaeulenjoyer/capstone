@@ -413,7 +413,12 @@ const Step2Form = ({ formData, handleChange, onBack, onNext, isValid }: Step2For
   </>
 );
 
-const Step3Form = ({ formData, onBack, onSubmit }: Step3FormProps) => (
+const Step3Form = ({
+  formData,
+  onBack,
+  onSubmit,
+  sendingOtp
+}: Step3FormProps & { sendingOtp?: boolean }) => (
   <>
     {/* Progress bar for step 3 */}
     <div className="h-2 bg-gray-200 rounded-full mb-2">
@@ -456,9 +461,11 @@ const Step3Form = ({ formData, onBack, onSubmit }: Step3FormProps) => (
       </button>
       <button
         onClick={onSubmit}
-        className="bg-[#8cb662] text-white px-8 py-2 rounded-lg font-semibold shadow-md transition-all duration-300 hover:bg-[#78a252]"
+        disabled={sendingOtp}
+        className={`px-8 py-2 rounded-lg font-semibold shadow-md transition-all duration-300
+          ${sendingOtp ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#8cb662] hover:bg-[#78a252] text-white'}`}
       >
-        Submit
+        {sendingOtp ? 'Sending OTP...' : 'Submit'}
       </button>
     </div>
   </>
@@ -594,6 +601,7 @@ const Teams = () => {
     role: '',
     branch: ''
   });
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -605,6 +613,30 @@ const Teams = () => {
 
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
+
+  const handleConfirmDetails = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in as Super Admin first');
+        return;
+      }
+
+      setSendingOtp(true);
+
+      await axios.post(
+        'http://127.0.0.1:8000/api/superadmin/create/request-otp',
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setStep(4);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
   // Handlers for top navigation buttons
   const showOnboarding = () => {
@@ -750,8 +782,52 @@ const Teams = () => {
             <>
               {step === 1 && <Step1Form formData={formData} handleChange={handleChange} onNext={handleNext} isValid={isStep1Valid} />}
               {step === 2 && <Step2Form formData={formData} handleChange={handleChange} onBack={handleBack} onNext={handleNext} isValid={isStep2Valid} />}
-              {step === 3 && <Step3Form formData={formData} onBack={handleBack} onSubmit={handleNext} />}
-              {step === 4 && <Step4Form formData={formData} onBack={handleBack} onSubmit={(otp) => console.log('OTP submitted:', otp)} />}
+              {step === 3 && (
+                <Step3Form
+                  formData={formData}
+                  onBack={handleBack}
+                  onSubmit={handleConfirmDetails}
+                  sendingOtp={sendingOtp}
+                />
+              )}
+              {step === 4 && (
+                <Step4Form
+                  formData={formData}
+                  onBack={handleBack}
+                  onSubmit={async (otp) => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      if (!token) {
+                        alert('Please log in as Super Admin first');
+                        return;
+                      }
+
+                      await axios.post(
+                        'http://127.0.0.1:8000/api/superadmin/create/verify-otp',
+                        { otp },
+                        {
+                          headers: {
+                            Authorization: `Bearer ${token}`
+                          }
+                        }
+                      );
+
+                      alert('Admin created successfully!');
+                      setView('adminTable');
+                      setStep(1);
+                      setFormData({
+                        fullName: '',
+                        username: '',
+                        email: '',
+                        role: '',
+                        branch: ''
+                      });
+                    } catch (err: any) {
+                      alert(err.response?.data?.message || 'OTP verification failed');
+                    }
+                  }}
+                />
+              )}
             </>
           )}
 

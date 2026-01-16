@@ -67,6 +67,14 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
   const [notes, setNotes] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [freeDrinksAvailable, setFreeDrinksAvailable] = useState(0);
+  const [usingReward, setUsingReward] = useState(false);
+
+  useEffect(() => {
+    if (route.params?.useReward) {
+      setUsingReward(true);
+    }
+  }, [route.params?.useReward]);
 
   useEffect(() => {
     if (route.params?.category) {
@@ -85,6 +93,21 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
 
   useEffect(() => {
     fetchMenuItems();
+  }, []);
+
+  useEffect(() => {
+    const loadLoyalty = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/api/loyalty/status`);
+        const data = await res.json();
+
+        setFreeDrinksAvailable(Number(data.free_drinks) || 0);
+      } catch (err) {
+        console.error("Failed to load loyalty:", err);
+      }
+    };
+
+    loadLoyalty();
   }, []);
 
   const getImageSource = (uri: string | null) =>
@@ -140,13 +163,14 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
         return {
           id: String(item.id),
           name: item.name,
+          type: item.type, // ✅ ADD THIS LINE
           description: item.description || "",
           imageUri,
           image_path: item.image_path || null,
           prices,
           sizeKeys,
           defaultSize,
-          categories: uiCategories, // <-- now array
+          categories: uiCategories,
           subcategories: uiSubcategories,
           raw: item,
         };
@@ -235,49 +259,46 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
 
   const addToCart = async () => {
     if (!selectedProduct) return;
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const payload = {
-        product_id: selectedProduct.id,
-        product_name: selectedProduct.name,
-        size: selectedSize,
-        quantity,
-        instructions: notes,
-        price: Number(selectedProduct.prices[selectedSize]),
-        image: selectedProduct.imageUri || null,
-      };
-      console.log("Adding to cart payload:", payload);
 
-      const res = await authFetch(`${API_BASE}/api/cart`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    const isFree = usingReward;
 
-      const raw = await res.text();
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = null;
-      }
+    const payload = {
+      product_id: selectedProduct.id,
+      product_name: isFree
+        ? `Free Drink #${freeDrinksAvailable}`
+        : selectedProduct.name,
+      type: selectedProduct.type,
+      size: selectedSize,
+      quantity: isFree ? quantity : quantity,
+      instructions: isFree ? "Loyalty Reward" : notes,
+      price: isFree ? 0 : Number(selectedProduct.prices[selectedSize]),
+      image: selectedProduct.imageUri,
+      is_free: isFree,
+    };
 
-      if (res.ok) {
-        setModalMessage("Added to cart!");
-        setModalVisible(true);
-        closeModal();
-      } else {
-        setModalMessage(data?.message || raw || "Error adding to cart");
-        setModalVisible(true);
-      }
-    } catch (err: any) {
-      console.error("Add to cart error:", err);
-      setModalMessage(err?.message || "Something went wrong");
-      setModalVisible(true);
+    await authFetch(`${API_BASE}/api/cart`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (isFree) {
+      setFreeDrinksAvailable(v => Math.max(0, v - quantity));
+      setUsingReward(false);
     }
+
+    setModalMessage("Added to cart!");
+    setModalVisible(true);
+    closeModal();
   };
+
+  const maxRewardQty = usingReward ? freeDrinksAvailable : Infinity;
+
+  const canDecreaseQty = !usingReward || quantity > 1;
+  const canIncreaseQty =
+    !usingReward || (freeDrinksAvailable > 1 && quantity < freeDrinksAvailable);
+
+
 
   if (loading) {
     return (
@@ -390,12 +411,42 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
                 <Text style={styles.modalDescription}>{selectedProduct.description}</Text>
                 <Text style={styles.sectionTitle}>Quantity</Text>
                 <View style={styles.quantityBox}>
-                  <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))}>
-                    <Text style={styles.qtyBtn}>-</Text>
+                  <TouchableOpacity
+                    disabled={!canDecreaseQty}
+                    onPress={() => {
+                      if (canDecreaseQty) {
+                        setQuantity(q => Math.max(1, q - 1));
+                      }
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.qtyBtn,
+                        !canDecreaseQty && { opacity: 0.3 }
+                      ]}
+                    >
+                      -
+                    </Text>
                   </TouchableOpacity>
+
                   <Text style={styles.qtyValue}>{quantity}</Text>
-                  <TouchableOpacity onPress={() => setQuantity(quantity + 1)}>
-                    <Text style={styles.qtyBtn}>+</Text>
+
+                  <TouchableOpacity
+                    disabled={!canIncreaseQty}
+                    onPress={() => {
+                      if (canIncreaseQty) {
+                        setQuantity(q => Math.min(maxRewardQty, q + 1));
+                      }
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.qtyBtn,
+                        !canIncreaseQty && { opacity: 0.3 }
+                      ]}
+                    >
+                      +
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.sectionTitle}>Select options</Text>
@@ -422,11 +473,26 @@ const MenuScreen: React.FC<Props> = ({ route }) => {
                   onChangeText={setNotes}
                   value={notes}
                 />
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.addBtn} onPress={addToCart}>
-                    <Text style={{ color: "#76B13A", fontSize: 16, fontWeight: "700" }}>Add to Cart</Text>
+                {/* Action Button */}
+                {usingReward ? (
+                  <TouchableOpacity
+                    style={styles.rewardBtnFull}
+                    onPress={addToCart}
+                  >
+                    <Text style={styles.rewardBtnText}>
+                      Redeem Free Drink
+                    </Text>
                   </TouchableOpacity>
-                </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.addBtnFull}
+                    onPress={addToCart}
+                  >
+                    <Text style={styles.addBtnText}>
+                      Add to Cart
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </>
             )}
           </View>
@@ -613,6 +679,43 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#fff",
     zIndex: 10,
+  },
+  rewardBtn: {
+    backgroundColor: "#76B13A",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2, 
+  },
+  rewardBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  addBtnFull: {
+    backgroundColor: "#E6F6C8",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 12,
+  },
+
+  addBtnText: {
+    color: "#76B13A",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  rewardBtnFull: {
+    backgroundColor: "#76B13A",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 12,
   },
 
   modalOverlay: {
