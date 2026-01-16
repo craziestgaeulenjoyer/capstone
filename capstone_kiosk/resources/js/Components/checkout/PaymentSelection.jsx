@@ -27,9 +27,6 @@ export default function PaymentSelection() {
 
   useEffect(() => {
   const savedName = localStorage.getItem("customer_name");
-  if (savedName) {
-    setCustomerName(savedName);
-  }
 }, []);
 
 
