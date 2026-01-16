@@ -3,6 +3,7 @@ import { IoIosArrowBack } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { CheckCircle } from "lucide-react"; 
+import { usePage } from "@inertiajs/react";
 
 export default function OrderNumber() {
   const [orderNumber, setOrderNumber] = useState(null);
@@ -19,36 +20,67 @@ export default function OrderNumber() {
     cream: "#FDFCF8",
     sageLight: "#E9F0DE",
   };
+const { props } = usePage();
 
-  useEffect(() => {
-    const storedCart = JSON.parse(localStorage.getItem("kiosk_cart_items") || "[]");
-    const total = storedCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    setCartItems(storedCart);
-    setTotalPrice(total);
-    setCustomerName(localStorage.getItem("customer_name") || "Guest");
-    setPaymentMethod(localStorage.getItem("payment_method") || "Counter");
-    
-    // Generate 3-digit number
-    setOrderNumber(Math.floor(100 + Math.random() * 900));
-  }, []);
 
-  const handleDoneClick = async () => {
-    try {
-      await axios.post("/kioskorders", {
-        orderNumber,
+
+useEffect(() => {
+  const name = localStorage.getItem("customer_name");
+  const method = localStorage.getItem("payment_method");
+
+  console.log("📦 Loaded from storage:", name, method);
+
+  if (name) setCustomerName(name);
+  if (method) setPaymentMethod(method);
+}, []);
+
+
+ useEffect(() => {
+  if (!customerName || !paymentMethod) {
+    console.warn("⏳ Waiting for customerName & paymentMethod...");
+    return;
+  }
+
+  console.log("🚀 Creating order with:", customerName, paymentMethod);
+
+  axios.get("/kiosk/cart")
+    .then(cartRes => {
+      console.log("🛒 Cart loaded", cartRes.data);
+
+      const cart = cartRes.data;
+      const total = cart.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
+
+      console.log("💰 Total computed:", total);
+
+      axios.post("/kioskorder", {
         customerName,
         paymentMethod,
-        totalPrice,
-        cartItems,
+        totalPrice: total,
+        cartItems: cart
+      })
+      .then(res => {
+        console.log("✅ Order saved successfully", res.data);
+        setOrderNumber(res.data.orderNumber);
+      })
+      .catch(err => {
+        console.error("❌ Order save failed", err.response?.data || err);
       });
+    })
+    .catch(err => {
+      console.error("❌ Failed to load cart", err);
+    });
+}, [customerName, paymentMethod]);
 
-      // Clear all
-      ["kiosk_cart_items", "customer_name", "payment_method", "order_type"].forEach(k => localStorage.removeItem(k));
-      window.location.href = "/"; 
-    } catch (error) {
-      console.error("Error saving order:", error);
-      alert("Failed to save order. Please try again.");
-    }
+
+
+  const handleDoneClick = () => {
+ axios.delete("/kiosk/cart/clear").then(() => {
+  window.location.href = "/bubble-welcome";
+});
+
   };
 
   return (
@@ -104,7 +136,7 @@ export default function OrderNumber() {
               animate={{ scale: 1 }}
               className="text-6xl md:text-8xl font-black italic text-[#3D2317] tracking-tighter"
             >
-              #{orderNumber}
+              {orderNumber}
             </motion.h1>
           </div>
 

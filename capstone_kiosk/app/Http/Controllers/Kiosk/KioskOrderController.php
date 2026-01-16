@@ -1,35 +1,28 @@
 <?php
 
-namespace App\Http\Controllers\Kiosk; // ✅ Updated namespace
+namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\KioskOrder;
 
 class KioskOrderController extends Controller
 {
     public function store(Request $request)
-    {
-        $request->validate([
-            'orderNumber' => 'required|integer|unique:kiosk_orders,order_number',
-            'customerName' => 'required|string',
-            'paymentMethod' => 'required|string',
-            'totalPrice' => 'required|numeric',
-            'cartItems' => 'required|array',
-        ]);
+{
+    $order = KioskOrder::create([
+        'order_number' => 'MI-' . str_pad(random_int(0, 999), 3, '0', STR_PAD_LEFT),
 
-        $order = KioskOrder::create([
-            'order_number' => $request->orderNumber,
-            'customer_name' => $request->customerName,
-            'payment_method' => $request->paymentMethod,
-            'total_price' => $request->totalPrice,
-            'cart_items' => $request->cartItems,
-        ]);
+        'customer_name' => $request->customerName,
+        'payment_method' => $request->paymentMethod,
+        'total_price' => $request->totalPrice,
+        'cart_items' => $request->cartItems,
+    ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Kiosk order created successfully',
-            'data' => $order
-        ]);
-    }
+    return response()->json([
+        'orderNumber' => $order->order_number
+    ]);
+}
+
 }

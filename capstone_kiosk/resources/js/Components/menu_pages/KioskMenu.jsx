@@ -381,7 +381,11 @@ export default function KioskMenu() {
                     <span className="text-[10px] font-black uppercase text-[#8CB662]">Total Bill</span>
                     <span className="text-3xl font-black italic">₱{totalPrice.toFixed(2)}</span>
                 </div>
-                <button onClick={() => { localStorage.setItem("kiosk_cart", JSON.stringify(cartItems)); router.visit("/paymentselect"); }} className="w-full bg-[#3D2317] text-white py-5 uppercase font-black tracking-[0.2em] text-[11px] shadow-xl flex justify-center items-center gap-2">
+                <button onClick={() => { axios.post("/kiosk/cart/add", {
+  cartItems
+}).then(() => {
+  router.visit("/paymentselect");
+});}} className="w-full bg-[#3D2317] text-white py-5 uppercase font-black tracking-[0.2em] text-[11px] shadow-xl flex justify-center items-center gap-2">
                   Confirm & Pay <IoIosArrowForward size={16}/>
                 </button>
               </div>
