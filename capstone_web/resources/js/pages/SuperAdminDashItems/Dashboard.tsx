@@ -3,7 +3,6 @@ import axios from "axios";
 import {
   ShoppingBag,
   Users,
-  DollarSign,
   BookOpen,
 } from "lucide-react";
 import {
@@ -19,6 +18,7 @@ import {
   BarElement,
 } from "chart.js";
 import { Doughnut, Line, Bar } from "react-chartjs-2";
+import { FaPesoSign } from "react-icons/fa6";
 
 ChartJS.register(
   CategoryScale,
@@ -314,7 +314,7 @@ const Dashboard: React.FC = () => {
             </p>
             <p className="text-gray-500 text-sm">Total Revenue</p>
           </div>
-          <DollarSign className="text-[#6CB74A]" size={36} />
+           <FaPesoSign className="text-[#6CB74A]" size={36} />
         </div>
         <div className="bg-white p-5 rounded-lg shadow flex items-center justify-between hover:shadow-md transform hover:-translate-y-1 transition">
           <div>

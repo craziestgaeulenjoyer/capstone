@@ -34,6 +34,57 @@ const JWT_SECRET = process.env.JWT_SECRET || 'CFoJy9csauDWon3fhdTcviGLMZt6afHm';
 
 const express = require('express');
 const pool = require('./db');
+
+const setupLoyaltyTrigger = async () => {
+  await pool.query(`
+    ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS loyalty_applied BOOLEAN DEFAULT false;
+  `);
+
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION apply_loyalty_on_completed_order()
+    RETURNS TRIGGER AS $$
+    DECLARE
+      drink_total INTEGER := 0;
+    BEGIN
+      IF NEW.status = 'completed'
+         AND OLD.status IS DISTINCT FROM 'completed'
+         AND NEW.loyalty_applied = false THEN
+
+        SELECT COALESCE(SUM((item->>'quantity')::int), 0)
+        INTO drink_total
+        FROM jsonb_array_elements(NEW.items) AS item
+        WHERE item->>'type' = 'drink'
+          AND (item->>'is_free')::boolean = false;
+
+        UPDATE loyalty
+        SET drink_count = drink_count + drink_total,
+            updated_at = NOW()
+        WHERE customer_id = NEW.user_id;
+
+        UPDATE orders
+        SET loyalty_applied = true
+        WHERE id = NEW.id;
+      END IF;
+
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  await pool.query(`
+    DROP TRIGGER IF EXISTS trg_apply_loyalty_on_completed_order ON orders;
+
+    CREATE TRIGGER trg_apply_loyalty_on_completed_order
+    AFTER UPDATE OF status
+    ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION apply_loyalty_on_completed_order();
+  `);
+
+  console.log("✅ Loyalty trigger ready");
+};
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -73,15 +124,21 @@ app.post("/api/paymongo/webhook",
       const transactionId = payment.id; // pay_...
       const sourceId = payment.attributes.source.id;
 
-      await pool.query(
+      const result = await pool.query(
         `
         UPDATE orders
         SET transaction_id = $1,
             status = 'completed'
         WHERE source_id = $2
+        RETURNING user_id
         `,
         [transactionId, sourceId]
       );
+
+      if (result.rows.length > 0) {
+        const userId = result.rows[0].user_id;
+        await applyLoyaltyForCompletedOrders(userId);
+      }
 
       console.log("✅ GCash payment confirmed:", {
         transactionId,
@@ -887,35 +944,6 @@ app.post("/api/voice-order", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/api/orders/clear-cart-after-order", authenticateToken, async (req, res) => {
-  const userId = req.userId;
-  const { orderId } = req.body;
-
-  if (!orderId) {
-    return res.status(400).json({ message: "Order ID required" });
-  }
-
-  try {
-    await pool.query(
-      `
-      DELETE FROM cart_items
-      WHERE customer_id = $1
-        AND product_id IN (
-          SELECT product_id
-          FROM order_items
-          WHERE order_id = $2
-        )
-      `,
-      [userId, orderId]
-    );
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ Failed to clear cart:", err);
-    res.status(500).json({ message: "Failed to clear cart" });
-  }
-});
-
 // Adding Items to Cart
 app.post('/api/cart', authenticateToken, async (req, res) => {
   const {
@@ -929,12 +957,25 @@ app.post('/api/cart', authenticateToken, async (req, res) => {
     is_free = false,
   } = req.body;
 
+  if (is_free) {
+    const loyalty = await pool.query(
+      `SELECT free_drinks FROM loyalty WHERE customer_id = $1`,
+      [req.userId]
+    );
+
+    if (!loyalty.rows.length || loyalty.rows[0].free_drinks <= 0) {
+      return res.status(400).json({ message: "No free drinks available." });
+    }
+  }
+
   try {
     const result = await pool.query(
-      `INSERT INTO cart_items 
-       (customer_id, product_id, product_name, size, quantity, instructions, price, image, is_free, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
-       RETURNING *`,
+      `
+      INSERT INTO cart_items
+      (customer_id, product_id, product_name, size, quantity, instructions, price, image, is_free, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      RETURNING *
+      `,
       [
         req.userId,
         product_id,
@@ -944,7 +985,7 @@ app.post('/api/cart', authenticateToken, async (req, res) => {
         instructions,
         Number(price),
         image,
-        is_free,
+        is_free
       ]
     );
 
@@ -963,8 +1004,8 @@ app.get('/api/cart', authenticateToken, async (req, res) => {
       SELECT
         ci.id,
         ci.product_id,
-        mi.name AS product_name,
-        mi.type,
+        ci.product_name,        -- ✅ USE STORED NAME
+        mi.type,                -- still useful
         ci.size,
         ci.quantity,
         ci.instructions,
@@ -973,12 +1014,15 @@ app.get('/api/cart', authenticateToken, async (req, res) => {
         ci.is_free,
         ci.created_at
       FROM cart_items ci
-      JOIN menu_items mi ON mi.id = ci.product_id
+      LEFT JOIN menu_items mi ON mi.id = ci.product_id
       WHERE ci.customer_id = $1
       ORDER BY ci.created_at DESC
       `,
-      [req.userId]   
+      [req.userId]
     );
+
+    console.log("🛒 CART ROWS FOR USER", req.userId);
+    console.table(result.rows);
 
     res.json(result.rows);
   } catch (err) {
@@ -1015,10 +1059,28 @@ app.delete("/api/cart/clear-checked", authenticateToken, async (req, res) => {
 // Remove Cart Items
 app.delete('/api/cart/:id', authenticateToken, async (req, res) => {
   try {
+    // 1️⃣ Check if item is free
+    const check = await pool.query(
+      `SELECT is_free FROM cart_items WHERE id = $1 AND customer_id = $2`,
+      [req.params.id, req.userId]
+    );
+
+    if (!check.rows.length) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    if (check.rows[0].is_free) {
+      return res.status(403).json({
+        message: "Free reward items cannot be removed"
+      });
+    }
+
+    // 2️⃣ Safe to delete
     await pool.query(
       'DELETE FROM cart_items WHERE id = $1 AND customer_id = $2',
       [req.params.id, req.userId]
     );
+
     res.json({ message: 'Item removed' });
   } catch (err) {
     console.error(err);
@@ -1031,6 +1093,23 @@ app.put("/api/cart/:id", authenticateToken, async (req, res) => {
   const { quantity, size, instructions } = req.body;
 
   try {
+    // 1️⃣ Check if item is free
+    const check = await pool.query(
+      `SELECT is_free FROM cart_items WHERE id = $1 AND customer_id = $2`,
+      [req.params.id, req.userId]
+    );
+
+    if (!check.rows.length) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    if (check.rows[0].is_free) {
+      return res.status(403).json({
+        message: "Free reward items cannot be modified"
+      });
+    }
+
+    // 2️⃣ Safe to update
     const result = await pool.query(
       `UPDATE cart_items
        SET quantity = $1, size = $2, instructions = $3
@@ -1039,17 +1118,13 @@ app.put("/api/cart/:id", authenticateToken, async (req, res) => {
       [quantity, size, instructions, req.params.id, req.userId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Cart item not found" });
-    }
-
     res.json({
       message: "Cart item updated",
       item: result.rows[0],
     });
   } catch (err) {
     console.error("Error updating cart:", err.message);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -1134,7 +1209,8 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     // Order metadata
     // -----------------------------
     const orderCode = "ORD-" + Math.floor(100000 + Math.random() * 900000);
-    const orderStatus = "pending";
+    const orderStatus =
+      paymentMethod === "Pay on Pickup" ? "completed" : "pending";
 
     let transactionId = null;
     
@@ -1250,6 +1326,48 @@ app.post("/api/checkout", authenticateToken, async (req, res) => {
     ]);
 
     console.log("✅ Order saved correctly:", orderResult.rows[0]);
+
+    if (orderStatus === "completed") {
+      await applyLoyaltyForCompletedOrders(userId);
+    }
+
+    // -----------------------------
+    // DEDUCT FREE DRINKS (AFTER ORDER SUCCESS)
+    // -----------------------------
+    const freeDrinkCount = orderItems.reduce((count, item) => {
+      if (item.is_free) return count + item.quantity;
+      return count;
+    }, 0);
+
+    if (freeDrinkCount > 0) {
+      await pool.query(
+        `
+        UPDATE loyalty
+        SET free_drinks = GREATEST(free_drinks - $1, 0)
+        WHERE customer_id = $2
+        `,
+        [freeDrinkCount, userId]
+      );
+
+      console.log("🍹 Deducted free drinks:", freeDrinkCount);
+    }
+
+    // -----------------------------
+    // CLEAR ONLY CHECKED CART ITEMS
+    // -----------------------------
+    const cartItemIdsToDelete = cartItems.map(i => i.cart_item_id ?? i.id);
+
+    await pool.query(
+      `
+      DELETE FROM cart_items
+      WHERE id = ANY($1::int[])
+        AND customer_id = $2
+      `,
+      [cartItemIdsToDelete, userId]
+    );
+
+    console.log("🧹 Cleared ONLY checked cart items:", cartItemIdsToDelete);
+
 
     // -----------------------------
     // Response
@@ -1609,8 +1727,95 @@ app.post("/api/voice-transcribe", authenticateToken, upload.single("audio"), asy
   }
 });
 
+async function applyLoyaltyForCompletedOrders(userId) {
+  // 1️⃣ Get completed, uncounted orders
+  const ordersRes = await pool.query(
+    `
+    SELECT id, items
+    FROM orders
+    WHERE user_id = $1
+      AND status = 'completed'
+      AND loyalty_counted = false
+    `,
+    [userId]
+  );
+
+  if (ordersRes.rows.length === 0) return;
+
+  let drinkTotal = 0;
+
+  // 2️⃣ Sum drink quantities (exclude free drinks)
+  for (const order of ordersRes.rows) {
+    const items = Array.isArray(order.items) ? order.items : [];
+
+    for (const item of items) {
+      if (
+        item.type === "drink" &&
+        item.is_free === false &&
+        Number(item.quantity) > 0
+      ) {
+        drinkTotal += Number(item.quantity);
+      }
+    }
+  }
+
+  if (drinkTotal === 0) {
+    // still mark orders as counted
+    await pool.query(
+      `
+      UPDATE orders
+      SET loyalty_counted = true
+      WHERE id = ANY($1)
+      `,
+      [ordersRes.rows.map(o => o.id)]
+    );
+    return;
+  }
+
+  // 3️⃣ Upsert loyalty row
+  await pool.query(
+    `
+    INSERT INTO loyalty (customer_id, drink_count)
+    VALUES ($1, $2)
+    ON CONFLICT (customer_id)
+    DO UPDATE
+    SET drink_count = loyalty.drink_count + $2,
+        updated_at = NOW()
+    `,
+    [userId, drinkTotal]
+  );
+
+  // 4️⃣ Update free drinks (example: every 10 drinks)
+  await pool.query(
+    `
+    UPDATE loyalty
+    SET free_drinks = FLOOR(drink_count / 10)
+    WHERE customer_id = $1
+    `,
+    [userId]
+  );
+
+  // 5️⃣ Mark orders as counted
+  await pool.query(
+    `
+    UPDATE orders
+    SET loyalty_counted = true
+    WHERE id = ANY($1)
+    `,
+    [ordersRes.rows.map(o => o.id)]
+  );
+}
+
 const PORT = 5000;
-app.listen(PORT, '0.0.0.0', () => {
+
+app.listen(PORT, '0.0.0.0', async () => {
   console.log('Server running on all interfaces');
+
+  try {
+    await setupLoyaltyTrigger();
+  } catch (err) {
+    console.error("❌ Failed to setup loyalty trigger:", err);
+  }
 });
+
 

@@ -18,7 +18,7 @@ import Header from "../components/Header";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../routes/navigation";
 import { authFetch } from "../../utils/authFetch";
-import { API_BASE } from "../../config/api";
+import { API_BASE, fixUrl } from "../../config/api";
 
 const UI_CATEGORIES = [
   "All",
@@ -52,498 +52,516 @@ const subcategoriesMap: Record<string, string[]> = {
 const LARAVEL_BASE = "http://10.0.2.2:8000"; // Laravel public base
 type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
 
-const MenuScreen: React.FC<Props> = ({ route }) => {
-  const navigation = useNavigation();
+  const MenuScreen: React.FC<Props> = ({ route }) => {
+    const navigation = useNavigation();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedSub, setSelectedSub] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState("");
-  const [notes, setNotes] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
-  const [freeDrinksAvailable, setFreeDrinksAvailable] = useState(0);
-  const [usingReward, setUsingReward] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [selectedSub, setSelectedSub] = useState<string | null>(null);
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [favorites, setFavorites] = useState<string[]>([]);
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [quantity, setQuantity] = useState(1);
+    const [selectedSize, setSelectedSize] = useState("");
+    const [notes, setNotes] = useState("");
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalMessage, setModalMessage] = useState("");
+    const [freeDrinksAvailable, setFreeDrinksAvailable] = useState(0);
+    const [usingReward, setUsingReward] = useState(false);
 
-  useEffect(() => {
-    if (route.params?.useReward) {
-      setUsingReward(true);
-    }
-  }, [route.params?.useReward]);
+    useEffect(() => {
+      if (route.params?.useReward) {
+        setUsingReward(true);
+      }
+    }, [route.params?.useReward]);
 
-  useEffect(() => {
-    if (route.params?.category) {
-      setSelectedCategory(route.params.category);
-      setSelectedSub(null);
-    }
-  }, [route.params?.category]);
+    useEffect(() => {
+      if (route.params?.category) {
+        setSelectedCategory(route.params.category);
+        setSelectedSub(null);
+      }
+    }, [route.params?.category]);
 
-  useEffect(() => {
-    const loadFavorites = async () => {
-      const stored = await AsyncStorage.getItem("favorites");
-      if (stored) setFavorites(JSON.parse(stored));
-    };
-    loadFavorites();
-  }, []);
+    useEffect(() => {
+      const loadFavorites = async () => {
+        const stored = await AsyncStorage.getItem("favorites");
+        if (stored) setFavorites(JSON.parse(stored));
+      };
+      loadFavorites();
+    }, []);
 
-  useEffect(() => {
-    fetchMenuItems();
-  }, []);
+    useEffect(() => {
+      fetchMenuItems();
+    }, []);
 
-  useEffect(() => {
-    const loadLoyalty = async () => {
+    useEffect(() => {
+      const loadLoyalty = async () => {
+        try {
+          const res = await authFetch(`${API_BASE}/api/loyalty/status`);
+          const data = await res.json();
+
+          setFreeDrinksAvailable(Number(data.free_drinks) || 0);
+        } catch (err) {
+          console.error("Failed to load loyalty:", err);
+        }
+      };
+
+      loadLoyalty();
+    }, []);
+
+    const getImageSource = (uri: string | null) =>
+      uri ? { uri } : require("../../assets/MiAmore2.png");
+
+    const fetchMenuItems = async () => {
+      setLoading(true);
+      console.warn("Fetching menu items...");
+
       try {
-        const res = await authFetch(`${API_BASE}/api/loyalty/status`);
+        const res = await fetch(`${API_BASE}/api/menu-items`);
         const data = await res.json();
+        console.warn("Raw data fetched:", data);
 
-        setFreeDrinksAvailable(Number(data.free_drinks) || 0);
+        const transformed = (Array.isArray(data) ? data : []).map((item: any) => {
+          const imageUri = item.image_path
+            ? `${LARAVEL_BASE}/storage/${item.image_path.replace(/^\/+/, "")}`
+            : null;
+
+          const dbCats: string[] = Array.isArray(item.categories)
+            ? item.categories.map((c: string) => String(c).trim())
+            : [];
+          const dbSubs: string[] = Array.isArray(item.subcategories)
+            ? item.subcategories.map((s: string) => String(s).trim())
+            : [];
+
+          // Map all matching UI categories
+          const uiCategories: string[] = UI_CATEGORIES.filter(
+            (cat) =>
+              dbCats.some((c) => c.toLowerCase() === cat.toLowerCase()) ||
+              dbSubs.some((s) => s.toLowerCase().startsWith(cat.toLowerCase()))
+          );
+
+          // If no match, use first DB category
+          if (uiCategories.length === 0 && dbCats.length > 0) uiCategories.push(dbCats[0]);
+
+          // Clean subcategories for UI filtering (remove prefixes like "Popular:Milktea")
+          const uiSubcategories = dbSubs.map((s) => {
+            const parts = s.split(":");
+            return parts.length > 1 ? parts[1] : parts[0];
+          });
+
+          // Handle price
+          const priceObj = item.price && typeof item.price === "object" ? item.price : {};
+          const prices: Record<string, number> = {};
+          Object.keys(priceObj).forEach((k) => {
+            const v = priceObj[k];
+            prices[String(k)] = typeof v === "string" ? Number(v) : v;
+          });
+          const sizeKeys = Object.keys(prices);
+          const defaultSize = sizeKeys.length > 0 ? sizeKeys[0] : "";
+
+          return {
+            id: String(item.id),
+            name: item.name,
+            type: item.type, // ✅ ADD THIS LINE
+            description: item.description || "",
+            imageUri,
+            image_path: item.image_path || null,
+            prices,
+            sizeKeys,
+            defaultSize,
+            categories: uiCategories,
+            subcategories: uiSubcategories,
+            raw: item,
+          };
+        });
+
+        console.warn("Transformed products:", transformed);
+        setProducts(transformed);
       } catch (err) {
-        console.error("Failed to load loyalty:", err);
+        console.error("Failed to fetch menu items:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadLoyalty();
-  }, []);
+    const filteredProducts = products.filter((p) => {
+      const matchesCategory =
+        selectedCategory === "All" ||
+        (p.categories && p.categories.includes(selectedCategory));
 
-  const getImageSource = (uri: string | null) =>
-    uri ? { uri } : require("../../assets/MiAmore2.png");
+      const matchesSub = !selectedSub || p.subcategories.includes(selectedSub);
+      const lowerQuery = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !lowerQuery ||
+        p.name.toLowerCase().includes(lowerQuery) ||
+        p.categories.some((c: string) => c.toLowerCase().includes(lowerQuery)) ||
+        p.subcategories.some((s: string) => s.toLowerCase().includes(lowerQuery)) ||
+        (p.description && p.description.toLowerCase().includes(lowerQuery));
 
-  const fetchMenuItems = async () => {
-    setLoading(true);
-    console.warn("Fetching menu items...");
-
-    try {
-      const res = await fetch(`${API_BASE}/api/menu-items`);
-      const data = await res.json();
-      console.warn("Raw data fetched:", data);
-
-      const transformed = (Array.isArray(data) ? data : []).map((item: any) => {
-        const imageUri = item.image_path
-          ? `${LARAVEL_BASE}/storage/${item.image_path.replace(/^\/+/, "")}`
-          : null;
-
-        const dbCats: string[] = Array.isArray(item.categories)
-          ? item.categories.map((c: string) => String(c).trim())
-          : [];
-        const dbSubs: string[] = Array.isArray(item.subcategories)
-          ? item.subcategories.map((s: string) => String(s).trim())
-          : [];
-
-        // Map all matching UI categories
-        const uiCategories: string[] = UI_CATEGORIES.filter(
-          (cat) =>
-            dbCats.some((c) => c.toLowerCase() === cat.toLowerCase()) ||
-            dbSubs.some((s) => s.toLowerCase().startsWith(cat.toLowerCase()))
-        );
-
-        // If no match, use first DB category
-        if (uiCategories.length === 0 && dbCats.length > 0) uiCategories.push(dbCats[0]);
-
-        // Clean subcategories for UI filtering (remove prefixes like "Popular:Milktea")
-        const uiSubcategories = dbSubs.map((s) => {
-          const parts = s.split(":");
-          return parts.length > 1 ? parts[1] : parts[0];
-        });
-
-        // Handle price
-        const priceObj = item.price && typeof item.price === "object" ? item.price : {};
-        const prices: Record<string, number> = {};
-        Object.keys(priceObj).forEach((k) => {
-          const v = priceObj[k];
-          prices[String(k)] = typeof v === "string" ? Number(v) : v;
-        });
-        const sizeKeys = Object.keys(prices);
-        const defaultSize = sizeKeys.length > 0 ? sizeKeys[0] : "";
-
-        return {
-          id: String(item.id),
-          name: item.name,
-          type: item.type, // ✅ ADD THIS LINE
-          description: item.description || "",
-          imageUri,
-          image_path: item.image_path || null,
-          prices,
-          sizeKeys,
-          defaultSize,
-          categories: uiCategories,
-          subcategories: uiSubcategories,
-          raw: item,
-        };
-      });
-
-      console.warn("Transformed products:", transformed);
-      setProducts(transformed);
-    } catch (err) {
-      console.error("Failed to fetch menu items:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredProducts = products.filter((p) => {
-    const matchesCategory =
-      selectedCategory === "All" ||
-      (p.categories && p.categories.includes(selectedCategory));
-
-    const matchesSub = !selectedSub || p.subcategories.includes(selectedSub);
-    const lowerQuery = searchQuery.trim().toLowerCase();
-    const matchesSearch =
-      !lowerQuery ||
-      p.name.toLowerCase().includes(lowerQuery) ||
-      p.categories.some((c: string) => c.toLowerCase().includes(lowerQuery)) ||
-      p.subcategories.some((s: string) => s.toLowerCase().includes(lowerQuery)) ||
-      (p.description && p.description.toLowerCase().includes(lowerQuery));
-
-    return matchesCategory && matchesSub && matchesSearch;
-  });
-
-  const availableSubcategories = React.useMemo(() => {
-    if (selectedCategory === "All") return [];
-
-    const key = selectedCategory.toLowerCase();
-    return subcategoriesMap[key] || [];
-  }, [selectedCategory]);
-
-
-  useEffect(() => {
-    console.log("Selected category:", selectedCategory);
-    console.log("Selected subcategory:", selectedSub);
-    console.log(
-      "Filtered products:",
-      filteredProducts.map((p) => ({  
-        id: p.id,
-        name: p.name,
-        category: p.category,
-        subcategories: p.subcategories,
-      }))
-    );
-  }, [selectedCategory, selectedSub, filteredProducts]);
-
-  const toggleFavorite = async (productId: string) => {
-    let updated;
-    if (favorites.includes(productId)) {
-      updated = favorites.filter((id) => id !== productId);
-    } else {
-      updated = [...favorites, productId];
-    }
-    setFavorites(updated);
-    await AsyncStorage.setItem("favorites", JSON.stringify(updated));
-  };
-
-  const openModal = (product: any) => {
-    setSelectedProduct(product);
-    setQuantity(1);
-    setSelectedSize(product.defaultSize || product.sizeKeys[0] || "");
-    setNotes("");
-  };
-
-  const closeModal = () => {
-    setSelectedProduct(null);
-    setSelectedSize("");
-    setQuantity(1);
-  };
-
-  const getPriceLabel = (prod: any) => {
-    if (!prod || !prod.sizeKeys || prod.sizeKeys.length === 0) return "₱0.00";
-    const keys = prod.sizeKeys;
-    if (keys.length === 1) return `₱${Number(prod.prices[keys[0]]).toFixed(2)}`;
-    const first = Number(prod.prices[keys[0]]).toFixed(2);
-    const second = Number(prod.prices[keys[1]]).toFixed(2);
-    return `₱${first} / ₱${second}`;
-  };
-
-  const addToCart = async () => {
-    if (!selectedProduct) return;
-
-    const isFree = usingReward;
-
-    const payload = {
-      product_id: selectedProduct.id,
-      product_name: isFree
-        ? `Free Drink #${freeDrinksAvailable}`
-        : selectedProduct.name,
-      type: selectedProduct.type,
-      size: selectedSize,
-      quantity: isFree ? quantity : quantity,
-      instructions: isFree ? "Loyalty Reward" : notes,
-      price: isFree ? 0 : Number(selectedProduct.prices[selectedSize]),
-      image: selectedProduct.imageUri,
-      is_free: isFree,
-    };
-
-    await authFetch(`${API_BASE}/api/cart`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      return matchesCategory && matchesSub && matchesSearch;
     });
 
-    if (isFree) {
-      setFreeDrinksAvailable(v => Math.max(0, v - quantity));
-      setUsingReward(false);
+    const availableSubcategories = React.useMemo(() => {
+      if (selectedCategory === "All") return [];
+
+      const key = selectedCategory.toLowerCase();
+      return subcategoriesMap[key] || [];
+    }, [selectedCategory]);
+
+
+    useEffect(() => {
+      console.log("Selected category:", selectedCategory);
+      console.log("Selected subcategory:", selectedSub);
+      console.log(
+        "Filtered products:",
+        filteredProducts.map((p) => ({  
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          subcategories: p.subcategories,
+        }))
+      );
+    }, [selectedCategory, selectedSub, filteredProducts]);
+
+    const toggleFavorite = async (productId: string) => {
+      let updated;
+      if (favorites.includes(productId)) {
+        updated = favorites.filter((id) => id !== productId);
+      } else {
+        updated = [...favorites, productId];
+      }
+      setFavorites(updated);
+      await AsyncStorage.setItem("favorites", JSON.stringify(updated));
+    };
+
+    const openModal = (product: any) => {
+      setSelectedProduct(product);
+      setQuantity(1);
+      setSelectedSize(product.defaultSize || product.sizeKeys[0] || "");
+      setNotes("");
+    };
+
+    const closeModal = () => {
+      setSelectedProduct(null);
+      setSelectedSize("");
+      setQuantity(1);
+    };
+
+    const getPriceLabel = (prod: any) => {
+      if (!prod || !prod.sizeKeys || prod.sizeKeys.length === 0) return "₱0.00";
+      const keys = prod.sizeKeys;
+      if (keys.length === 1) return `₱${Number(prod.prices[keys[0]]).toFixed(2)}`;
+      const first = Number(prod.prices[keys[0]]).toFixed(2);
+      const second = Number(prod.prices[keys[1]]).toFixed(2);
+      return `₱${first} / ₱${second}`;
+    };
+
+    const addToCart = async () => {
+      if (!selectedProduct) return;
+
+      const isFree = usingReward && freeDrinksAvailable > 0;
+
+      const payload = {
+        product_id: selectedProduct.id,
+        product_name: selectedProduct.name, // ✅ FIXED
+        type: selectedProduct.type,
+        size: selectedSize,
+        quantity,
+        instructions: isFree ? "Loyalty Reward" : notes,
+        price: isFree ? 0 : Number(selectedProduct.prices[selectedSize]),
+        image: selectedProduct.imageUri,
+        is_free: isFree,
+      };
+
+      await authFetch(`${API_BASE}/api/cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (isFree) {
+        setFreeDrinksAvailable(v => Math.max(0, v - quantity));
+        setUsingReward(false);
+      }
+
+      setModalMessage("Added to cart!");
+      setModalVisible(true);
+      closeModal();
+    };
+
+    const maxRewardQty = usingReward ? freeDrinksAvailable : Infinity;
+
+    const canDecreaseQty = !usingReward || quantity > 1;
+    const canIncreaseQty =
+      !usingReward || (freeDrinksAvailable > 1 && quantity < freeDrinksAvailable);
+
+    if (loading) {
+      return (
+        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+          <ActivityIndicator size="large" />
+        </View>
+      );
     }
 
-    setModalMessage("Added to cart!");
-    setModalVisible(true);
-    closeModal();
-  };
-
-  const maxRewardQty = usingReward ? freeDrinksAvailable : Infinity;
-
-  const canDecreaseQty = !usingReward || quantity > 1;
-  const canIncreaseQty =
-    !usingReward || (freeDrinksAvailable > 1 && quantity < freeDrinksAvailable);
-
-
-
-  if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+      <View style={styles.container}>
+        <Header title="Menu" />
+        <Text style={styles.headerText}>Our Menu</Text>
+        <Text style={styles.subHeaderText}>Special For You</Text>
 
-  return (
-    <View style={styles.container}>
-      <Header title="Menu" />
-      <Text style={styles.headerText}>Our Menu</Text>
-      <Text style={styles.subHeaderText}>Special For You</Text>
+        <View style={styles.searchContainer}>
+          <Icon name="search-outline" size={20} color="#888" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor="#121212"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      <View style={styles.searchContainer}>
-        <Icon name="search-outline" size={20} color="#888" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search"
-          placeholderTextColor="#121212"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryContainer}>
-        {UI_CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
-            onPress={() => {
-              setSelectedCategory(cat);
-              setSelectedSub(null);
-            }}
-          >
-            <Text style={selectedCategory === cat ? styles.categoryTextActive : styles.categoryText}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {availableSubcategories.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subCategoryContainer}>
-          {availableSubcategories.map((sub) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryContainer}>
+          {UI_CATEGORIES.map((cat) => (
             <TouchableOpacity
-              key={sub}
-              style={[styles.subChip, selectedSub === sub && styles.subChipActive]}
-              onPress={() => setSelectedSub(sub)}
+              key={cat}
+              style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
+              onPress={() => {
+                setSelectedCategory(cat);
+                setSelectedSub(null);
+              }}
             >
-              <Text style={selectedSub === sub ? styles.subTextActive : styles.subText}>{sub}</Text>
+              <Text style={selectedCategory === cat ? styles.categoryTextActive : styles.categoryText}>
+                {cat}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-      )}
 
-      <View style={{ flex: 1 }}>
-        {filteredProducts.length > 0 ? (
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-            renderItem={({ item }) => (
-              <View style={{ position: "relative", flex: 1 }}>
-                <TouchableOpacity style={styles.card} onPress={() => openModal(item)}>
-                  <Image source={getImageSource(item.imageUri)} style={styles.cardImage} />
-                  <Text style={styles.cardTitle}>{item.name}</Text>
-                  <Text style={styles.cardDescription} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                  <Text style={styles.cardPrice}>{getPriceLabel(item)}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => toggleFavorite(item.id)} style={styles.favoriteIcon}>
-                  <Icon
-                    name={favorites.includes(item.id) ? "heart" : "heart-outline"}
-                    size={22}
-                    color={favorites.includes(item.id) ? "#ff4d4d" : "#fff"}
-                    style={{ textShadowColor: "rgba(0,0,0,0.3)", textShadowRadius: 3 }}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {searchQuery ? `No products found for "${searchQuery}".` : "No products for this category."}
-            </Text>
-          </View>
+        {availableSubcategories.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subCategoryContainer}>
+            {availableSubcategories.map((sub) => (
+              <TouchableOpacity
+                key={sub}
+                style={[styles.subChip, selectedSub === sub && styles.subChipActive]}
+                onPress={() => setSelectedSub(sub)}
+              >
+                <Text style={selectedSub === sub ? styles.subTextActive : styles.subText}>{sub}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         )}
-      </View>
 
-      {/* Modal for product details */}
-      <Modal visible={!!selectedProduct} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
-              <Icon name="close" size={24} color="#76B13A" />
-            </TouchableOpacity>
-            {selectedProduct && (
-              <>
-                <View style={{ alignItems: "center" }}>
-                  <Image source={getImageSource(selectedProduct.imageUri)} style={styles.modalImage} />
-                </View>
-                <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
-                <Text style={styles.modalPrice}>{getPriceLabel(selectedProduct)}</Text>
-                <Text style={styles.modalDescription}>{selectedProduct.description}</Text>
-                <Text style={styles.sectionTitle}>Quantity</Text>
-                <View style={styles.quantityBox}>
-                  <TouchableOpacity
-                    disabled={!canDecreaseQty}
-                    onPress={() => {
-                      if (canDecreaseQty) {
-                        setQuantity(q => Math.max(1, q - 1));
-                      }
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.qtyBtn,
-                        !canDecreaseQty && { opacity: 0.3 }
-                      ]}
-                    >
-                      -
-                    </Text>
-                  </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          {filteredProducts.length > 0 ? (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+              renderItem={({ item }) => {
+                const rewardBlocked = usingReward && item.type !== "drink";
 
-                  <Text style={styles.qtyValue}>{quantity}</Text>
-
-                  <TouchableOpacity
-                    disabled={!canIncreaseQty}
-                    onPress={() => {
-                      if (canIncreaseQty) {
-                        setQuantity(q => Math.min(maxRewardQty, q + 1));
-                      }
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.qtyBtn,
-                        !canIncreaseQty && { opacity: 0.3 }
-                      ]}
-                    >
-                      +
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.sectionTitle}>Select options</Text>
-                <View style={styles.sizeSelector}>
-                  {selectedProduct.sizeKeys.map((s: string) => (
+                return (
+                  <View style={{ position: "relative", flex: 1 }}>
                     <TouchableOpacity
-                      key={s}
-                      style={[styles.sizeBtn, selectedSize === s && styles.sizeBtnActive]}
-                      onPress={() => setSelectedSize(s)}
+                      style={[
+                        styles.card,
+                        rewardBlocked && { opacity: 0.4 }
+                      ]}
+                      disabled={rewardBlocked}
+                      onPress={() => {
+                        if (rewardBlocked) return;
+                        openModal(item);
+                      }}
                     >
-                      <Text style={{ color: selectedSize === s ? "#fff" : "#000" }}>
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      <Image
+                        source={getImageSource(fixUrl(item.image_path))}
+                        style={styles.cardImage}
+                      />
+                      <Text style={styles.cardTitle}>{item.name}</Text>
+                      <Text style={styles.cardDescription} numberOfLines={2}>
+                        {item.description}
+                      </Text>
+                      <Text style={styles.cardPrice}>{getPriceLabel(item)}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => toggleFavorite(item.id)}
+                      style={styles.favoriteIcon}
+                    >
+                      <Icon
+                        name={favorites.includes(item.id) ? "heart" : "heart-outline"}
+                        size={22}
+                        color={favorites.includes(item.id) ? "#ff4d4d" : "#fff"}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                );
+              }}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery ? `No products found for "${searchQuery}".` : "No products for this category."}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Modal for product details */}
+        <Modal visible={!!selectedProduct} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
+                <Icon name="close" size={24} color="#76B13A" />
+              </TouchableOpacity>
+              {selectedProduct && (
+                <>
+                  <View style={{ alignItems: "center" }}>
+                    <Image
+                      source={getImageSource(fixUrl(selectedProduct.image_path))}
+                      style={styles.modalImage}
+                    />
+                  </View>
+                  <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
+                  <Text style={styles.modalPrice}>{getPriceLabel(selectedProduct)}</Text>
+                  <Text style={styles.modalDescription}>{selectedProduct.description}</Text>
+                  <Text style={styles.sectionTitle}>Quantity</Text>
+                  <View style={styles.quantityBox}>
+                    <TouchableOpacity
+                      disabled={!canDecreaseQty}
+                      onPress={() => {
+                        if (canDecreaseQty) {
+                          setQuantity(q => Math.max(1, q - 1));
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.qtyBtn,
+                          !canDecreaseQty && { opacity: 0.3 }
+                        ]}
+                      >
+                        -
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={styles.sectionTitle}>What's included</Text>
-                <TextInput
-                  style={styles.textArea}
-                  placeholder="Add special instructions..."
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  onChangeText={setNotes}
-                  value={notes}
-                />
-                {/* Action Button */}
-                {usingReward ? (
-                  <TouchableOpacity
-                    style={styles.rewardBtnFull}
-                    onPress={addToCart}
-                  >
-                    <Text style={styles.rewardBtnText}>
-                      Redeem Free Drink
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.addBtnFull}
-                    onPress={addToCart}
-                  >
-                    <Text style={styles.addBtnText}>
-                      Add to Cart
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
 
-      {/* Add cart success/error modal */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.validityModalOverlay}>
-          <View style={styles.validityModalBox}>
-            <Text style={{ fontSize: 16, fontWeight: "600", textAlign: "center" }}>{modalMessage}</Text>
-            <TouchableOpacity style={styles.validityModalBtn} onPress={() => setModalVisible(false)}>
-              <Text style={{ color: "#fff", fontWeight: "600" }}>OK</Text>
+                    <Text style={styles.qtyValue}>{quantity}</Text>
+
+                    <TouchableOpacity
+                      disabled={!canIncreaseQty}
+                      onPress={() => {
+                        if (canIncreaseQty) {
+                          setQuantity(q => Math.min(maxRewardQty, q + 1));
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.qtyBtn,
+                          !canIncreaseQty && { opacity: 0.3 }
+                        ]}
+                      >
+                        +
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.sectionTitle}>Select options</Text>
+                  <View style={styles.sizeSelector}>
+                    {selectedProduct.sizeKeys.map((s: string) => (
+                      <TouchableOpacity
+                        key={s}
+                        style={[styles.sizeBtn, selectedSize === s && styles.sizeBtnActive]}
+                        onPress={() => setSelectedSize(s)}
+                      >
+                        <Text style={{ color: selectedSize === s ? "#fff" : "#000" }}>
+                          {s.charAt(0).toUpperCase() + s.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={styles.sectionTitle}>What's included</Text>
+                  <TextInput
+                    style={styles.textArea}
+                    placeholder="Add special instructions..."
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                    onChangeText={setNotes}
+                    value={notes}
+                  />
+                  {/* Action Button */}
+                  {usingReward ? (
+                    <TouchableOpacity
+                      style={styles.rewardBtnFull}
+                      onPress={addToCart}
+                    >
+                      <Text style={styles.rewardBtnText}>
+                        Redeem Free Drink
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addBtnFull}
+                      onPress={addToCart}
+                    >
+                      <Text style={styles.addBtnText}>
+                        Add to Cart
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Add cart success/error modal */}
+        <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.validityModalOverlay}>
+            <View style={styles.validityModalBox}>
+              <Text style={{ fontSize: 16, fontWeight: "600", textAlign: "center" }}>{modalMessage}</Text>
+              <TouchableOpacity style={styles.validityModalBtn} onPress={() => setModalVisible(false)}>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Bottom Tabs */}
+        <View style={styles.bottomTabs}>
+          {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.tabItem}
+              onPress={() => {
+                if (tab === "Menu") navigation.navigate("Menu" as never);
+                else if (tab === "Home") navigation.navigate("Home" as never);
+                else if (tab === "Cart") navigation.navigate("Cart" as never);
+                else if (tab === "Profile") navigation.navigate("Profile" as never);
+              }}
+            >
+              <Icon
+                name={
+                  tab === "Menu"
+                    ? "restaurant"
+                    : tab === "Home"
+                    ? "home-outline"
+                    : tab === "Cart"
+                    ? "cart-outline"
+                    : "person-outline"
+                }
+                size={22}
+                color={tab === "Menu" ? "#73C04D" : "#999"}
+              />
+              <Text style={[styles.tabText, { color: tab === "Menu" ? "#73C04D" : "#999" }]}>{tab}</Text>
             </TouchableOpacity>
-          </View>
+          ))}
         </View>
-      </Modal>
-
-      {/* Bottom Tabs */}
-      <View style={styles.bottomTabs}>
-        {["Home", "Menu", "Cart", "Profile"].map((tab, i) => (
-          <TouchableOpacity
-            key={i}
-            style={styles.tabItem}
-            onPress={() => {
-              if (tab === "Menu") navigation.navigate("Menu" as never);
-              else if (tab === "Home") navigation.navigate("Home" as never);
-              else if (tab === "Cart") navigation.navigate("Cart" as never);
-              else if (tab === "Profile") navigation.navigate("Profile" as never);
-            }}
-          >
-            <Icon
-              name={
-                tab === "Menu"
-                  ? "restaurant"
-                  : tab === "Home"
-                  ? "home-outline"
-                  : tab === "Cart"
-                  ? "cart-outline"
-                  : "person-outline"
-              }
-              size={22}
-              color={tab === "Menu" ? "#73C04D" : "#999"}
-            />
-            <Text style={[styles.tabText, { color: tab === "Menu" ? "#73C04D" : "#999" }]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
       </View>
-    </View>
-  );
-};
+    );
+  };
 
 export default MenuScreen;
 
