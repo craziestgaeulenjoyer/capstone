@@ -10,44 +10,51 @@ use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
 use App\Http\Controllers\Cart_Controllers\CartController;
 
 
-/* ---------------- CUSTOMER AUTH ---------------- */
+Route::prefix('customer')->name('customer.')->group(function () {
 
-Route::prefix('customer')->group(function () {
-
-    // Pages
+    /* ---------- SIGNUP ---------- */
     Route::get('/signup', [CustomerAuthController::class, 'showSignup'])
-        ->name('customer.signup.form');
+        ->name('signup.form');
 
-    Route::get('/signincard', [CustomerAuthController::class, 'showSignupForm'])
-        ->name('customer.login.form');
+    Route::post('/signup', [CustomerAuthController::class, 'signup'])
+        ->name('signup.store');
 
-    Route::get('/emailverification', [CustomerAuthController::class, 'showVerification'])
-        ->name('customer.verification.email');
+    /* ---------- EMAIL VERIFICATION ---------- */
+    Route::get('/verify-email', [CustomerAuthController::class, 'showVerification'])
+        ->name('verification.email');
 
-    Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])
-        ->name('customer.signup.verify');
+    Route::post('/verify-email', [CustomerAuthController::class, 'verifyOtp'])
+        ->name('signup.verify');
 
-    Route::post('/signup/resend', [CustomerAuthController::class, 'resendOtp'])
-        ->name('customer.signup.resend');
+    Route::post('/resend-otp', [CustomerAuthController::class, 'resendOtp'])
+        ->name('signup.resend');
+
+    /* ---------- LOGIN ---------- */
+    Route::get('/login', [CustomerAuthController::class, 'showSignupForm'])
+        ->name('login.form');
 
     Route::post('/login', [CustomerAuthController::class, 'login'])
-        ->name('login.authenticate');
-    
-Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
-    ->name('customer.logout');
+        ->name('login');
+
+    /* ---------- LOGOUT ---------- */
+    Route::post('/logout', [CustomerAuthController::class, 'logout'])
+        ->name('logout');
 });
 
-/* ----------------CARTS ---------------- */
+
 Route::middleware('auth:customer')->group(function () {
+
     Route::post('/cart/add', [CartController::class, 'store']);
     Route::get('/cart/items', [CartController::class, 'items']);
     Route::get('/cart/count', [CartController::class, 'count']);
     Route::delete('/cart/{id}', [CartController::class, 'destroy']);
-    Route::post('/order/confirm',[PlacedOrderController::class, 'confirm']);
+
+    Route::post('/order/confirm', [PlacedOrderController::class, 'confirm']);
+
     Route::get('/customer/profile', function () {
-    return response()->json([
-        'customer' => auth('customer')->user()
-    ]);
+        return response()->json([
+            'customer' => auth('customer')->user()
+        ]);
     });
 });
 

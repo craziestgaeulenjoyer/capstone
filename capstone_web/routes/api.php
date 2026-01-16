@@ -21,22 +21,26 @@ use App\Http\Controllers\Customer_Controllers\CustomerSocialController;
 use App\Http\Controllers\Customer_Controllers\ForgotPasswordController;
 use App\Http\Controllers\Administrator_Controllers\NotificationController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
-
-/* ---------------- CART ROUTES ---------------- */
-
 use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
 use App\Http\Controllers\Cart_Controllers\CartController;
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/cart/add', [CartController::class, 'store']);
-    Route::get('/cart/items', [CartController::class, 'items']);
-    Route::get('/cart/count', [CartController::class, 'count']);
-    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
-    Route::post('/order/store', [PlacedOrderController::class, 'store']);
-    Route::post(
-    '/order/confirm',
-    [PlacedOrderController::class, 'confirm']);
+
+
+Route::prefix('customer')->group(function () {
+    Route::post('/verify-code', [CustomerAuthController::class, 'verifyOtp']);
+    Route::post('/resend-code', [CustomerAuthController::class, 'resendOtp']);
+        // Step 1: Send reset OTP to email
+    Route::post('/forgot-password', [CustomerAuthController::class, 'forgotPassword']);
+
+    // Step 2: Verify OTP (used by VerificationCode.tsx)
+    Route::post('/verify-reset-otp', [CustomerAuthController::class, 'verifyResetOtp']);
+
+    // Step 3: Reset password
+    Route::post('/reset-password', [CustomerAuthController::class, 'resetPassword']);
 });
+
+
+
 
 
 /* ---------------- PUBLIC ROUTES ---------------- */
@@ -52,14 +56,6 @@ Route::get('/auth/google/callback', [CustomerSocialController::class, 'googleCal
 
 Route::get('/auth/facebook/redirect', [CustomerSocialController::class, 'facebookRedirect']);
 Route::get('/auth/facebook/callback', [CustomerSocialController::class, 'facebookCallback']);
-
-
-/* ---------------- CUSTOMER PASSWORD RESET ---------------- */
-Route::post('customer/forgot-password', [ForgotPasswordController::class, 'sendVerificationCode']);
-Route::post('customer/resend-code', [ForgotPasswordController::class, 'resendCode']);
-Route::post('customer/verify-code', [ForgotPasswordController::class, 'verifyCode']);
-Route::post('customer/reset-password', [ForgotPasswordController::class, 'resetPassword']);
-
 
 
 /* ================= EMAIL CHANGE VERIFICATION ================= */
