@@ -21,8 +21,7 @@ use App\Http\Controllers\Customer_Controllers\CustomerSocialController;
 use App\Http\Controllers\Customer_Controllers\ForgotPasswordController;
 use App\Http\Controllers\Administrator_Controllers\NotificationController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
-use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
-use App\Http\Controllers\Cart_Controllers\CartController;
+
 
 
 
