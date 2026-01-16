@@ -88,7 +88,6 @@ Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'
 Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
     ->name('checkout.details');
 
-
 /* ---------------- WEBSITE PAGES ---------------- */
 
 Route::get('/home', fn() => Inertia::render('website_pages/Home_MiAmore'))

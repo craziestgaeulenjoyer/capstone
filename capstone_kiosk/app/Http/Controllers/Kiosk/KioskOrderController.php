@@ -6,23 +6,34 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\KioskOrder;
+use App\Models\Customer; 
 
 class KioskOrderController extends Controller
 {
     public function store(Request $request)
-{
-    $order = KioskOrder::create([
-        'order_number' => 'MI#' . str_pad(random_int(0, 999), 3, '0', STR_PAD_LEFT),
+    {
+        $orderCode = strtoupper(substr(uniqid(), -6));
 
-        'customer_name' => $request->customerName,
-        'payment_method' => $request->paymentMethod,
-        'total_price' => $request->totalPrice,
-        'cart_items' => $request->cartItems,
-    ]);
+        $userId = null;
 
-    return response()->json([
-        'orderNumber' => $order->order_number
-    ]);
-}
+        $customer = Customer::where('full_name', $request->customerName)->first();
+        if ($customer) {
+            $userId = $customer->id;
+        }
 
+        $order = KioskOrder::create([
+            'order_code'     => $orderCode,
+            'user_id'        => $userId,                
+            'customer_name'  => $request->customerName,
+            'payment_method' => $request->paymentMethod,
+            'fulfillment_method'  => $request->fulfillmentMethod,
+            'total_amount'   => $request->totalPrice,
+            'items'          => $request->cartItems,
+            'status'         => 'pending',
+        ]);
+
+        return response()->json([
+            'orderCode' => $order->order_code
+        ]);
+    }
 }

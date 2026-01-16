@@ -6,41 +6,36 @@ import { CheckCircle } from "lucide-react";
 import { usePage } from "@inertiajs/react";
 
 export default function OrderNumber() {
-  const [orderNumber, setOrderNumber] = useState(null);
+  const [orderCode, setOrderCode] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [cartItems, setCartItems] = useState([]);
-  const [totalPrice, setTotalPrice] = useState(0);
+  const [fulfillmentMethod, setFulfillmentMethod] = useState(""); 
   const goBack = () => window.history.back();
-  const [orderType, setOrderType] = useState("");
-  // Color Palette
+
   const colors = {
     sage: "#8CB662",
     brown: "#3D2317",
     cream: "#FDFCF8",
     sageLight: "#E9F0DE",
   };
-const { props } = usePage();
-
-
-useEffect(() => {
-  setCustomerName(localStorage.getItem("customer_name") || "");
-  setPaymentMethod(localStorage.getItem("payment_method") || "");
-  setOrderType(localStorage.getItem("order_type") || "");
-}, []);
 
 useEffect(() => {
   const name = localStorage.getItem("customer_name");
   const method = localStorage.getItem("payment_method");
+  const fulfillment = localStorage.getItem("fulfillment_method") || "Dine In";
 
-  console.log("📦 Loaded from storage:", name, method);
+  console.log("📦 Loaded from storage:", {
+    name,
+    method,
+    fulfillment,
+  });
 
   if (name) setCustomerName(name);
   if (method) setPaymentMethod(method);
+  setFulfillmentMethod(fulfillment);
 }, []);
 
-
- useEffect(() => {
+useEffect(() => {
   if (!customerName || !paymentMethod) {
     console.warn("⏳ Waiting for customerName & paymentMethod...");
     return;
@@ -63,12 +58,13 @@ useEffect(() => {
       axios.post("/kioskorder", {
         customerName,
         paymentMethod,
+        fulfillmentMethod,
         totalPrice: total,
         cartItems: cart
       })
       .then(res => {
         console.log("✅ Order saved successfully", res.data);
-        setOrderNumber(res.data.orderNumber);
+        setOrderCode(res.data.orderCode);
       })
       .catch(err => {
         console.error("❌ Order save failed", err.response?.data || err);
@@ -77,10 +73,7 @@ useEffect(() => {
     .catch(err => {
       console.error("❌ Failed to load cart", err);
     });
-}, [customerName, paymentMethod]);
-
-
-
+}, [customerName, paymentMethod, fulfillmentMethod]);
 
   const handleDoneClick = () => {
  axios.delete("/kiosk/cart/clear").then(() => {
@@ -136,41 +129,28 @@ useEffect(() => {
             
           </p>
           <div className="w-full mt-2 px-2 py-3 rounded-xl bg-[#FDFCF8] border border-[#3D2317]/10 space-y-2 text-left text-xs">
-  
-  {customerName && (
-    <div className="flex justify-between items-center">
-      <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
-        Name:
-      </span>
-      <span className="font-black text-[#3D2317]">
-        {customerName}
-      </span>
-    </div>
-  )}
+              {customerName && (
+                <div className="flex justify-between items-center">
+                  <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
+                    Name:
+                  </span>
+                  <span className="font-black text-[#3D2317]">
+                    {customerName}
+                  </span>
+                </div>
+              )}
 
-  {paymentMethod && (
-    <div className="flex justify-between items-center">
-      <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
-        Payment mode:
-      </span>
-      <span className="font-black text-[#3D2317]">
-        {paymentMethod}
-      </span>
-    </div>
-  )}
-
-  {orderType && (
-    <div className="flex justify-between items-center">
-      <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
-        Order Type:
-      </span>
-      <span className="font-black text-[#3D2317]">
-        {orderType}
-      </span>
-    </div>
-  )}
-</div>
-          
+              {paymentMethod && (
+                <div className="flex justify-between items-center">
+                  <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
+                    Payment mode:
+                  </span>
+                  <span className="font-black text-[#3D2317]">
+                    {paymentMethod}
+                  </span>
+                </div>
+              )}
+            </div>
           <div className="space-y-1 mb-8">
             <p className="text-[#3D2317] text-sm md:text-base opacity-60">Your order number is</p>
             <motion.h1 
@@ -178,7 +158,7 @@ useEffect(() => {
               animate={{ scale: 1 }}
               className="text-6xl md:text-8xl font-black italic text-[#3D2317] tracking-tighter"
             >
-            {orderNumber}
+            {orderCode ?? "—"}
             </motion.h1>
           </div>
 
