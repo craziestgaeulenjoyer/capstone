@@ -13,7 +13,7 @@ Route::delete('/kiosk/cart/clear', [KioskCartController::class, 'clear']);
 
 Route::post('/kioskorder', [KioskOrderController::class, 'store']);
 
-Route::post('/kiosk/customer', function (\Illuminate\Http\Request $request) {
+Route::delete('/kiosk/customer', function (\Illuminate\Http\Request $request) {
     session([
         'kiosk_customer_name' => $request->customerName,
         'kiosk_payment_method' => $request->paymentMethod,

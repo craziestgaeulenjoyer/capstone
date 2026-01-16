@@ -17,15 +17,10 @@ export default function KioskHome() {
     { id: 'c9', name: "Platters", image: "/images/Platter3.png" },
   ];
 
-  const handleCategoryClick = (categoryName) => {
-    localStorage.setItem("kiosk_selected_category", categoryName);
-
-    router.visit("/kioskmenu", {
-      method: 'get',
-      data: { category: categoryName },
-      preserveState: false, 
-    });
-  };
+ const handleCategoryClick = (categoryName) => {
+  router.visit(`/kioskmenu?category=${encodeURIComponent(categoryName)}`);
+};
+  
 
   return (
     <div className="h-screen w-screen bg-[#FDFCF8] font-serif flex flex-col overflow-hidden text-[#3D2317] select-none">

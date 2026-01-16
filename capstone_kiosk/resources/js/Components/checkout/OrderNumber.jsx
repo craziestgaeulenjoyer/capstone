@@ -12,7 +12,7 @@ export default function OrderNumber() {
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
   const goBack = () => window.history.back();
-
+  const [orderType, setOrderType] = useState("");
   // Color Palette
   const colors = {
     sage: "#8CB662",
@@ -23,6 +23,11 @@ export default function OrderNumber() {
 const { props } = usePage();
 
 
+useEffect(() => {
+  setCustomerName(localStorage.getItem("customer_name") || "");
+  setPaymentMethod(localStorage.getItem("payment_method") || "");
+  setOrderType(localStorage.getItem("order_type") || "");
+}, []);
 
 useEffect(() => {
   const name = localStorage.getItem("customer_name");
@@ -73,6 +78,7 @@ useEffect(() => {
       console.error("❌ Failed to load cart", err);
     });
 }, [customerName, paymentMethod]);
+
 
 
 
@@ -127,7 +133,43 @@ useEffect(() => {
 
           <p className="text-[#3D2317]/50 text-[10px] md:text-xs uppercase tracking-[0.3em] font-bold mb-2">
             Ticket Confirmation
+            
           </p>
+          <div className="w-full mt-2 px-2 py-3 rounded-xl bg-[#FDFCF8] border border-[#3D2317]/10 space-y-2 text-left text-xs">
+  
+  {customerName && (
+    <div className="flex justify-between items-center">
+      <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
+        Name:
+      </span>
+      <span className="font-black text-[#3D2317]">
+        {customerName}
+      </span>
+    </div>
+  )}
+
+  {paymentMethod && (
+    <div className="flex justify-between items-center">
+      <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
+        Payment mode:
+      </span>
+      <span className="font-black text-[#3D2317]">
+        {paymentMethod}
+      </span>
+    </div>
+  )}
+
+  {orderType && (
+    <div className="flex justify-between items-center">
+      <span className="uppercase tracking-[0.3em] font-bold text-[#3D2317]/50">
+        Order Type:
+      </span>
+      <span className="font-black text-[#3D2317]">
+        {orderType}
+      </span>
+    </div>
+  )}
+</div>
           
           <div className="space-y-1 mb-8">
             <p className="text-[#3D2317] text-sm md:text-base opacity-60">Your order number is</p>
@@ -136,7 +178,7 @@ useEffect(() => {
               animate={{ scale: 1 }}
               className="text-6xl md:text-8xl font-black italic text-[#3D2317] tracking-tighter"
             >
-              {orderNumber}
+            {orderNumber}
             </motion.h1>
           </div>
 

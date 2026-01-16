@@ -109,7 +109,6 @@ const SignUpForm: React.FC = () => {
     gender: '', birthday: '', phone_number: '',
   });
 
-  const [isSuccess, setIsSuccess] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
@@ -118,7 +117,6 @@ const SignUpForm: React.FC = () => {
     if(!agreed) return;
     post(route('customer.signup.store'), {
       preserveScroll: true,
-      onSuccess: () => setIsSuccess(true),
     });
   };
 
@@ -128,7 +126,8 @@ const SignUpForm: React.FC = () => {
            style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/paper-fibers.png')` }} />
       
       <AnimatePresence>
-        {(processing || isSuccess) && <CoffeeLoader isDone={isSuccess} />}
+       {processing && <CoffeeLoader isDone={false} />}
+
       </AnimatePresence>
 
       <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />

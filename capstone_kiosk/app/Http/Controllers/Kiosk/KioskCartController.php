@@ -9,7 +9,7 @@ class KioskCartController extends Controller
     public function add(Request $request)
     {
         session(['kiosk_cart' => $request->cartItems]);
-        return response()->json(['ok' => true]);
+        return response()->json(['success' => true]);
     }
 
     public function get()
@@ -19,7 +19,13 @@ class KioskCartController extends Controller
 
     public function clear()
     {
-        session()->forget('kiosk_cart');
+        session()->forget([
+            'kiosk_cart',
+            'customer_name',
+            'payment_method', // optional but recommended
+        ]);
+        
+    
         return response()->json(['cleared' => true]);
     }
 }
