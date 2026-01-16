@@ -52,8 +52,8 @@ const CheckoutReviewPage: React.FC = () => {
   const subtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
   
   // Only add 50 pesos if the payment type is exactly 'cod'
-  const deliveryFee = paymentInfo.payment_type === "cod" ? 50 : 0; 
-  const total = subtotal + deliveryFee;
+
+  const total = subtotal ;
 
   const formatPeso = (amount: number) => `₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
@@ -63,7 +63,7 @@ const CheckoutReviewPage: React.FC = () => {
         phone: paymentInfo.phone,
         address: paymentInfo.address,
         payment_type: paymentInfo.payment_type,
-        delivery_fee: deliveryFee,
+      
         total_amount: total,
       });
 
@@ -138,11 +138,7 @@ const CheckoutReviewPage: React.FC = () => {
                 <span className="text-black">{formatPeso(subtotal)}</span>
               </div>
               
-              {/* This only shows 50 if payment_type is 'cod' */}
-              <div className="flex justify-between text-xs text-gray-400 font-bold">
-                <span>DELIVERY FEE (COD)</span>
-                <span className="text-black">{formatPeso(deliveryFee)}</span>
-              </div>
+            
 
               <div className="flex justify-between text-2xl font-black text-black border-t pt-4">
                 <span>TOTAL</span>

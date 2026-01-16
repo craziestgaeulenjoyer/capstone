@@ -4,10 +4,13 @@ import { FaChevronLeft, FaChevronRight, FaTrash, FaEdit } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, ReceiptText } from "lucide-react";
 import { router } from '@inertiajs/react';
+import { usePage } from "@inertiajs/react";
 
 export default function KioskMenu() {
   // --- STATES ---
-  const [selectedCategory, setSelectedCategory] = useState("Specialty Coffee");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const { url } = usePage();
+
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSize, setSelectedSize] = useState("Regular 16oz");
   const [selectedTemp, setSelectedTemp] = useState("Iced");
@@ -19,7 +22,18 @@ export default function KioskMenu() {
   const [editingId, setEditingId] = useState(null);
 
   const scrollRef = useRef(null);
-  const goBack = () => window.history.back();
+  const goBack = () => {
+  axios.post("/kiosk/cart/clear").finally(() => {
+    setCartItems([]);
+    setSelectedItem(null);
+    setSelectedAddOns([]);
+    setQuantity(1);
+    setEditingId(null);
+    setShowCartPanel(false);
+    router.visit("/kioskhome"); // safer than history.back() for kiosks
+  });
+};
+
 
   // --- DATA STRUCTURE ---
   const categories = [
@@ -118,6 +132,21 @@ export default function KioskMenu() {
       { id: 806, name: "Mozza Ramyeon Corndog", price: 145, image: "/images/MozzaRamyeonCorndogs.png" },
     ]
   };
+  useEffect(() => {
+  axios.get("/kiosk/cart").then(res => {
+    setCartItems(res.data);
+  });
+}, []);
+useEffect(() => {
+  const params = new URLSearchParams(url.split("?")[1]);
+  const categoryFromUrl = params.get("category");
+
+  if (categoryFromUrl && allMenuItems[categoryFromUrl]) {
+    setSelectedCategory(categoryFromUrl);
+  } else {
+    setSelectedCategory("Specialty Coffee"); // fallback
+  }
+}, [url]);
 
   // --- LOGIC ---
   const getCurrentPrice = (item) => {
@@ -384,7 +413,9 @@ export default function KioskMenu() {
                 <button onClick={() => { axios.post("/kiosk/cart/add", {
   cartItems
 }).then(() => {
-  router.visit("/paymentselect");
+  router.visit("/paymentselect", {
+   
+  });
 });}} className="w-full bg-[#3D2317] text-white py-5 uppercase font-black tracking-[0.2em] text-[11px] shadow-xl flex justify-center items-center gap-2">
                   Confirm & Pay <IoIosArrowForward size={16}/>
                 </button>

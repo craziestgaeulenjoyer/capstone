@@ -18,7 +18,7 @@ class ForgotPasswordController extends Controller
         $request->validate(['email' => 'required|email|exists:customers,email']);
         $customer = Customer::where('email', $request->email)->first();
 
-        $customer->password_otp_code = rand(1000, 9999);
+        $customer->password_otp_code = rand(100000, 999999);
         $customer->password_otp_expiry = Carbon::now()->addMinutes(10);
         $customer->password_otp_token = Str::random(40);
         $customer->save();
@@ -53,7 +53,8 @@ class ForgotPasswordController extends Controller
     {
         $request->validate([
             'email' => 'required|email|exists:customers,email',
-            'otp_code' => 'required|digits:4'
+            'otp_code' => 'required|digits:6'
+
         ]);
 
         $customer = Customer::where('email', $request->email)->first();

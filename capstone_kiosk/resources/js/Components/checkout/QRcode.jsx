@@ -60,7 +60,7 @@ export default function QRcode() {
           <motion.img
             animate={{ scale: [1, 1.02, 1] }}
             transition={{ duration: 3, repeat: Infinity }}
-            src="/images/InitialQRcode.png"
+            src="/images/ActualQR.jpg"
             alt="QR Code"
             className="w-48 h-48 md:w-64 md:h-64 object-contain relative z-10"
           />

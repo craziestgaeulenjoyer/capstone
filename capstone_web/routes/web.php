@@ -27,6 +27,36 @@ Route::middleware('auth:customer')->get('/customer/profile', function () {
         'customer' => auth('customer')->user()
     ]);
 });
+/* ---------------- CUSTOMER AUTH ---------------- */
+
+Route::prefix('customer')->group(function () {
+
+    // Pages
+    Route::get('/signup', [CustomerAuthController::class, 'showSignup'])
+        ->name('customer.signup.form');
+
+    Route::get('/signincard', [CustomerAuthController::class, 'showSignupForm'])
+        ->name('customer.login.form');
+
+    Route::get('/emailverification', [CustomerAuthController::class, 'showVerification'])
+        ->name('customer.verification.email');
+
+    // Actions
+    Route::post('/signup', [CustomerAuthController::class, 'signup'])
+        ->name('customer.signup.store');
+
+    Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])
+        ->name('customer.signup.verify');
+
+    Route::post('/signup/resend', [CustomerAuthController::class, 'resendOtp'])
+        ->name('customer.signup.resend');
+
+    Route::post('/login', [CustomerAuthController::class, 'login'])
+        ->name('login.authenticate');
+    
+Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
+    ->name('customer.logout');
+});
 
 /* ---------------- CUSTOMER AUTHENTICATION LOGIC ---------------- */
 

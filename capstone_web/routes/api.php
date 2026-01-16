@@ -44,7 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/eventinquiry', [EventInquiryController::class, 'store']);
 
 // Contact form
-Route::post('/contact', [ContactController::class, 'store'])->name('contact_message');
+Route::post('/contact', [ContactController::class, 'store']);
 
 /* ---------------- CUSTOMER SOCIAL LOGIN ---------------- */
 Route::get('/auth/google/redirect', [CustomerSocialController::class, 'googleRedirect']);
@@ -59,24 +59,6 @@ Route::post('customer/forgot-password', [ForgotPasswordController::class, 'sendV
 Route::post('customer/resend-code', [ForgotPasswordController::class, 'resendCode']);
 Route::post('customer/verify-code', [ForgotPasswordController::class, 'verifyCode']);
 Route::post('customer/reset-password', [ForgotPasswordController::class, 'resetPassword']);
-
-/* ---------------- CUSTOMER SIGNUP & LOGIN ---------------- */
-Route::prefix('customer')->group(function () {
-    // Signup
-    Route::post('/signup', [CustomerAuthController::class, 'signup'])->name('customer.signup.store');
-    Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])->name('customer.signup.verify');
-    Route::post('/signup/resend', [CustomerAuthController::class, 'resendOtp'])->name('customer.signup.resend');
-
-    // Login
-    Route::get('/login', [CustomerAuthController::class, 'showLoginForm'])->name('customer.login.form');
-    Route::post('/login', [CustomerAuthController::class, 'login'])->name('login.authenticate');
-
-    // Signup form after OTP verification
-    Route::get('/signincard', [CustomerAuthController::class, 'showSignupForm'])->name('customer.signup.form');
-});
-
-// Verification screen
-Route::get('/verification', [CustomerAuthController::class, 'showVerification'])->name('customer.verification.email');
 
 
 

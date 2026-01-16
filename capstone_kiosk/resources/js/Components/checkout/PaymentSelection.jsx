@@ -13,13 +13,25 @@ export default function PaymentSelection() {
   const [totalPrice, setTotalPrice] = useState(0);
   const [nameError, setNameError] = useState(false);
   
-  const goBack = () => window.history.back();
+  const goBack = () => {
+  router.visit("/kioskmenu", {
+    preserveState: true,
+    preserveScroll: true,
+  });
+};
+
 
   // Color Palette update
   const brandGreen = "#8CB662";
   const brandBrown = "#3D2317";
 
-  
+  useEffect(() => {
+  const savedName = localStorage.getItem("customer_name");
+  if (savedName) {
+    setCustomerName(savedName);
+  }
+}, []);
+
 
   useEffect(() => {
   axios.get("/kiosk/cart").then(res => {
@@ -35,27 +47,42 @@ export default function PaymentSelection() {
 }, []);
 
 
-  const handleButtonClick = (button) => {
-    setActiveButton(button);
-    if (button === "Restart") {
-      localStorage.removeItem("kiosk_cart_items");
-      router.visit("/kioskmenu");
-    }
-    if (button === "Checkout") {
-      if (!customerName.trim()) {
-        setNameError(true);
-        return;
-      }
-     // ✅ SAVE BEFORE NAVIGATION
-  localStorage.setItem("customer_name", customerName);
-  localStorage.setItem("payment_method", paymentMethod);
+ const handleButtonClick = async (button) => {
+  setActiveButton(button);
 
-  router.visit(
-    paymentMethod === "QR Pay" ? "/qrcode" : "/ordernumber"
-  );
+  if (button === "Restart") {
+    // ✅ Clear backend session
+    await axios.delete("/kiosk/cart/clear");
 
+    // ✅ Clear browser storage
+    localStorage.removeItem("customer_name");
+    localStorage.removeItem("payment_method");
+    localStorage.removeItem("kiosk_cart_items");
+
+    // ✅ Clear React state
+    setCustomerName("");
+    setCartItems([]);
+    setTotalPrice(0);
+
+    // ✅ Navigate ONCE
+    router.visit("/kioskmenu");
+    return;
+  }
+
+  if (button === "Checkout") {
+    if (!customerName.trim()) {
+      setNameError(true);
+      return;
     }
-  };
+
+    localStorage.setItem("customer_name", customerName);
+    localStorage.setItem("payment_method", paymentMethod);
+
+    router.visit(
+      paymentMethod === "QR Pay" ? "/qrcode" : "/ordernumber"
+    );
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] flex flex-col items-center p-4 md:p-10 relative overflow-hidden">

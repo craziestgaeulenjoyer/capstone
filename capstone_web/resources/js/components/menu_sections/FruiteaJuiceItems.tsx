@@ -257,87 +257,84 @@ const isLoggedIn = Boolean(auth?.customer);
               {getPriceForSize(selectedItem)}
             </div>
 
-                {/* Quantity */}
-                <div className="mb-4">
-                  <label className="text-sm font-semibold">Quantity</label>
-                  <div className="flex gap-2 mt-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="px-3 border rounded-full bg-white text-black hover:bg-[#8CB662] hover:text-white"
-                    >
-                      -
-                    </button>
-                    <span>{quantity}</span>
-                    <button
-                      onClick={handleIncrease}
-                      className="px-3 border rounded-full bg-white text-black hover:bg-[#8CB662] hover:text-white"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sizes */}
-                <div className="mb-4">
-                  <label className="text-sm font-semibold">Cup Size</label>
-                  <div className="h-[2px] bg-[#8CB662] my-2" />
-                  <div className="flex gap-2">
-                    {drinkOptions.sizes.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSelectedSize(s)}
-                        className={`w-[95px] h-[30px] border rounded-full text-sm
-                          ${
-                            selectedSize === s
-                              ? "bg-[#8CB662] text-white border-[#8CB662]"
-                              : "bg-white text-black hover:bg-[#8CB662] hover:text-white"
-                          }
-                        `}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Add-ons */}
-                <div className="mb-4">
-                  <label className="text-sm font-semibold">Add-ons</label>
-                  <div className="h-[2px] bg-[#8CB662] my-2" />
-                  <select
-                    value={selectedAddOn}
-                    onChange={(e) => setSelectedAddOn(e.target.value)}
-                    className="border border-[#8CB662] bg-white text-black rounded px-2 py-1 text-sm w-[300px]"
-                  >
-                    <option value="">Select an add-on</option>
-                    {drinkOptions.addOns.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Add to Cart */}
-                {isLoggedIn ? (
-                  <button
-                    onClick={handleAddToCart}
-                    className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
-                  >
-                    Add to Cart
-                  </button>
-                ) : (
-                  <div className="text-red-500 font-semibold">
-                    Please log in to order.
-                  </div>
-                )}
+            {/* Quantity */}
+            <div className="mb-4">
+              <label className="text-sm font-semibold">Quantity</label>
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={handleDecrease}
+                  className="px-3 border rounded-full bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                >
+                  -
+                </button>
+                <span>{quantity}</span>
+                <button
+                  onClick={handleIncrease}
+                  className="px-3 border rounded-full bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                >
+                  +
+                </button>
               </div>
             </div>
+
+            {/* Sizes */}
+            <div className="mb-4">
+              <label className="text-sm font-semibold">Cup Size</label>
+              <div className="h-[2px] bg-[#8CB662] my-2" />
+              <div className="flex gap-2">
+                {drinkOptions.sizes.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSelectedSize(s)}
+                    className={`w-[95px] h-[30px] border rounded-full text-sm ${
+                      selectedSize === s
+                        ? "bg-[#8CB662] text-white border-[#8CB662]"
+                        : "bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Add-ons */}
+            <div className="mb-4">
+              <label className="text-sm font-semibold">Add-ons</label>
+              <div className="h-[2px] bg-[#8CB662] my-2" />
+              <select
+                value={selectedAddOn}
+                onChange={(e) => setSelectedAddOn(e.target.value)}
+                className="border border-[#8CB662] bg-white text-black rounded px-2 py-1 text-sm w-[300px]"
+              >
+                <option value="">Select an add-on</option>
+                {drinkOptions.addOns.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Add to Cart */}
+            {isLoggedIn ? (
+              <button
+                onClick={handleAddToCart}
+                className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
+              >
+                Add to Cart
+              </button>
+            ) : (
+              <div className="text-red-500 font-semibold">
+                Please log in to order.
+              </div>
+            )}
           </div>
         </div>
       )}
-    </div>
-  );
+          </div>
+       
+    );
 };
 
 export default FruiteaJuiceItems;

@@ -12,7 +12,7 @@ class KioskOrderController extends Controller
     public function store(Request $request)
 {
     $order = KioskOrder::create([
-        'order_number' => 'MI-' . str_pad(random_int(0, 999), 3, '0', STR_PAD_LEFT),
+        'order_number' => 'MI#' . str_pad(random_int(0, 999), 3, '0', STR_PAD_LEFT),
 
         'customer_name' => $request->customerName,
         'payment_method' => $request->paymentMethod,

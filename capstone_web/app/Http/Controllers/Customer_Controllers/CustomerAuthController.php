@@ -13,6 +13,9 @@ use Carbon\Carbon;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
+use App\Mail\CustomerOtpMail;
+
+
 class CustomerAuthController extends Controller
 {
     /**
@@ -23,71 +26,44 @@ class CustomerAuthController extends Controller
         return Inertia::render('getstarted_section/SignUpForm');
     }
 
-    /**
-     * Handle customer registration
-     */
     public function signup(Request $request)
-    {
-        try {
-            $request->validate([
-                'full_name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:customers',
-                'password' => 'required|string|min:8|confirmed',
-                'phone_number' => 'nullable|string|max:40',
-                'gender' => 'nullable|string|max:40',
-                'birthday' => 'nullable|string|max:40',
-            ]);
+{
+    $request->validate([
+        'full_name' => 'required|string|max:255',
+        'email' => 'required|email|unique:customers',
+        'password' => 'required|string|min:8|confirmed',
+    ]);
 
-            // Create customer
-            $customer = Customer::create([
-                'full_name' => $request->full_name,
-                'email' => $request->email,
-                'password_hash' => Hash::make($request->password),
-                'phone_number' => $request->phone_number,
-                'gender' => $request->gender,
-                'birthday' => $request->birthday,
-                'email_verified' => false,
-            ]);
+    $customer = Customer::create([
+        'full_name' => $request->full_name,
+        'email' => $request->email,
+        'password_hash' => Hash::make($request->password),
+        'email_verified' => false,
+    ]);
 
-            // Generate OTP
-            $otp = $this->generateOtp();
-            $otpToken = Str::random(60);
-            $customer->update([
-                'otp_code' => $otp,
-                'otp_token' => $otpToken,
-                'otp_expiry' => Carbon::now()->addMinutes(10),
-            ]);
+    $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-            // Send OTP email
-            $this->sendOtpEmail($customer->email, $otp, $customer->full_name);
+    $customer->update([
+        'otp_code' => $otp,
+        'otp_expiry' => Carbon::now()->addMinutes(10),
+    ]);
 
-            // Redirect to OTP verification page
-            return redirect()->route('customer.verification.email', ['email' => $customer->email])
-                             ->with('success', 'Registration successful. Check your email for the OTP.');
+    Mail::to($customer->email)->send(
+        new CustomerOtpMail($otp, $customer->full_name)
+    );
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()
-                             ->withErrors($e->errors())
-                             ->withInput();
-        } catch (\Exception $e) {
-            Log::error('Signup failed: ' . $e->getMessage());
-            return redirect()->back()
-                             ->with('error', 'Registration failed: ' . $e->getMessage())
-                             ->withInput();
-        }
-    }
+    return redirect()->route('customer.verification.email', [
+        'email' => $customer->email
+    ]);
+}
 
-    /**
-     * Show OTP verification page
-     */
-    public function showVerification(Request $request)
-    {
-        return Inertia::render('getstarted_section/VerificationEmail', [
-            'email' => $request->email,
-            'success' => session('success'),
-            'error' => session('error'),
-        ]);
-    }
+
+   public function showVerification(Request $request)
+{
+    return Inertia::render('getstarted_section/VerificationEmail', [
+        'email' => $request->email
+    ]);
+}
 
     /**
      * Verify OTP
@@ -115,7 +91,7 @@ class CustomerAuthController extends Controller
         ]);
 
         // Redirect to signup form with success message
-        return redirect()->route('customer.signup.form')
+        return redirect()->route('customer.login.form')
                          ->with('success', 'Email verified successfully! You can now complete your signup.');
     } else {
         // OTP invalid or expired → go back with error
