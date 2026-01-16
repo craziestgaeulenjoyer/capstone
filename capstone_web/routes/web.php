@@ -6,27 +6,10 @@ use App\Http\Controllers\CustomerSignupController;
 use App\Http\Controllers\CustomerLoginController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
-
-use Illuminate\Support\Facades\Auth;
-Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
-    ->name('customer.logout');
-
-
 use App\Http\Controllers\Cart_Controllers\PlacedOrderController;
 use App\Http\Controllers\Cart_Controllers\CartController;
 
-Route::middleware('auth:customer')->group(function () {
-    Route::post('/cart/add', [CartController::class, 'store']);
-    Route::get('/cart/items', [CartController::class, 'items']);
-    Route::get('/cart/count', [CartController::class, 'count']);
-    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
-    Route::post('/order/confirm',[PlacedOrderController::class, 'confirm']);
-});
-Route::middleware('auth:customer')->get('/customer/profile', function () {
-    return response()->json([
-        'customer' => auth('customer')->user()
-    ]);
-});
+
 /* ---------------- CUSTOMER AUTH ---------------- */
 
 Route::prefix('customer')->group(function () {
@@ -41,10 +24,6 @@ Route::prefix('customer')->group(function () {
     Route::get('/emailverification', [CustomerAuthController::class, 'showVerification'])
         ->name('customer.verification.email');
 
-    // Actions
-    Route::post('/signup', [CustomerAuthController::class, 'signup'])
-        ->name('customer.signup.store');
-
     Route::post('/signup/verify', [CustomerAuthController::class, 'verifyOtp'])
         ->name('customer.signup.verify');
 
@@ -58,23 +37,19 @@ Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
     ->name('customer.logout');
 });
 
-/* ---------------- CUSTOMER AUTHENTICATION LOGIC ---------------- */
-
-// Signup Process
-Route::post('/signup', [CustomerSignupController::class, 'store'])
-    ->name('signup.store');
-
-// Verification Logic 
-Route::post('/verify-otp', [CustomerSignupController::class, 'verify'])
-    ->name('customer.signup.verify');
-
-Route::post('/resend-otp', [CustomerSignupController::class, 'resend'])
-    ->name('customer.signup.resend');
-
-// Login Logic
-Route::post('/login/authenticate', [CustomerLoginController::class, 'authenticate'])
-    ->name('login.authenticate');
-
+/* ----------------CARTS ---------------- */
+Route::middleware('auth:customer')->group(function () {
+    Route::post('/cart/add', [CartController::class, 'store']);
+    Route::get('/cart/items', [CartController::class, 'items']);
+    Route::get('/cart/count', [CartController::class, 'count']);
+    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+    Route::post('/order/confirm',[PlacedOrderController::class, 'confirm']);
+    Route::get('/customer/profile', function () {
+    return response()->json([
+        'customer' => auth('customer')->user()
+    ]);
+    });
+});
 
 /* ---------------- REDIRECTS ---------------- */
 
@@ -102,10 +77,7 @@ Route::get('/cart', fn() => Inertia::render('Cart_section/CustomerCartPage'))
 
 Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'))
     ->name('payment.cart');
-
-Route::get('/loyalty', fn() => Inertia::render('Cart_section/LoyaltyPage'))
-    ->name('loyalty.cart');
-
+    
 Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
     ->name('checkout.details');
 
