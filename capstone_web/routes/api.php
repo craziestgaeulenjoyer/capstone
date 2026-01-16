@@ -199,6 +199,7 @@ Route::prefix('admin')->group(function () {
         Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('admin.inventory.update');
         Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('admin.inventory.destroy');
         Route::patch('/inventory/archive/{id}', [InventoryController::class, 'archive'])->name('admin.inventory.archive');
+
         /* Customers */
         Route::get('/customers', [CustomerController::class, 'listCustomers']);
         Route::get('/customers/{id}', [CustomerController::class, 'getCustomer']);

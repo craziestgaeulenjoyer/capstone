@@ -38,6 +38,7 @@ Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
 });
 
 /* ----------------CARTS ---------------- */
+
 Route::middleware('auth:customer')->group(function () {
     Route::post('/cart/add', [CartController::class, 'store']);
     Route::get('/cart/items', [CartController::class, 'items']);
@@ -80,7 +81,6 @@ Route::get('/payment', fn() => Inertia::render('Cart_section/PaymentDetailsPage'
     
 Route::get('/checkout', fn() => Inertia::render('Cart_section/ConfirmOrderPage'))
     ->name('checkout.details');
-
 
 /* ---------------- WEBSITE PAGES ---------------- */
 

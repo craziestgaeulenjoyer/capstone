@@ -3,7 +3,7 @@ import { IoIosArrowBack } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
 import { router } from "@inertiajs/react";
 import { QrCode, Banknote, RotateCcw } from "lucide-react";
-
+import axios from "axios";
 
 export default function PaymentSelection() {
   const [paymentMethod, setPaymentMethod] = useState("QR Pay");

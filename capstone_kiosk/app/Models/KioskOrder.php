@@ -6,18 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class KioskOrder extends Model
 {
-    protected $table = 'kiosk_orders';
+    protected $table = 'orders';
 
     protected $fillable = [
-        'order_number',
+        'order_code',
+        'user_id', 
         'customer_name',
         'payment_method',
-        'total_price',
-        'cart_items',
-        'status'
+        'fulfillment_method',
+        'total_amount',
+        'items',
+        'status',
     ];
 
     protected $casts = [
-        'cart_items' => 'array',
+        'items' => 'array',
     ];
 }

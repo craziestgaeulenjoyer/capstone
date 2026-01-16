@@ -9,11 +9,12 @@ export default function PickOrder() {
 
   const handleSelect = (option) => {
     setSelectedOption(option);
-    
-    
-    localStorage.setItem("order_type", option);
 
-    
+    const fulfillmentMethod =
+      option === "dinein" ? "Dine In" : "Take out";
+
+    localStorage.setItem("fulfillment_method", fulfillmentMethod);
+
     setTimeout(() => {
       router.visit("/kioskhome");
     }, 500);
