@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axiosClient from '../../axiosClient';
+import axiosClient from '@/axiosClient';
 import { Link, router, usePage } from '@inertiajs/react';
 
 interface CustomPageProps {
@@ -53,8 +53,6 @@ const DashboardLoginForm = () => {
     setLoading(true);
 
     try {
-      await axiosClient.get('/sanctum/csrf-cookie');
-
       let response;
 
       try {
@@ -64,13 +62,15 @@ const DashboardLoginForm = () => {
           remember: rememberMe,
         });
       } catch (err: any) {
-        if (err.response?.status !== 401) throw err;
-
-        response = await axiosClient.post('/admin/login', {
-          email,
-          password,
-          remember: rememberMe,
-        });
+        if (err.response?.status === 401) {
+          response = await axiosClient.post('/admin/login', {
+            email,
+            password,
+            remember: rememberMe,
+          });
+        } else {
+          throw err;
+        }
       }
 
       /* ---------------- REMEMBER ME ---------------- */
@@ -98,8 +98,10 @@ const DashboardLoginForm = () => {
         return;
       }
 
+      const role = response.data.role?.toLowerCase();
+
       const dashboardPath =
-        response.data.role === 'super_admin'
+        role === 'super_admin'
           ? '/superadmin/dashboard'
           : '/admin/dashboard';
 

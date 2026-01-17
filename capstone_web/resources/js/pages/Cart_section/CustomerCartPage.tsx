@@ -173,7 +173,7 @@ const CustomerCartPage: React.FC = () => {
 
             <button 
               onClick={() => router.visit("/payment")}
-              disabled={items.length === 0}
+              disabled={selectedItems.length === 0}
               className={`w-full py-4 rounded-sm shadow-md font-bold text-[11px] uppercase tracking-[0.2em] transition-all ${
                 items.length === 0 
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed" 

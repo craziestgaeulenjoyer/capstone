@@ -18,11 +18,8 @@ use App\Http\Controllers\Home_Controllers\ContactController;
 use App\Http\Controllers\Home_Controllers\EventInquiryController;
 use App\Http\Controllers\Customer_Controllers\CustomerAuthController;
 use App\Http\Controllers\Customer_Controllers\CustomerSocialController;
-use App\Http\Controllers\Customer_Controllers\ForgotPasswordController;
 use App\Http\Controllers\Administrator_Controllers\NotificationController;
 use App\Http\Controllers\Administrator_Controllers\ProfileController;
-
-
 
 
 Route::prefix('customer')->group(function () {
@@ -37,10 +34,6 @@ Route::prefix('customer')->group(function () {
     // Step 3: Reset password
     Route::post('/reset-password', [CustomerAuthController::class, 'resetPassword']);
 });
-
-
-
-
 
 /* ---------------- PUBLIC ROUTES ---------------- */
 // Event Inquiry

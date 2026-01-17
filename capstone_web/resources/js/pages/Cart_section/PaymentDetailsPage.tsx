@@ -24,14 +24,18 @@ const PaymentDetailsPage: React.FC = () => {
     const fetchCustomer = async () => {
       try {
         const res = await axiosClient.get("/customer/profile");
-        const customerData = res.data.customer;
+
+        const cartRes = await axiosClient.get("/cart/items");
+        if (!cartRes.data.items || cartRes.data.items.length === 0) {
+          router.visit("/cart");
+          return;
+        }
 
         setCustomer({
-          full_name: customerData.full_name || "",
-          email: customerData.email || "",
+          full_name: res.data.customer.full_name || "",
+          email: res.data.customer.email || "",
         });
       } catch (err) {
-        console.error(err);
         router.visit("/signin");
       } finally {
         setLoading(false);

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import api from "@/apiClient";
 import {
   MoreHorizontal,
   Filter,
@@ -77,20 +77,12 @@ const Inventory: React.FC = () => {
 
   const token = localStorage.getItem("token");
 
-  const axiosInstance = axios.create({
-    baseURL: "http://127.0.0.1:8000",
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-      "Content-Type": "application/json",
-    },
-  });
-
   // ----- Fetch all inventory (single request) -----
   const fetchInventory = async () => {
     try {
       setLoading(true);
 
-      const res = await axiosInstance.get(`${apiPrefix}/inventory`);
+      const res = await api.get(`/${role}/inventory`);
       const data: InventoryItem[] = Array.isArray(res.data) ? res.data : [];
 
       const normalized = data.map((d) => ({
@@ -123,15 +115,9 @@ const Inventory: React.FC = () => {
     try {
       setLoading(true);
 
-      const res = await axiosInstance.get(
-        `${apiPrefix}/inventory`, 
-        {
-          params: {
-            month,
-            year,
-          }
-        }
-      );
+      const res = await api.get(`/${role}/inventory`, {
+        params: { month, year },
+      });
 
       const data: InventoryItem[] = Array.isArray(res.data) ? res.data : [];
 
@@ -226,9 +212,9 @@ const Inventory: React.FC = () => {
     try {
       setLoading(true);
       if (editingItem) {
-        await axiosInstance.put(`${apiPrefix}/inventory/${editingItem.id}`, payload);
+        await api.put(`/${role}/inventory/${editingItem.id}`, payload);
       } else {
-        await axiosInstance.post(`${apiPrefix}/inventory`, payload);
+        await api.post(`/${role}/inventory`, payload);
       }
       await fetchInventory();
       setModalOpen(false);
@@ -252,7 +238,7 @@ const Inventory: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       setLoading(true);
-      await axiosInstance.delete(`${apiPrefix}/inventory/${id}`);
+      await api.delete(`/${role}/inventory/${id}`);
       await fetchInventory();
       setMenuOpen(null);
     } catch (err) {
@@ -265,7 +251,7 @@ const Inventory: React.FC = () => {
   const handleArchive = async (id: number) => {
     try {
       setLoading(true);
-      await axiosInstance.patch(`${apiPrefix}/inventory/archive/${id}`);
+      await api.patch(`/${role}/inventory/archive/${id}`);
       await fetchInventory();
       setMenuOpen(null);
     } catch (err) {
@@ -535,16 +521,20 @@ const Inventory: React.FC = () => {
   }, [activeItems]);
 
   const fetchActivity = async (page = 1) => {
-    const res = await axiosInstance.get(
-      `${apiPrefix}/inventory/logs`,
-      {
-        params: { page }
-      }
-    );
+    try {
+      const res = await api.get(
+        `/${role}/inventory/logs`,
+        {
+          params: { page },
+        }
+      );
 
-    setActivity(res.data.data);
-    setActivityPage(res.data.current_page);
-    setActivityTotalPages(res.data.last_page);
+      setActivity(res.data.data);
+      setActivityPage(res.data.current_page);
+      setActivityTotalPages(res.data.last_page);
+    } catch (error) {
+      console.error("Failed to fetch inventory activity logs:", error);
+    }
   };
 
   useEffect(() => {

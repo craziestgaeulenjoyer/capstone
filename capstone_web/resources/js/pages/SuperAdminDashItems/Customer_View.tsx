@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, } from 'react';
 import { MoreHorizontal, Filter } from 'lucide-react';
-import axios from 'axios';
+import api from '@/apiClient';
 
 interface Customer {
   id: string;
@@ -64,11 +64,8 @@ const Customer_View = () => {
     setLoading(true);
     try {
       const dashboardRole = sessionStorage.getItem('dashboard_role');
-      const authToken = localStorage.getItem('token');
       const apiRoleSegment = dashboardRole === 'super_admin' ? 'superadmin' : 'admin';
-      const response = await axios.get(`/api/${apiRoleSegment}/customers`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
+      const response = await api.get(`/${apiRoleSegment}/customers`);
       const data = response.data;
 
       const formattedData: Customer[] = data.map((item: any) => ({
@@ -104,11 +101,8 @@ const Customer_View = () => {
     try {
       const dashboardRole = sessionStorage.getItem('dashboard_role');
       const apiRoleSegment = dashboardRole === 'super_admin' ? 'superadmin' : 'admin';
-      const token = localStorage.getItem('token');
 
-      const res = await axios.get(`/api/${apiRoleSegment}/customers/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/${apiRoleSegment}/customers/${id}`);
 
       console.log('Profile API Response:', res.data); // Debugging
 
@@ -140,11 +134,10 @@ const Customer_View = () => {
     try {
       const dashboardRole = sessionStorage.getItem('dashboard_role');
       const apiRoleSegment = dashboardRole === 'super_admin' ? 'superadmin' : 'admin';
-      const token = localStorage.getItem('token');
 
-      const res = await axios.get(`/api/${apiRoleSegment}/customers/${id}/loyalty`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(
+        `/${apiRoleSegment}/customers/${id}/loyalty`
+      );
 
       console.log("LOYALTY:", res.data);
 

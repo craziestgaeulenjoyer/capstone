@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from "react-dom";
 import { MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
-import axios from 'axios'; 
+import apiClient from "@/apiClient";
 
 interface MenuItem {
   id: number;
@@ -101,19 +101,14 @@ const Manage_Items = () => {
 
   const getApiBase = () => {
     const role = sessionStorage.getItem("dashboard_role") || "";
-    const normalizedRole = role.toLowerCase().replace(/[_\s]/g, ""); 
-    return normalizedRole === "superadmin" ? "/api/superadmin" : "/api/admin";
+    const normalizedRole = role.toLowerCase().replace(/[_\s]/g, "");
+    return normalizedRole === "superadmin" ? "/superadmin" : "/admin";
   };
 
   const fetchItems = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
       const base = getApiBase(); 
-      const response = await axios.get(`${base}/menu-items`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(`${base}/menu-items`);
 
       setTableData(response.data.items || []);
     } catch (error: any) {
@@ -356,8 +351,10 @@ const Manage_Items = () => {
         form.append("_method", "PUT");
         await updateMenuItem(editingItemId, form);
       } else {
-        await axios.post(`${base}/menu-items`, form, {
-          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+        await apiClient.post(`${base}/menu-items`, form, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         });
         alert("Menu item created successfully!");
         setIsAddingMenu(false);
@@ -380,8 +377,10 @@ const Manage_Items = () => {
       console.log(`PUT ${base}/menu-items/${id}`);
       console.log("FormData for update:", form);
 
-      await axios.post(`${base}/menu-items/${id}`, form, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+      await apiClient.post(`${base}/menu-items/${id}`, form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       alert("Menu item updated successfully!");
@@ -402,9 +401,7 @@ const Manage_Items = () => {
       if (!token) throw new Error("No token found.");
 
       const base = getApiBase();
-      await axios.delete(`${base}/menu-items/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await apiClient.delete(`${base}/menu-items/${id}`);
 
       alert("Menu item deleted successfully!");
       fetchItems();

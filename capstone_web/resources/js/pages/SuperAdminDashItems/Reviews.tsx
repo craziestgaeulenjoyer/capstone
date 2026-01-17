@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import { Star, Smartphone, Globe, CheckCircle, Clock, AlertTriangle, MoreVertical, ThumbsUp, ThumbsDown } from 'lucide-react';
-import axios from 'axios';
+import { Star, Smartphone, Globe, Clock, MoreVertical, ThumbsUp, ThumbsDown } from 'lucide-react';
+import apiClient from "@/apiClient";
 
 export default function ReviewDashboard() {
   const [reviews, setReviews] = useState<any[]>([]);
@@ -27,19 +27,11 @@ export default function ReviewDashboard() {
     setActiveDropdown(null);
   };
 
-  const token = localStorage.getItem('token');
-
-  const api = axios.create({
-    headers: {
-      Authorization: token ? `Bearer ${token}` : '',
-    },
-  });
-
   const confirmAction = async () => {
     if (!selectedAction || !apiRole) return;
 
     try {
-      await api.patch(
+      await apiClient.patch(
         `/api/${apiRole}/feedback/${selectedAction.id}/status`,
         { status: selectedAction.status }
       );
@@ -73,9 +65,8 @@ export default function ReviewDashboard() {
   useEffect(() => {
     if (!apiRole) return;
 
-    api.get(`/api/${apiRole}/feedback`)
-      .then(res => setReviews(res.data))
-      .catch(err => console.error('Failed to fetch feedback', err));
+    apiClient.get(`/api/${apiRole}/feedback`)
+    .then(res => setReviews(res.data));
   }, [apiRole]);
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '@/apiClient';
 
 // Define the types for the form data
 interface FormData {
@@ -59,14 +59,7 @@ const AdminAccountTable = ({ onEditClick }: AdminAccountTableProps) => {
           setLoading(false);
           return;
         }
-
-        const response = await axios.get('http://127.0.0.1:8000/api/superadmin/admins', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-
-        // assuming the API returns an array of admins/superadmins
+        const response = await apiClient.get('/superadmin/admins');
         setAdmins(response.data.data || []);
       } catch (error: any) {
         console.error('Failed to fetch admins:', error.response?.data || error);
@@ -197,15 +190,10 @@ const EditAdminModal = ({
 
   const handleSave = async () => {
     try {
-      await axios.put(
-        `http://127.0.0.1:8000/api/superadmin/admins/${admin.id}`,
-        { status, email },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      await apiClient.put(`/superadmin/admins/${admin.id}`, {
+        status,
+        email
+      });
 
       alert('Admin updated successfully');
       onUpdated();
@@ -488,11 +476,7 @@ const Step4Form = ({ formData, onBack, onSubmit }: Step4FormProps) => {
         return;
       }
 
-      await axios.post(
-        'http://127.0.0.1:8000/api/superadmin/create/request-otp',
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await apiClient.post('/superadmin/create/request-otp', formData);
 
       setCanResend(false);
       setTimer(60);
@@ -624,11 +608,7 @@ const Teams = () => {
 
       setSendingOtp(true);
 
-      await axios.post(
-        'http://127.0.0.1:8000/api/superadmin/create/request-otp',
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await apiClient.post('/superadmin/create/request-otp', formData);
 
       setStep(4);
     } catch (err: any) {
@@ -802,15 +782,7 @@ const Teams = () => {
                         return;
                       }
 
-                      await axios.post(
-                        'http://127.0.0.1:8000/api/superadmin/create/verify-otp',
-                        { otp },
-                        {
-                          headers: {
-                            Authorization: `Bearer ${token}`
-                          }
-                        }
-                      );
+                      await apiClient.post('/superadmin/create/verify-otp', { otp });
 
                       alert('Admin created successfully!');
                       setView('adminTable');

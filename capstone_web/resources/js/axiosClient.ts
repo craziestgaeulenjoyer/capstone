@@ -1,15 +1,18 @@
-import axios from 'axios';
+import axios from "axios";
 
-const axiosClient = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+const authClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
   headers: {
-    'X-Requested-With': 'XMLHttpRequest',
-    'Accept': 'application/json',
+    Accept: "application/json",
+    "X-Requested-With": "XMLHttpRequest",
   },
 });
-// Attach token from localStorage automatically
-axiosClient.interceptors.request.use((config) => {
+
+/**
+ * Attach ONLY customer token (auth-related actions)
+ */
+authClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("customer_token");
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -17,13 +20,14 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 });
 
-axiosClient.interceptors.request.use(async (config) => {
-  if (['post', 'put', 'delete'].includes(config.method || '')) {
-    await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', {
-      withCredentials: true,
-    });
+/**
+ * Sanctum CSRF handling
+ */
+authClient.interceptors.request.use(async (config) => {
+  if (["post", "put", "patch", "delete"].includes(config.method || "")) {
+    await authClient.get("/sanctum/csrf-cookie");
   }
   return config;
 });
 
-export default axiosClient;
+export default authClient;

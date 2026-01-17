@@ -4,7 +4,6 @@ import { motion, Variants } from "framer-motion";
 import { FaFacebookF, FaInstagram, FaTiktok } from "react-icons/fa";
 import NavbarLayout from '@/layouts/navbar_layouts/GuestNavBar_Layout';
 
-
 const ContactPage: React.FC = () => {
     const containerVariants: Variants = {
         hidden: { opacity: 0 },

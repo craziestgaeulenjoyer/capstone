@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axiosClient from '../../axiosClient';
+import axiosClient from '@/axiosClient';
 import { Link, usePage } from '@inertiajs/react';
 
 interface AuthUser {
@@ -38,7 +38,7 @@ function DashboardEmailVerificationResend() {
 
     try {
       const endpoint = role === 'super_admin' ? '/superadmin/email/resend' : '/admin/email/resend';
-      const response = await axiosClient.post(`/api${endpoint}`, { email });
+      const response = await axiosClient.post(endpoint, { email });
 
       setMessage(response.data.message || 'Verification email resent successfully!');
       setStatus('success');
