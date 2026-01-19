@@ -643,7 +643,8 @@ const AccountSettings: React.FC<{
 interface NavItem {
   name: string;
   icon: LucideIcon;
-  route: string;
+  route?: string;
+  subItems?: { name: string; route: string }[];
 }
 
 const SuperAdminNavbar: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -653,6 +654,7 @@ const SuperAdminNavbar: React.FC<{ children: React.ReactNode }> = ({ children })
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isSalesDropdownOpen, setIsSalesDropdownOpen] = useState(false);
 
   const [user, setUser] = useState<{
     username: string;
@@ -665,7 +667,14 @@ const SuperAdminNavbar: React.FC<{ children: React.ReactNode }> = ({ children })
   const navItems: NavItem[] = [
     { name: "Dashboard", icon: LayoutGrid, route: "/superadmin/dashboard" },
     { name: "Inventory", icon: Package, route: "/superadmin/dashboard/inventory" },
-    { name: "Sales Order", icon: ShoppingCart, route: "/superadmin/dashboard/salesorder" },
+    { 
+      name: "Order Management", 
+      icon: ShoppingCart, 
+      subItems: [
+        { name: "Sales Orders", route: "/superadmin/dashboard/salesorder" },
+        { name: "Delivery Orders", route: "/superadmin/dashboard/delivery-orders" }, 
+      ] 
+    },
     { name: "Customers", icon: Users, route: "/superadmin/dashboard/customers" },
     { name: "Events", icon: Calendar, route: "/superadmin/dashboard/events" },
     { name: "Reports", icon: BarChart2, route: "/superadmin/dashboard/reports" },
@@ -674,6 +683,7 @@ const SuperAdminNavbar: React.FC<{ children: React.ReactNode }> = ({ children })
     { name: "Manage Items", icon: Settings, route: "/superadmin/dashboard/manage-items" },
     { name: "Teams", icon: Users2, route: "/superadmin/dashboard/teams" },
   ];
+  
 
   const fetchNotifications = async () => {
     try {
@@ -756,23 +766,67 @@ const SuperAdminNavbar: React.FC<{ children: React.ReactNode }> = ({ children })
 
         <nav className="mt-6 flex-grow">
           {isSidebarOpen && <div className="px-6 mb-4 text-sm font-semibold text-white transition-opacity duration-300">Menu</div>}
-          <ul>
-            {navItems.map((item) => (
-              <li key={item.name} className="mb-3 group relative">
-                <a
-                  href={item.route}
-                  className={`flex items-center py-2 px-5 rounded-l-full transition-all duration-300 ease-in-out ${
-                    window.location.pathname === item.route
-                      ? "bg-gray-100 text-[#76B13A]"
-                      : "text-white hover:bg-gray-100 hover:text-[#76B13A]"
-                  }`}
-                >
-                  <item.icon size={20} className="mr-4 flex-shrink-0" />
-                  {isSidebarOpen && <span className="font-bold">{item.name}</span>}
-                </a>
-              </li>
-            ))}
-          </ul>
+<ul>
+  {navItems.map((item) => {
+    const hasDropdown = item.name === "Order Management";
+    const isActive = window.location.pathname === item.route || 
+    (item.subItems?.some(sub => window.location.pathname === sub.route));
+
+    return (
+      <li key={item.name} className="mb-1">
+        {hasDropdown ? (
+          /* --- RENDER DROPDOWN VERSION --- */
+          <div>
+            <button
+              onClick={() => setIsSalesDropdownOpen(!isSalesDropdownOpen)}
+              className={`w-full flex items-center py-2 px-5 rounded-l-full transition-all cursor-pointer
+              ${isActive ? "bg-gray-100 text-[#76B13A]" : "text-white hover:bg-gray-100 hover:text-[#76B13A]"}`}
+            >
+              <item.icon size={20} className="mr-4" />
+              {isSidebarOpen && (
+                <div className="flex justify-between items-center w-full">
+                  <span className="font-bold">{item.name}</span>
+                  <ChevronDown size={16} className={`transition-transform ${isSalesDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+              )}
+            </button>
+
+            {/* Dropdown Content - Phone-in/Delivery Orders */}
+            {isSalesDropdownOpen && isSidebarOpen && (
+              <div className="mt-1 ml-10 space-y-1">
+                {item.subItems?.map((sub) => (
+                  <a
+                    key={sub.name}
+                    href={sub.route}
+                    className={`block py-2 px-4 text-md rounded-l-full transition-all
+                    ${window.location.pathname === sub.route 
+                        ? "text-white font-extrabold bg-[#8db561]" 
+                        : "text-white hover:text-[#8db561] hover:bg-[#ffffff]"}`}
+                  >
+                    {sub.name}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* --- RENDER REGULAR VERSION --- */
+          <a
+            href={item.route}
+            className={`flex items-center py-2 px-5 rounded-l-full transition-all
+            ${window.location.pathname === item.route
+                ? "bg-gray-100 text-[#76B13A]"
+                : "text-white hover:bg-gray-100 hover:text-[#76B13A]"
+            }`}
+          >
+            <item.icon size={20} className="mr-4" />
+            {isSidebarOpen && <span className="font-bold">{item.name}</span>}
+          </a>
+        )}
+      </li>
+    );
+  })}
+</ul>
         </nav>
       </aside>
 
