@@ -72,7 +72,33 @@ class InventoryController extends Controller
         DB::beginTransaction();
 
         try {
-            $item = Inventory::create($request->all());
+            $data = $request->validate([
+                'name'            => 'required|string',
+                'category'        => 'required|string',
+                'supplier'        => 'nullable|string',
+                'quantity'        => 'required|numeric',
+                'base_unit'       => 'required|string', // g, ml, pcs
+                'conversion_size' => 'nullable|numeric', // 1000, 250, etc
+                'expiry'          => 'nullable|date',
+                'status'          => 'nullable|string',
+            ]);
+
+            $quantityInBaseUnit = $data['quantity'];
+
+            if (!empty($data['conversion_size'])) {
+                $quantityInBaseUnit = $data['quantity'] * $data['conversion_size'];
+            }
+
+            $item = Inventory::create([
+                'name'            => $data['name'],
+                'category'        => $data['category'],
+                'supplier'        => $data['supplier'],
+                'quantity'        => $quantityInBaseUnit,
+                'base_unit'       => $data['base_unit'],
+                'conversion_size' => $data['conversion_size'],
+                'expiry'          => $data['expiry'],
+                'status'          => $data['status'] ?? 'In Stock',
+            ]);
 
             InventoryLog::create([
                 'inventory_id' => $item->id,
@@ -117,6 +143,16 @@ class InventoryController extends Controller
         try {
             $item = Inventory::findOrFail($id);
 
+            if ($request->has('quantity')) {
+                $addedQuantity = $request->quantity;
+
+                if ($item->conversion_size) {
+                    $addedQuantity *= $item->conversion_size;
+                }
+
+                $item->quantity += $addedQuantity;
+            }
+
             $oldData = $item->only([
                 'name',
                 'category',
@@ -131,7 +167,8 @@ class InventoryController extends Controller
                 'name'     => 'sometimes|string',
                 'category' => 'sometimes|string',
                 'supplier' => 'nullable|string',
-                'quantity' => 'sometimes|integer',
+                'quantity' => 'sometimes|numeric',
+                'conversion_size' => 'sometimes|numeric',
                 'unit'     => 'nullable|string',
                 'expiry'   => 'nullable|date',
                 'status'   => 'sometimes|in:In Stock,Low,Expired Soon,Expired',
@@ -307,5 +344,60 @@ class InventoryController extends Controller
         $notification->update(['is_read' => true]);
 
         return response()->json(['message' => 'Notification marked as read']);
+    }
+
+    /**
+     * Inventory list for recipe selection
+     */
+    public function recipeIngredients()
+    {
+        return response()->json(
+            Inventory::where('archived', false)
+                ->where('quantity', '>', 0)
+                ->whereNotIn('status', ['Expired'])
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'unit',
+                    'quantity',
+                    'status'
+                ])
+        );
+    }
+
+    /**
+     * Convert recipe unit to inventory base unit
+     */
+    private function convertToBaseUnit(
+        float $amount,
+        string $fromUnit,
+        string $baseUnit
+    ): float {
+        $map = [
+            'tbsp' => [
+                'ml' => 15,
+                'g'  => 12,
+            ],
+            'tsp' => [
+                'ml' => 5,
+                'g'  => 4,
+            ],
+            'cup' => [
+                'ml' => 240,
+                'g'  => 120,
+            ],
+            'ml' => [
+                'ml' => 1,
+            ],
+            'g' => [
+                'g' => 1,
+            ],
+            'pcs' => [
+                'pcs' => 1,
+            ],
+        ];
+
+        return $amount * ($map[$fromUnit][$baseUnit] ?? 1);
     }
 }

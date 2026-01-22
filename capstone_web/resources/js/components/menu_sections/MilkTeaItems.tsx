@@ -23,15 +23,14 @@ interface PageProps extends InertiaPageProps {
   auth: AuthProps;
 }
 
-
 interface MilkTeaItem {
   id: number;
   name: string;
   description: string;
-  category: "Classic" | "Special";
-  subcategories: string[];
   image_path: string;
-  price: { regular: string; large?: string };
+  price: { regular?: string; large?: string };
+  subcategories: string[];
+  is_available: boolean;
 }
 
 const MilkTeaItems: React.FC = () => {
@@ -46,12 +45,9 @@ const MilkTeaItems: React.FC = () => {
   const [selectedFlavor, setSelectedFlavor] = useState("");
   const [selectedAddOn, setSelectedAddOn] = useState("");
 
-
-
  const { props } = usePage<PageProps>();
-const auth = props.auth;
-const isLoggedIn = Boolean(auth?.customer);
-
+  const auth = props.auth;
+  const isLoggedIn = Boolean(auth?.customer);
 
   /* 📦 FETCH MENU */
   useEffect(() => {
@@ -131,8 +127,11 @@ const isLoggedIn = Boolean(auth?.customer);
     },
   };
 
-  const getOptionsFor = (item: MilkTeaItem) =>
-    optionsMap[item.category] || optionsMap.Classic;
+  const getOptionsFor = (item: MilkTeaItem) => {
+    const sub = item.subcategories.find(s => s.startsWith("Milktea:"));
+    const type = sub?.split(":")[1] || "Classic";
+    return optionsMap[type] || optionsMap.Classic;
+  };
 
   const getAvailableSizes = (price: {
     regular?: string;
@@ -233,20 +232,37 @@ const isLoggedIn = Boolean(auth?.customer);
           <div
             key={item.id}
             onClick={() => {
+              if (!item.is_available) return;
               setSelectedItem(item);
               setQuantity(1);
               setSelectedSize("16oz");
               setSelectedFlavor("");
               setSelectedAddOn("");
             }}
-            className="rounded-2xl shadow hover:shadow-lg transition overflow-hidden border bg-white cursor-pointer text-black"
+            className={`rounded-2xl transition overflow-hidden border text-black
+              ${
+                item.is_available
+                  ? "bg-white shadow hover:shadow-lg cursor-pointer"
+                  : "bg-gray-100 opacity-60 cursor-not-allowed"
+              }
+            `}
           >
-            <div className="bg-[#E1E1E1] p-4 flex justify-center">
+            <div className="relative bg-[#E1E1E1] p-4 flex justify-center">
               <img
                 src={`/storage/${item.image_path}`}
                 alt={item.name}
-                className="w-60 h-60 object-contain rounded-xl"
+                className={`w-60 h-60 object-contain rounded-xl ${
+                  !item.is_available ? "grayscale" : ""
+                }`}
               />
+
+              {!item.is_available && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    SOLD OUT
+                  </span>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-lg font-bold">{item.name}</h3>
@@ -274,11 +290,23 @@ const isLoggedIn = Boolean(auth?.customer);
             </button>
 
             <div className="flex flex-col md:flex-row gap-8">
-              <img
-                src={`/storage/${selectedItem.image_path}`}
-                alt={selectedItem.name}
-                className="w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded"
-              />
+              <div className="relative">
+                <img
+                  src={`/storage/${selectedItem.image_path}`}
+                  alt={selectedItem.name}
+                  className={`w-[350px] h-[350px] object-contain bg-[#E1E1E1] rounded ${
+                    !selectedItem.is_available ? "grayscale" : ""
+                  }`}
+                />
+
+                {!selectedItem.is_available && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="bg-black/70 text-white px-4 py-2 rounded-full font-bold">
+                      SOLD OUT
+                    </span>
+                  </div>
+                )}
+              </div>
 
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2">
@@ -410,9 +438,16 @@ const isLoggedIn = Boolean(auth?.customer);
                 {isLoggedIn ? (
                   <button
                     onClick={handleAddToCart}
-                    className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
+                    disabled={!selectedItem.is_available}
+                    className={`w-[150px] rounded-full font-semibold py-2
+                      ${
+                        selectedItem.is_available
+                          ? "border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }
+                    `}
                   >
-                    Add to Cart
+                    {selectedItem.is_available ? "Add to Cart" : "Sold Out"}
                   </button>
                 ) : (
                   <div className="text-red-500 font-semibold">

@@ -69,6 +69,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
     const [modalMessage, setModalMessage] = useState("");
     const [freeDrinksAvailable, setFreeDrinksAvailable] = useState(0);
     const [usingReward, setUsingReward] = useState(false);
+    const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+    const [favoriteItems, setFavoriteItems] = useState<any[]>([]);
 
     useEffect(() => {
       if (route.params?.useReward) {
@@ -84,12 +86,13 @@ type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
     }, [route.params?.category]);
 
     useEffect(() => {
-      const loadFavorites = async () => {
-        const stored = await AsyncStorage.getItem("favorites");
-        if (stored) setFavorites(JSON.parse(stored));
-      };
       loadFavorites();
     }, []);
+
+    const loadFavorites = async () => {
+      const stored = await AsyncStorage.getItem("favorites");
+      setFavoriteItems(stored ? JSON.parse(stored) : []);
+    };
 
     useEffect(() => {
       fetchMenuItems();
@@ -108,6 +111,17 @@ type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
       };
 
       loadLoyalty();
+    }, []);
+
+    useEffect(() => {
+      const loadFavorites = async () => {
+        const stored = await AsyncStorage.getItem("favorites");
+        if (stored) {
+          setFavoriteIds(JSON.parse(stored));
+        }
+      };
+
+      loadFavorites();
     }, []);
 
     const getImageSource = (uri: string | null) =>
@@ -224,15 +238,20 @@ type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
       );
     }, [selectedCategory, selectedSub, filteredProducts]);
 
-    const toggleFavorite = async (productId: string) => {
-      let updated;
-      if (favorites.includes(productId)) {
-        updated = favorites.filter((id) => id !== productId);
+    const toggleFavorite = async (product: any) => {
+      const stored = await AsyncStorage.getItem("favorites");
+      let favorites = stored ? JSON.parse(stored) : [];
+
+      const exists = favorites.some((f: any) => f.id === product.id);
+
+      if (exists) {
+        favorites = favorites.filter((f: any) => f.id !== product.id);
       } else {
-        updated = [...favorites, productId];
+        favorites.push(product);
       }
-      setFavorites(updated);
-      await AsyncStorage.setItem("favorites", JSON.stringify(updated));
+
+      await AsyncStorage.setItem("favorites", JSON.stringify(favorites));
+      setFavoriteItems(favorites); // 🔥 THIS FIXES UNTOGGLE
     };
 
     const openModal = (product: any) => {
@@ -387,13 +406,21 @@ type Props = NativeStackScreenProps<RootStackParamList, "Menu">;
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      onPress={() => toggleFavorite(item.id)}
+                      onPress={() => toggleFavorite(item)}
                       style={styles.favoriteIcon}
                     >
                       <Icon
-                        name={favorites.includes(item.id) ? "heart" : "heart-outline"}
+                        name={
+                          favoriteItems.some((f) => f.id === item.id)
+                            ? "heart"
+                            : "heart-outline"
+                        }
                         size={22}
-                        color={favorites.includes(item.id) ? "#ff4d4d" : "#fff"}
+                        color={
+                          favoriteItems.some((f) => f.id === item.id)
+                            ? "#ff4d4d"
+                            : "#fff"
+                        }
                       />
                     </TouchableOpacity>
                   </View>

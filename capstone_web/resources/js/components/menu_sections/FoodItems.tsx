@@ -4,7 +4,6 @@ import { Search, X } from "lucide-react";
 import { usePage } from "@inertiajs/react";
 import type { PageProps as InertiaPageProps } from "@inertiajs/core";
 
-
 interface AuthProps {
   user: null | {
     id: number;
@@ -23,7 +22,6 @@ interface PageProps extends InertiaPageProps {
   auth: AuthProps;
 }
 
-
 interface ApiItem {
   id: number;
   name: string;
@@ -32,6 +30,7 @@ interface ApiItem {
   subcategories: string[];
   image_path: string;
   price: { regular?: number; large?: number };
+  is_available: boolean;
 }
 
 interface FoodItem {
@@ -41,6 +40,7 @@ interface FoodItem {
   category: "Snacks" | "Platters" | "Croffles" | "Quesadillas & Korean Corndogs";
   image: string;
   rawPrice: { regular?: number; large?: number };
+  is_available: boolean;
 }
 
 const SUBCATEGORIES = [
@@ -95,6 +95,7 @@ const isLoggedIn = Boolean(auth?.customer);
               category: (sub?.split(":")[1] || "Snacks") as FoodItem["category"],
               image: `/storage/${item.image_path}`,
               rawPrice: item.price,
+              is_available: item.is_available,  
             };
           });
 
@@ -218,16 +219,36 @@ const isLoggedIn = Boolean(auth?.customer);
           <div
             key={item.id}
             onClick={() => {
+              if (!item.is_available) return;
               setSelectedItem(item);
               setSelectedSize("regular");
               setQuantity(1);
               setSelectedFlavor("");
               setSelectedExtra("");
             }}
-            className="rounded-2xl shadow hover:shadow-lg transition bg-white cursor-pointer text-black"
+            className={`rounded-2xl transition text-black
+              ${
+                item.is_available
+                  ? "bg-white shadow hover:shadow-lg cursor-pointer"
+                  : "bg-gray-100 opacity-60 cursor-not-allowed"
+              }
+            `}
           >
-            <div className="bg-[#E1E1E1] p-4 flex justify-center">
-              <img src={item.image} className="w-60 h-60 object-contain rounded-xl" />
+            <div className="relative bg-[#E1E1E1] p-4 flex justify-center">
+              <img
+                src={item.image}
+                className={`w-60 h-60 object-contain rounded-xl ${
+                  !item.is_available ? "grayscale" : ""
+                }`}
+              />
+
+              {!item.is_available && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    SOLD OUT
+                  </span>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="font-bold">{item.name}</h3>
@@ -341,9 +362,16 @@ const isLoggedIn = Boolean(auth?.customer);
                 {isLoggedIn ? (
                   <button
                     onClick={handleAddToCart}
-                    className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
+                    disabled={!selectedItem.is_available}
+                    className={`w-[150px] rounded-full font-semibold py-2
+                      ${
+                        selectedItem.is_available
+                          ? "border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }
+                    `}
                   >
-                    Add to Cart
+                    {selectedItem.is_available ? "Add to Cart" : "Sold Out"}
                   </button>
                 ) : (
                   <div className="text-red-500 font-semibold">

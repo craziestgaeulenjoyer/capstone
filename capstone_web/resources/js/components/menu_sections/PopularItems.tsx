@@ -31,6 +31,7 @@ interface MenuItem {
   subcategories: string[];
   price: { regular: string; large?: string };
   image_path: string;
+  is_available: boolean;
 }
 
 const PopularItems: React.FC = () => {
@@ -195,20 +196,34 @@ const PopularItems: React.FC = () => {
           <div
             key={item.id}
             onClick={() => {
+              if (!item.is_available) return; 
               setSelectedItem(item);
               setSelectedSize("16oz");
               setQuantity(1);
               setSelectedFlavor("");
               setSelectedAddOn("");
             }}
-            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
+            className={`rounded-2xl overflow-hidden border transition duration-200
+              ${item.is_available
+                ? "bg-white shadow hover:shadow-lg cursor-pointer"
+                : "bg-gray-100 opacity-60 cursor-not-allowed"
+              }`}
           >
-            <div className="bg-[#E1E1E1] p-4 flex justify-center">
+            <div className="relative">
               <img
                 src={`/storage/${item.image_path}`}
                 alt={item.name}
-                className="w-60 h-60 object-contain rounded-xl"
+                className={`w-60 h-60 object-contain rounded-xl
+                  ${!item.is_available ? "grayscale" : ""}`}
               />
+
+              {!item.is_available && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    SOLD OUT
+                  </span>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-lg font-bold text-[#2E3A2F]">
@@ -360,9 +375,14 @@ const PopularItems: React.FC = () => {
                   {isLoggedIn ? (
                     <button
                       onClick={handleAddToCart}
-                      className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2"
+                      disabled={!selectedItem?.is_available}
+                      className={`w-[150px] text-sm rounded-4xl font-semibold py-2
+                        ${selectedItem?.is_available
+                          ? "border border-[#8CB662] text-[#8CB662] hover:bg-[#8CB662] hover:text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
                     >
-                      Add to Cart
+                      {selectedItem?.is_available ? "Add to Cart" : "Sold Out"}
                     </button>
                   ) : (
                     <div className="text-red-500 font-semibold">

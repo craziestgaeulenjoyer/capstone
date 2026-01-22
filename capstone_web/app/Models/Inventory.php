@@ -19,4 +19,9 @@ class Inventory extends Model
         'status',
         'archived',
     ];
+
+    protected $casts = [
+        'archived' => 'boolean',
+        'quantity' => 'integer',
+    ];
 }

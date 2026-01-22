@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Notification;
+use App\Models\Inventory;
+use App\Models\InventoryLog;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -109,11 +111,61 @@ class SalesOrderController extends Controller
 
         $oldStatus = $order->status;
 
-        // Update
+        // Update status
         $order->status = $request->status;
         $order->save();
 
-        // Create notification ONLY if it actually changed
+        /**
+         * ✅ DEDUCT INVENTORY
+         * Only when order transitions to COMPLETED
+         */
+        if ($oldStatus !== 'completed' && $request->status === 'completed') {
+
+            DB::beginTransaction();
+
+            try {
+                foreach ($order->items as $item) {
+                    foreach ($item['recipes'] ?? [] as $recipe) {
+
+                        $inventory = Inventory::findOrFail($recipe['inventory_id']);
+
+                        $deductAmount = $this->convertToBaseUnit(
+                            $recipe['amount'],
+                            $recipe['unit'],
+                            $inventory->base_unit
+                        );
+
+                        $inventory->quantity -= $deductAmount;
+
+                        if ($inventory->quantity < 0) {
+                            $inventory->quantity = 0;
+                        }
+
+                        $inventory->save();
+
+                        InventoryLog::create([
+                            'inventory_id' => $inventory->id,
+                            'action' => 'deducted',
+                            'changed_fields' => [
+                                'deducted' => $deductAmount,
+                                'remaining' => $inventory->quantity,
+                            ],
+                            'performed_by' => $this->actorName(),
+                        ]);
+                    }
+                }
+
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Inventory deduction failed',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+        }
+
+        // Notification (unchanged)
         if ($oldStatus !== $order->status) {
             Notification::create([
                 'type' => 'sales_order',

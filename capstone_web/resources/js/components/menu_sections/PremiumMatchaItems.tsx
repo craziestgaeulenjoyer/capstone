@@ -22,7 +22,6 @@ interface PageProps extends InertiaPageProps {
   auth: AuthProps;
 }
 
-
 interface ApiItem {
   id: number;
   name: string;
@@ -30,6 +29,7 @@ interface ApiItem {
   image_path: string;
   price: { regular?: string; large?: string };
   categories: string[];
+  is_available: boolean; 
 }
 
 interface PremiumMatchaItem {
@@ -38,6 +38,7 @@ interface PremiumMatchaItem {
   description: string;
   image: string;
   rawPrice: { regular?: string; large?: string };
+  is_available: boolean;
 }
 
 const PremiumMatcha: React.FC = () => {
@@ -73,6 +74,7 @@ const isLoggedIn = Boolean(auth?.customer);
             description: item.description,
             image: item.image_path,
             rawPrice: item.price,
+            is_available: item.is_available,
           }));
 
         setItems(formatted);
@@ -151,18 +153,28 @@ const isLoggedIn = Boolean(auth?.customer);
           <div
             key={item.id}
             onClick={() => {
+              if (!item.is_available) return; 
               setSelectedItem(item);
               setSelectedSize("16oz");
               setQuantity(1);
-              setSelectedSize('16oz'); 
             }}
             className="rounded-2xl shadow hover:shadow-lg transition border bg-white cursor-pointer text-black"
           >
-            <div className="bg-[#E1E1E1] p-4 flex justify-center">
+            <div className="relative bg-[#E1E1E1] p-4 flex justify-center">
               <img
                 src={`/storage/${item.image}`}
-                className="w-60 h-60 object-contain rounded-xl"
+                className={`w-60 h-60 object-contain rounded-xl ${
+                  !item.is_available ? "grayscale" : ""
+                }`}
               />
+
+              {!item.is_available && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    SOLD OUT
+                  </span>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-lg font-bold">{item.name}</h3>
@@ -272,9 +284,16 @@ const isLoggedIn = Boolean(auth?.customer);
                 {isLoggedIn ? (
                   <button
                     onClick={handleAddToCart}
-                    className="w-[150px] border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white rounded-full font-semibold py-2"
+                    disabled={!selectedItem?.is_available}
+                    className={`w-[150px] rounded-full font-semibold py-2
+                      ${
+                        selectedItem?.is_available
+                          ? "border border-[#8CB662] bg-white text-black hover:bg-[#8CB662] hover:text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }
+                    `}
                   >
-                    Add to Cart
+                    {selectedItem?.is_available ? "Add to Cart" : "Sold Out"}
                   </button>
                 ) : (
                   <div className="text-red-500 font-semibold">

@@ -8,6 +8,7 @@ use App\Models\MenuItem;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class MenuController extends Controller
 {
@@ -66,6 +67,11 @@ class MenuController extends Controller
             'subcategories' => 'nullable|array',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        
+            'recipes' => 'required|array|min:1',
+            'recipes.*.inventory_id' => 'required|exists:inventories,id',
+            'recipes.*.amount' => 'required|numeric|min:0.01',
+            'recipes.*.unit' => 'required|string|max:50',
         ]);
 
         $finalPrice = $this->normalizePrice($request);
@@ -83,6 +89,17 @@ class MenuController extends Controller
             'description' => $validated['description'] ?? '',
             'image_path' => $path,
         ]);
+
+        foreach ($request->recipes as $recipe) {
+            DB::table('menu_item_recipes')->insert([
+                'menu_item_id' => $item->id,
+                'inventory_id' => $recipe['inventory_id'],
+                'amount' => $recipe['amount'],
+                'unit' => $recipe['unit'],
+            ]);
+        }
+
+        DB::statement('SELECT refresh_menu_availability()');
 
         Notification::create([
             'type' => 'menu',
@@ -118,6 +135,11 @@ class MenuController extends Controller
             'subcategories' => 'nullable|array',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        
+            'recipes' => 'required|array|min:1',
+            'recipes.*.inventory_id' => 'required|exists:inventories,id',
+            'recipes.*.amount' => 'required|numeric|min:0.01',
+            'recipes.*.unit' => 'required|string|max:50',
         ]);
 
         $finalPrice = $this->normalizePrice($request);
@@ -138,6 +160,21 @@ class MenuController extends Controller
             'description' => $validated['description'] ?? '',
             'image_path' => $validated['image_path'] ?? $item->image_path,
         ]);
+        
+        DB::table('menu_item_recipes')
+            ->where('menu_item_id', $item->id)
+            ->delete();
+
+        foreach ($request->recipes as $recipe) {
+            DB::table('menu_item_recipes')->insert([
+                'menu_item_id' => $item->id,
+                'inventory_id' => $recipe['inventory_id'],
+                'amount' => $recipe['amount'],
+                'unit' => $recipe['unit'],
+            ]);
+        }
+
+        DB::statement('SELECT refresh_menu_availability()');
 
         // Detect changes
         $changed = [];

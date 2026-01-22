@@ -100,11 +100,13 @@ Route::prefix('superadmin')->group(function () {
         Route::get('/menu-items', [MenuController::class, 'list'])->name('superadmin.menu.index');
         Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('superadmin.menu.update');
         Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('superadmin.menu.destroy');
+        Route::get('/menu-items/{id}/recipes',[MenuController::class, 'getRecipes'])->name('superadmin.menu.recipes');
 
         Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('superadmin.inventory.logs');
 
         Route::get('/inventory', [InventoryController::class, 'index'])->name('superadmin.inventory.index');
-        Route::post('/inventory', [InventoryController::class, 'store'])->name('superadmin.inventory.store');
+        Route::post('/inventory',   [InventoryController::class, 'store'])->name('superadmin.inventory.store');
+        Route::get('/inventory/recipe-ingredients', [InventoryController::class, 'recipeIngredients'])->name('superadmin.inventory.recipe-ingredients');
         Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('superadmin.inventory.show');
         Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('superadmin.inventory.update');
         Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('superadmin.inventory.destroy');
@@ -118,10 +120,7 @@ Route::prefix('superadmin')->group(function () {
         /* ================= SALES ORDERS ================= */
         Route::get('/sales_orders', [SalesOrderController::class, 'index']);
         Route::get('/payment_history', [SalesOrderController::class, 'paymentHistory']);
-        Route::get(
-            '/sales_orders/archived',
-            [SalesOrderController::class, 'archived']
-        )->name('superadmin.sales_orders.archived');
+        Route::get('/sales_orders/archived', [SalesOrderController::class, 'archived'])->name('superadmin.sales_orders.archived');
         Route::get(
             '/sales_orders/{orderCode}',
             [SalesOrderController::class, 'show']
@@ -178,11 +177,13 @@ Route::prefix('admin')->group(function () {
         Route::get('/menu-items', [MenuController::class, 'list'])->name('admin.menu.index');
         Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('admin.menu.update');
         Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('admin.menu.destroy');
+        Route::get('/menu-items/{id}/recipes',[MenuController::class, 'getRecipes'])->name('superadmin.menu.recipes');
 
         Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('admin.inventory.logs');
 
         Route::get('/inventory', [InventoryController::class, 'index'])->name('admin.inventory.index');
         Route::post('/inventory', [InventoryController::class, 'store'])->name('admin.inventory.store');
+        Route::get('/inventory/recipe-ingredients', [InventoryController::class, 'recipeIngredients'])->name('admin.inventory.recipe-ingredients');
         Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('admin.inventory.show');
         Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('admin.inventory.update');
         Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('admin.inventory.destroy');
@@ -244,9 +245,6 @@ Route::prefix('admin')->group(function () {
 /* ---------------- PUBLIC MENU ---------------- */
 
 /* ================= PUBLIC ================= */
-Route::get('/menu', [MenuController::class, 'publicMenu']);
-// Public Menu
-
 Route::get('/menu', [MenuController::class, 'publicMenu'])->name('menu.public');
 
 /* --------------- REVIEWS ---------------- */

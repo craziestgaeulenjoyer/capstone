@@ -88,6 +88,11 @@ const setupLoyaltyTrigger = async () => {
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+
+app.use(cors({
+  origin: "*", 
+}));
+
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client('1018371869413-d6k2ancgs59ujstbuu8j6b38lo6foec8.apps.googleusercontent.com');
@@ -279,7 +284,7 @@ app.post("/api/register", async (req, res) => {
 });
 
 // Login route
-app.post('/api/login', async (req, res) => {
+  app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
 
@@ -638,6 +643,16 @@ app.get('/api/menu-items', async (req, res) => {
   } catch (err) {
     console.error("Error fetching menu items:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/api/products", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM menu_items");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch products" });
   }
 });
 
@@ -1806,16 +1821,9 @@ async function applyLoyaltyForCompletedOrders(userId) {
   );
 }
 
-const PORT = 5000;
-
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log('Server running on all interfaces');
-
-  try {
-    await setupLoyaltyTrigger();
-  } catch (err) {
-    console.error("❌ Failed to setup loyalty trigger:", err);
-  }
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 
