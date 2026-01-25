@@ -25,6 +25,31 @@ class SalesOrderController extends Controller
 
         return 'System';
     }
+
+    private function convertToBaseUnit(
+        float $amount,
+        string $fromUnit,
+        string $baseUnit
+    ): float {
+        $map = [
+            'tbsp' => ['ml' => 15, 'g' => 12],
+            'tsp'  => ['ml' => 5,  'g' => 4],
+            'cup'  => ['ml' => 240, 'g' => 120],
+            'oz'   => ['ml' => 29.5735, 'g' => 28.3495],
+            'ml'   => ['ml' => 1],
+            'g'    => ['g' => 1],
+            'pcs'  => ['pcs' => 1],
+        ];
+
+        $fromUnit = strtolower(trim($fromUnit));
+        $baseUnit = strtolower(trim($baseUnit));
+
+        if (!isset($map[$fromUnit][$baseUnit])) {
+            throw new \Exception("Unsupported unit: $fromUnit → $baseUnit");
+        }
+
+        return $amount * $map[$fromUnit][$baseUnit];
+    }
     // Fetch all orders
     public function index()
     {
@@ -116,7 +141,7 @@ class SalesOrderController extends Controller
         $order->save();
 
         /**
-         * ✅ DEDUCT INVENTORY
+         * DEDUCT INVENTORY
          * Only when order transitions to COMPLETED
          */
         if ($oldStatus !== 'completed' && $request->status === 'completed') {
@@ -124,61 +149,72 @@ class SalesOrderController extends Controller
             DB::beginTransaction();
 
             try {
-                if ($oldStatus !== 'completed' && $request->status === 'completed') {
+                foreach ($order->items as $item) {
 
-                    DB::beginTransaction();
+                    // Skip free items
+                    if (!empty($item['is_free'])) {
+                        continue;
+                    }
 
-                    try {
+                    // Get menu item recipes
+                    $recipes = DB::table('menu_item_recipes')
+                        ->where('menu_item_id', $item['id'])
+                        ->get();
 
-                        foreach ($order->items as $item) {
+                    foreach ($recipes as $recipe) {
 
-                            // Get recipe from DB
-                            $recipes = DB::table('menu_item_recipes')
-                                ->where('menu_item_id', $item['id'])
-                                ->get();
+                        // Lock inventory row
+                        $inventory = Inventory::lockForUpdate()
+                            ->findOrFail($recipe->inventory_id);
 
-                            foreach ($recipes as $recipe) {
+                        $requiredAmount = $recipe->amount * $item['quantity'];
+                        $requiredUnit   = strtolower($recipe->unit);
+                        $inventoryUnit  = strtolower($inventory->unit);
+                        $baseUnit       = strtolower($inventory->base_unit);
 
-                                $inventory = Inventory::lockForUpdate()->findOrFail($recipe->inventory_id);
-
-                                $deductAmount = $this->convertToBaseUnit(
-                                    $recipe->amount * $item['quantity'],
-                                    $recipe->unit,
-                                    $inventory->base_unit
+                        // Same unit → direct compare
+                        if ($requiredUnit === $inventoryUnit) {
+                            if ($inventory->quantity < $requiredAmount) {
+                                throw new \Exception(
+                                    "Insufficient stock for {$inventory->name}"
                                 );
-
-                                if ($inventory->quantity < $deductAmount) {
-                                    throw new \Exception("Insufficient stock for {$inventory->name}");
-                                }
-
-                                $inventory->decrement('quantity', $deductAmount);
-
-                                InventoryLog::create([
-                                    'inventory_id' => $inventory->id,
-                                    'action' => 'deducted',
-                                    'changed_fields' => [
-                                        'deducted' => $deductAmount,
-                                        'remaining' => $inventory->quantity,
-                                    ],
-                                    'performed_by' => $this->actorName(),
-                                ]);
                             }
+
+                            $inventory->decrement('quantity', $requiredAmount);
+                        } else {
+                            // Convert to base unit
+                            $requiredBase = $this->convertToBaseUnit(
+                                $requiredAmount,
+                                $requiredUnit,
+                                $baseUnit
+                            );
+
+                            if ($inventory->quantity < $requiredBase) {
+                                throw new \Exception(
+                                    "Insufficient stock for {$inventory->name}"
+                                );
+                            }
+
+                            $inventory->decrement('quantity', $requiredBase);
                         }
 
-                        DB::commit();
-
-                    } catch (\Throwable $e) {
-                        DB::rollBack();
-                        return response()->json([
-                            'message' => 'Inventory deduction failed',
-                            'error' => $e->getMessage(),
-                        ], 500);
+                        InventoryLog::create([
+                            'inventory_id' => $inventory->id,
+                            'action' => 'deducted',
+                            'changed_fields' => [
+                                'used' => $requiredAmount,
+                                'remaining' => $inventory->quantity,
+                            ],
+                            'performed_by' => $this->actorName(),
+                        ]);
                     }
                 }
 
                 DB::commit();
+
             } catch (\Throwable $e) {
                 DB::rollBack();
+
                 return response()->json([
                     'message' => 'Inventory deduction failed',
                     'error' => $e->getMessage(),
