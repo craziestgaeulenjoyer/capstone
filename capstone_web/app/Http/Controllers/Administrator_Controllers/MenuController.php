@@ -150,6 +150,64 @@ class MenuController extends Controller
     {
         $items = MenuItem::with('recipes')->get();
 
+        $items = $items->map(function ($item) {
+
+            // Default to "cannot order"
+            $maxQuantity = null;
+
+            // No recipe = not orderable
+            if ($item->recipes->isEmpty()) {
+                $item->max_quantity = 0;
+                return $item;
+            }
+
+            foreach ($item->recipes as $inventory) {
+
+                // Blocked inventory
+                if (
+                    !$inventory ||
+                    $inventory->archived ||
+                    $inventory->status === 'Expired'
+                ) {
+                    $item->max_quantity = 0;
+                    return $item;
+                }
+
+                $requiredAmount = (float) $inventory->pivot->amount;
+                $requiredUnit   = strtolower($inventory->pivot->unit);
+                $baseUnit       = strtolower($inventory->base_unit);
+
+                try {
+                    // Convert recipe requirement → base unit
+                    $requiredBase = $this->convertToBaseUnit(
+                        $requiredAmount,
+                        $requiredUnit,
+                        $baseUnit
+                    );
+                } catch (\Exception $e) {
+                    $item->max_quantity = 0;
+                    return $item;
+                }
+
+                if ($requiredBase <= 0) {
+                    $item->max_quantity = 0;
+                    return $item;
+                }
+
+                // 🔑 THIS IS THE KEY LINE
+                $possible = (int) floor($inventory->quantity / $requiredBase);
+
+                // First ingredient OR lowest so far
+                $maxQuantity = is_null($maxQuantity)
+                    ? $possible
+                    : min($maxQuantity, $possible);
+            }
+
+            $item->max_quantity = max(0, $maxQuantity);
+
+            return $item;
+        });
+
         return response()->json([
             'items' => $items
         ]);

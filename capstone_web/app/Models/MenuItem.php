@@ -26,7 +26,46 @@ class MenuItem extends Model
         'subcategories' => 'array',
     ];
 
-    protected $appends = ['availability_status'];
+    protected $appends = ['availability_status', 'max_quantity'];
+
+    public function getMaxQuantityAttribute(): int
+    {
+        $recipes = $this->relationLoaded('recipes')
+            ? $this->recipes
+            : $this->recipes()->get();
+
+        if ($recipes->isEmpty()) {
+            return 0;
+        }
+
+        $maxQuantities = [];
+
+        foreach ($recipes as $inventory) {
+            if ($inventory->archived || $inventory->status === 'Expired') {
+                return 0;
+            }
+
+            $requiredAmount = (float) $inventory->pivot->amount;
+            $requiredUnit   = strtolower($inventory->pivot->unit);
+            $inventoryUnit  = strtolower($inventory->unit);
+            $baseUnit       = strtolower($inventory->base_unit);
+
+            if ($requiredUnit === $inventoryUnit) {
+                $availableAmount = $inventory->quantity;
+            } else {
+                try {
+                    $availableAmount = $inventory->quantity / $this->convertToBaseUnit(1, $requiredUnit, $baseUnit);
+                } catch (\Exception $e) {
+                    return 0;
+                }
+            }
+
+            $maxForIngredient = floor($availableAmount / $requiredAmount);
+            $maxQuantities[] = $maxForIngredient;
+        }
+
+        return min($maxQuantities);
+    }
 
     /* ---------------- RELATIONSHIP ---------------- */
 
@@ -52,8 +91,9 @@ class MenuItem extends Model
             return 'Not Available';
         }
 
-        foreach ($recipes as $inventory) {
+        $maxQuantities = [];
 
+        foreach ($recipes as $inventory) {
             if ($inventory->archived || $inventory->status === 'Expired') {
                 return 'Sold Out';
             }
@@ -63,31 +103,25 @@ class MenuItem extends Model
             $inventoryUnit  = strtolower($inventory->unit);
             $baseUnit       = strtolower($inventory->base_unit);
 
-            // Same unit → direct compare
+            // Convert inventory quantity to match required unit if needed
             if ($requiredUnit === $inventoryUnit) {
-                if ($inventory->quantity < $requiredAmount) {
+                $availableAmount = $inventory->quantity;
+            } else {
+                try {
+                    // Convert required unit to inventory base unit
+                    $availableAmount = $inventory->quantity / $this->convertToBaseUnit(1, $requiredUnit, $baseUnit);
+                } catch (\Exception $e) {
                     return 'Sold Out';
                 }
-                continue;
             }
 
-            // Units differ → convert
-            try {
-                $requiredBase = $this->convertToBaseUnit(
-                    $requiredAmount,
-                    $requiredUnit,
-                    $baseUnit
-                );
-            } catch (Exception $e) {
-                return 'Sold Out';
-            }
-
-            if ($inventory->quantity < $requiredBase) {
-                return 'Sold Out';
-            }
+            // Max servings this ingredient allows
+            $maxForIngredient = floor($availableAmount / $requiredAmount);
+            $maxQuantities[] = $maxForIngredient;
         }
 
-        return 'Available';
+        // Minimum across all ingredients
+        return min($maxQuantities) > 0 ? 'Available' : 'Sold Out';
     }
 
     /* ---------------- UNIT CONVERSION ---------------- */
