@@ -41,7 +41,7 @@ const Manage_Items = () => {
   const [inventories, setInventories] = useState<any[]>([]);
 
   const [recipes, setRecipes] = useState<
-    { inventory_id: number; amount: number; unit: string }[]
+    { inventory_id: number | null; amount: string; unit: string }[]
   >([]);
 
   const DropdownPortal = ({ children }: any) => {
@@ -289,6 +289,21 @@ const Manage_Items = () => {
     });
   };
 
+  const parseAmountToDecimal = (value: string): number => {
+    if (!value.trim()) throw new Error("Amount is required");
+
+    if (value.includes("/")) {
+      const [num, den] = value.split("/").map(Number);
+      if (!num || !den) throw new Error("Invalid fraction");
+      return num / den;
+    }
+
+    const parsed = Number(value);
+    if (isNaN(parsed)) throw new Error("Invalid amount");
+
+    return parsed;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -326,6 +341,29 @@ const Manage_Items = () => {
       }
     }
 
+    // --- RECIPE VALIDATION ---
+    for (let i = 0; i < recipes.length; i++) {
+      const r = recipes[i];
+
+      if (!r.inventory_id || isNaN(Number(r.inventory_id))) {
+        alert(`Please select a valid ingredient for recipe #${i + 1}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!r.amount.trim()) {
+        alert(`Amount is required for recipe #${i + 1}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!r.unit.trim()) {
+        alert(`Unit is required for recipe #${i + 1}`);
+        setLoading(false);
+        return;
+      }
+    }
+
     if (hasError) {
       setErrors(newErrors);
       setLoading(false);
@@ -357,7 +395,18 @@ const Manage_Items = () => {
       // --- CATEGORIES & SUBCATEGORIES ---
       formData.categories.forEach(cat => form.append("categories[]", cat));
       formData.subcategories.forEach(sub => form.append("subcategories[]", sub));
-      form.append("recipes", JSON.stringify(recipes));
+      const normalizedRecipes = recipes.map(r => ({
+        ...r,
+        amount: parseAmountToDecimal(r.amount), 
+      }));
+
+      normalizedRecipes.forEach((recipe, i) => {
+        if (!recipe.inventory_id) return; 
+
+        form.append(`recipes[${i}][inventory_id]`, recipe.inventory_id.toString());
+        form.append(`recipes[${i}][amount]`, recipe.amount.toString());
+        form.append(`recipes[${i}][unit]`, recipe.unit);
+      });
 
       // --- IMAGE ---
       if (formData.image) form.append("image", formData.image);
@@ -489,52 +538,69 @@ const Manage_Items = () => {
     return rangeWithDots;
   };
 
-  const handleEditClick = (item: MenuItem) => {
-    setEditingItemId(item.id);
+  const handleEditClick = async (item: MenuItem) => {
+    try {
+      const base = getApiBase();
 
-    let regular = "";
-    let large = "";
-    let regularEnabled = false;
-    let largeEnabled = false;
+      const res = await apiClient.get(
+        `${base}/menu-items/${item.id}/detail`
+      );
 
-    // DRINK & FOOD LOGIC
-    if ((item.type === "drink" || item.type === "food") && typeof item.price !== "string") {
-      regular = item.price.regular || "";
-      large = item.price.large || "";
+      const fullItem = res.data;
 
-      // Enable inputs if price exists
-      if (regular) regularEnabled = true;
-      if (large) largeEnabled = true;
-    } else if (item.type === "food" && typeof item.price === "string") {
-      // fallback: old food price stored as string -> set as regular
-      regular = item.price;
-      regularEnabled = true;
+      setEditingItemId(fullItem.id);
+
+      // ----- PRICE HANDLING (UNCHANGED LOGIC) -----
+      let regular = "";
+      let large = "";
+      let regularEnabled = false;
+      let largeEnabled = false;
+
+      if (
+        (fullItem.type === "drink" || fullItem.type === "food") &&
+        typeof fullItem.price !== "string"
+      ) {
+        regular = fullItem.price.regular || "";
+        large = fullItem.price.large || "";
+
+        if (regular) regularEnabled = true;
+        if (large) largeEnabled = true;
+      }
+
+      setRegularPrice(regular);
+      setLargePrice(large);
+      setRegularEnabled(regularEnabled);
+      setLargeEnabled(largeEnabled);
+
+      // ----- MAIN FORM DATA -----
+      setFormData({
+        image: null,
+        name: fullItem.name,
+        type: fullItem.type,
+        price: "",
+        regularPrice: regular,
+        largePrice: large,
+        categories: fullItem.categories || [],
+        subcategories: fullItem.subcategories || [],
+        description: fullItem.description || "",
+        existingImagePath: fullItem.image_path || null,
+      });
+
+      // ✅ LOAD RECIPES
+      setRecipes(
+        (fullItem.recipes || []).map((r: any) => ({
+          inventory_id: r.id,
+          amount: r.pivot.amount.toString(),
+          unit: r.pivot.unit,
+        }))
+      );
+
+      setIsAddingMenu(true);
+      setActiveDropdown(null);
+    } catch (err) {
+      console.error("Failed to load menu item:", err);
+      alert("Failed to load item for editing.");
     }
-
-    setRegularPrice(regular);
-    setLargePrice(large);
-    setRegularEnabled(regularEnabled);
-    setLargeEnabled(largeEnabled);
-
-    // Main form data
-    setFormData({
-      image: null, 
-      name: item.name,
-      type: item.type,
-      price: "", // keep empty, using regular/large instead
-      regularPrice: regular,
-      largePrice: large,
-      categories: Array.isArray(item.categories)
-        ? item.categories
-        : String(item.categories).split(",").map((s) => s.trim()),
-      subcategories: Array.isArray(item.subcategories)
-        ? item.subcategories
-        : String(item.subcategories).split(",").map((s) => s.trim()),
-      description: item.description,
-      existingImagePath: item.image_path || null,
-    });
-
-    setIsAddingMenu(true);
   };
 
   const discardModal = (
@@ -1119,7 +1185,7 @@ const Manage_Items = () => {
                   key={index}
                   className="bg-gray-50 border border-gray-200 rounded-lg p-4"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
 
                     {/* INGREDIENT */}
                     <div>
@@ -1127,7 +1193,7 @@ const Manage_Items = () => {
                         Ingredient
                       </label>
                       <select
-                        value={recipe.inventory_id}
+                        value={recipe.inventory_id ?? ""}
                         onChange={(e) => {
                           const inventoryId = Number(e.target.value);
                           const selectedInventory = inventories.find(
@@ -1138,17 +1204,19 @@ const Manage_Items = () => {
                           copy[index] = {
                             ...copy[index],
                             inventory_id: inventoryId,
-                            unit: selectedInventory?.unit || "", 
+                            unit: selectedInventory?.base_unit || "",
                           };
 
                           setRecipes(copy);
                         }}
-                        className="w-full border rounded-md p-2 text-gray-900 focus:ring-[#8cb662]"
+                        className="text-gray-900 w-full border rounded-md p-2"
                       >
-                        <option value="">Select ingredient</option>
-                        {inventories.map(inv => (
+                        <option value="" disabled>
+                          Select ingredient
+                        </option>
+                        {inventories.map((inv) => (
                           <option key={inv.id} value={inv.id}>
-                            {inv.name} ({inv.unit})
+                            {inv.name}
                           </option>
                         ))}
                       </select>
@@ -1160,16 +1228,22 @@ const Manage_Items = () => {
                         Amount
                       </label>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={recipe.amount}
                         onChange={(e) => {
                           const copy = [...recipes];
-                          copy[index].amount = Number(e.target.value);
+                          copy[index].amount = e.target.value;
                           setRecipes(copy);
                         }}
-                        placeholder="e.g. 10"
-                        className="w-full border rounded-md p-2 text-gray-900 focus:ring-[#8cb662]"
+                        onBlur={(e) => {
+                          const parsed = parseAmountToDecimal(e.target.value);
+                          const copy = [...recipes];
+                          copy[index].amount = parsed.toString();
+                          setRecipes(copy);
+                        }}
+                        placeholder="e.g. 1, 1.25, 1/2"
+                        className="text-gray-900 w-full border rounded-md p-2"
                       />
                     </div>
 
@@ -1187,13 +1261,13 @@ const Manage_Items = () => {
                           copy[index].unit = e.target.value;
                           setRecipes(copy);
                         }}
-                        placeholder="g / ml / pcs"
+                        placeholder="e.g. ml, L, oz, scoop, shot"
                         className="w-full border rounded-md p-2 text-gray-900 focus:ring-[#8cb662]"
                       />
 
                       {recipe.inventory_id !== 0 && (
                         <p className="text-xs text-gray-400 mt-1">
-                          Auto-filled from inventory (editable)
+                          Will be converted when order is marked as completed
                         </p>
                       )}
                     </div>
@@ -1219,7 +1293,7 @@ const Manage_Items = () => {
             <button
               type="button"
               onClick={() =>
-                setRecipes([...recipes, { inventory_id: 0, amount: 0, unit: "" }])
+                setRecipes([...recipes, { inventory_id: null, amount: "", unit: "" }])
               }
               className="px-4 py-2 bg-[#8CB662] text-white rounded-lg text-sm font-semibold hover:bg-[#7a9d59]"
             >

@@ -22,6 +22,7 @@ interface InventoryItem {
   supplier?: string | null;
   quantity: number;
   unit: string;
+  base_unit: string; 
   expiry: string | null;
   status: "In Stock" | "Low" | "Expired Soon" | "Expired";
   updated_at: string | null;
@@ -61,6 +62,7 @@ const Inventory: React.FC = () => {
   const [activity, setActivity] = useState<any[]>([]);
   const [activityPage, setActivityPage] = useState(1);
   const [activityTotalPages, setActivityTotalPages] = useState(1);
+  const [baseUnit, setBaseUnit] = useState("");
 
   const calendarRef = React.useRef<HTMLDivElement>(null);
 
@@ -219,8 +221,6 @@ const Inventory: React.FC = () => {
       await fetchInventory();
       setModalOpen(false);
       setEditingItem(null);
-
-      window.location.reload();
     } catch (err: any) {
       if (err.response && err.response.status === 401) {
         console.error("Unauthorized: Check your token or session role");
@@ -345,6 +345,7 @@ const Inventory: React.FC = () => {
     category: "",
     quantity: 0,
     unit: "pcs",
+    base_unit: "pcs", 
     expiry: null,
     status: "In Stock",
   });
@@ -1154,9 +1155,8 @@ const Inventory: React.FC = () => {
                   supplier: (e.target as any).supplier.value || null,
                   quantity: parseInt((e.target as any).quantity.value, 10) || 0,
                   unit: (e.target as any).unit.value,
-                  expiry: noExpiry
-                    ? null
-                    : (e.target as any).expiry.value || null,
+                  base_unit: (e.target as any).base_unit.value,
+                  expiry: noExpiry ? null : (e.target as any).expiry.value || null,
                   status: (e.target as any).status.value,
                 };
 
@@ -1207,7 +1207,7 @@ const Inventory: React.FC = () => {
               </div>
 
               {/* Quantity & Unit */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Quantity</label>
                   <input
@@ -1233,6 +1233,21 @@ const Inventory: React.FC = () => {
                     }`}
                   />
                   {errors.unit && <p className="text-sm text-red-500 mt-1">{errors.unit}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Base Unit</label>
+                  <select
+                    name="base_unit"
+                    defaultValue={editingItem?.base_unit || "pcs"}
+                    className="mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white shadow-md
+                      focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition"
+                    required
+                  >
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="ml">Milliliters (ml)</option>
+                    <option value="grams">Grams (g)</option>
+                  </select>
                 </div>
               </div>
 

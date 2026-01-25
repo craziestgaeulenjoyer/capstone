@@ -77,25 +77,21 @@ class InventoryController extends Controller
                 'category'        => 'required|string',
                 'supplier'        => 'nullable|string',
                 'quantity'        => 'required|numeric',
-                'base_unit'       => 'required|string', // g, ml, pcs
-                'conversion_size' => 'nullable|numeric', // 1000, 250, etc
+                'unit'            => 'nullable|string',
+                'base_unit'       => 'required|string', 
+                'conversion_size' => 'nullable|numeric', 
                 'expiry'          => 'nullable|date',
                 'status'          => 'nullable|string',
             ]);
-
-            $quantityInBaseUnit = $data['quantity'];
-
-            if (!empty($data['conversion_size'])) {
-                $quantityInBaseUnit = $data['quantity'] * $data['conversion_size'];
-            }
 
             $item = Inventory::create([
                 'name'            => $data['name'],
                 'category'        => $data['category'],
                 'supplier'        => $data['supplier'],
-                'quantity'        => $quantityInBaseUnit,
+                'quantity'        => $data['quantity'], 
+                'unit'            => $data['unit'],       
                 'base_unit'       => $data['base_unit'],
-                'conversion_size' => $data['conversion_size'],
+                'conversion_size' => $data['conversion_size'] ?? null,
                 'expiry'          => $data['expiry'],
                 'status'          => $data['status'] ?? 'In Stock',
             ]);
@@ -143,36 +139,41 @@ class InventoryController extends Controller
         try {
             $item = Inventory::findOrFail($id);
 
-            if ($request->has('quantity')) {
-                $addedQuantity = $request->quantity;
-
-                if ($item->conversion_size) {
-                    $addedQuantity *= $item->conversion_size;
-                }
-
-                $item->quantity += $addedQuantity;
-            }
-
             $oldData = $item->only([
                 'name',
                 'category',
                 'supplier',
                 'quantity',
-                'unit',
+                'base_unit',
                 'expiry',
                 'status',
             ]);
 
             $data = $request->validate([
-                'name'     => 'sometimes|string',
-                'category' => 'sometimes|string',
-                'supplier' => 'nullable|string',
-                'quantity' => 'sometimes|numeric',
+                'name'            => 'sometimes|string',
+                'category'        => 'sometimes|string',
+                'supplier'        => 'nullable|string',
+                'quantity'        => 'sometimes|numeric',
+                'unit'            => 'nullable|string',
                 'conversion_size' => 'sometimes|numeric',
-                'unit'     => 'nullable|string',
-                'expiry'   => 'nullable|date',
-                'status'   => 'sometimes|in:In Stock,Low,Expired Soon,Expired',
+                'base_unit'       => 'sometimes|string',
+                'expiry'          => 'nullable|date',
+                'status'          => 'sometimes|in:In Stock,Low,Expired Soon,Expired',
             ]);
+
+            if (isset($data['quantity'])) {
+                $item->quantity = $data['quantity'];
+                unset($data['quantity']);
+            }
+
+            if (!isset($data['unit']) && isset($data['base_unit'])) {
+                $data['unit'] = match ($data['base_unit']) {
+                    'ml'    => 'ml',
+                    'g'     => 'g',
+                    'grams' => 'g',
+                    default => 'pcs',
+                };
+            }
 
             $item->update($data);
 
@@ -357,12 +358,12 @@ class InventoryController extends Controller
                 ->whereNotIn('status', ['Expired'])
                 ->orderBy('name')
                 ->get([
-                    'id',
-                    'name',
-                    'unit',
-                    'quantity',
-                    'status'
-                ])
+                        'id',
+                        'name',
+                        'base_unit',
+                        'quantity',
+                        'status'
+                    ])
         );
     }
 
@@ -375,6 +376,7 @@ class InventoryController extends Controller
         string $baseUnit
     ): float {
         $map = [
+            // SPOONS
             'tbsp' => [
                 'ml' => 15,
                 'g'  => 12,
@@ -383,10 +385,20 @@ class InventoryController extends Controller
                 'ml' => 5,
                 'g'  => 4,
             ],
+
+            // CUPS
             'cup' => [
                 'ml' => 240,
                 'g'  => 120,
             ],
+
+            // OUNCES (NEW)
+            'oz' => [
+                'ml' => 29.5735,  // fluid ounce
+                'g'  => 28.3495,  // weight ounce
+            ],
+
+            // BASE UNITS
             'ml' => [
                 'ml' => 1,
             ],
@@ -398,6 +410,14 @@ class InventoryController extends Controller
             ],
         ];
 
-        return $amount * ($map[$fromUnit][$baseUnit] ?? 1);
+        // Normalize units (safety)
+        $fromUnit = strtolower(trim($fromUnit));
+        $baseUnit = strtolower(trim($baseUnit));
+
+        if (!isset($map[$fromUnit][$baseUnit])) {
+            throw new \Exception("Unsupported unit conversion: $fromUnit → $baseUnit");
+        }
+
+        return $amount * $map[$fromUnit][$baseUnit];
     }
 }

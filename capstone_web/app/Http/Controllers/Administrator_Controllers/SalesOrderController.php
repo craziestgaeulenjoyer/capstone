@@ -124,34 +124,55 @@ class SalesOrderController extends Controller
             DB::beginTransaction();
 
             try {
-                foreach ($order->items as $item) {
-                    foreach ($item['recipes'] ?? [] as $recipe) {
+                if ($oldStatus !== 'completed' && $request->status === 'completed') {
 
-                        $inventory = Inventory::findOrFail($recipe['inventory_id']);
+                    DB::beginTransaction();
 
-                        $deductAmount = $this->convertToBaseUnit(
-                            $recipe['amount'],
-                            $recipe['unit'],
-                            $inventory->base_unit
-                        );
+                    try {
 
-                        $inventory->quantity -= $deductAmount;
+                        foreach ($order->items as $item) {
 
-                        if ($inventory->quantity < 0) {
-                            $inventory->quantity = 0;
+                            // Get recipe from DB
+                            $recipes = DB::table('menu_item_recipes')
+                                ->where('menu_item_id', $item['id'])
+                                ->get();
+
+                            foreach ($recipes as $recipe) {
+
+                                $inventory = Inventory::lockForUpdate()->findOrFail($recipe->inventory_id);
+
+                                $deductAmount = $this->convertToBaseUnit(
+                                    $recipe->amount * $item['quantity'],
+                                    $recipe->unit,
+                                    $inventory->base_unit
+                                );
+
+                                if ($inventory->quantity < $deductAmount) {
+                                    throw new \Exception("Insufficient stock for {$inventory->name}");
+                                }
+
+                                $inventory->decrement('quantity', $deductAmount);
+
+                                InventoryLog::create([
+                                    'inventory_id' => $inventory->id,
+                                    'action' => 'deducted',
+                                    'changed_fields' => [
+                                        'deducted' => $deductAmount,
+                                        'remaining' => $inventory->quantity,
+                                    ],
+                                    'performed_by' => $this->actorName(),
+                                ]);
+                            }
                         }
 
-                        $inventory->save();
+                        DB::commit();
 
-                        InventoryLog::create([
-                            'inventory_id' => $inventory->id,
-                            'action' => 'deducted',
-                            'changed_fields' => [
-                                'deducted' => $deductAmount,
-                                'remaining' => $inventory->quantity,
-                            ],
-                            'performed_by' => $this->actorName(),
-                        ]);
+                    } catch (\Throwable $e) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => 'Inventory deduction failed',
+                            'error' => $e->getMessage(),
+                        ], 500);
                     }
                 }
 

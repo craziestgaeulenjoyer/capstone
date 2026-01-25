@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MenuItem;
 use App\Models\Notification;
+use App\Models\Inventory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -45,11 +46,11 @@ class MenuController extends Controller
     {
         $price = $request->price;
 
-        if ($request->type === 'drink') {
+        if (in_array($request->type, ['drink', 'food'])) {
             return is_array($price) ? $price : [$price];
         }
 
-        return is_array($price) ? $price : (string) $price;
+        return (string) $price;
     }
 
     /**
@@ -57,7 +58,21 @@ class MenuController extends Controller
      */
     public function store(Request $request)
     {
+        if (is_string($request->recipes)) {
+            $request->merge([
+                'recipes' => json_decode($request->recipes, true)
+            ]);
+        }
+
         Log::info('MenuController@store request received', $request->all());
+
+        if ($request->has('recipes')) {
+            $cleanRecipes = collect($request->recipes)->filter(function ($r) {
+                return !empty($r['inventory_id']);
+            })->values()->toArray();
+
+            $request->merge(['recipes' => $cleanRecipes]);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -68,7 +83,7 @@ class MenuController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         
-            'recipes' => 'required|array|min:1',
+            'recipes' => 'nullable|array',
             'recipes.*.inventory_id' => 'required|exists:inventories,id',
             'recipes.*.amount' => 'required|numeric|min:0.01',
             'recipes.*.unit' => 'required|string|max:50',
@@ -90,13 +105,27 @@ class MenuController extends Controller
             'image_path' => $path,
         ]);
 
-        foreach ($request->recipes as $recipe) {
-            DB::table('menu_item_recipes')->insert([
-                'menu_item_id' => $item->id,
-                'inventory_id' => $recipe['inventory_id'],
-                'amount' => $recipe['amount'],
-                'unit' => $recipe['unit'],
-            ]);
+        if ($request->has('recipes')) {
+            foreach ($request->recipes as $recipe) {
+                if (empty($recipe['inventory_id'])) {
+                    continue;
+                }
+
+                $amount = $recipe['amount'];
+
+                // Safety normalization (backend guard)
+                if (is_string($amount) && str_contains($amount, '/')) {
+                    [$num, $den] = explode('/', $amount);
+                    $amount = (float) $num / (float) $den;
+                }
+
+                DB::table('menu_item_recipes')->insert([
+                    'menu_item_id' => $item->id,
+                    'inventory_id' => $recipe['inventory_id'],
+                    'amount' => (float) $amount,
+                    'unit' => $recipe['unit'],
+                ]);
+            }
         }
 
         DB::statement('SELECT refresh_menu_availability()');
@@ -117,15 +146,45 @@ class MenuController extends Controller
         ], 201);
     }
 
+    public function index()
+    {
+        $items = MenuItem::with('recipes')->get();
+
+        return response()->json([
+            'items' => $items
+        ]);
+    }
+
+    public function show($id)
+    {
+        return response()->json(
+            MenuItem::with('recipes')->findOrFail($id)
+        );
+    }
+
     /**
      * Update an existing menu item
      */
     public function update(Request $request, $id)
     {
+        if (is_string($request->recipes)) {
+            $request->merge([
+                'recipes' => json_decode($request->recipes, true)
+            ]);
+        }
+
         $item = MenuItem::findOrFail($id);
         $before = $item->getOriginal();
 
         Log::info('MenuController@update request received', $request->all());
+
+        if ($request->has('recipes')) {
+            $cleanRecipes = collect($request->recipes)->filter(function ($r) {
+                return !empty($r['inventory_id']);
+            })->values()->toArray();
+
+            $request->merge(['recipes' => $cleanRecipes]);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -136,7 +195,7 @@ class MenuController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         
-            'recipes' => 'required|array|min:1',
+            'recipes' => 'nullable|array',
             'recipes.*.inventory_id' => 'required|exists:inventories,id',
             'recipes.*.amount' => 'required|numeric|min:0.01',
             'recipes.*.unit' => 'required|string|max:50',
@@ -165,13 +224,26 @@ class MenuController extends Controller
             ->where('menu_item_id', $item->id)
             ->delete();
 
-        foreach ($request->recipes as $recipe) {
-            DB::table('menu_item_recipes')->insert([
-                'menu_item_id' => $item->id,
-                'inventory_id' => $recipe['inventory_id'],
-                'amount' => $recipe['amount'],
-                'unit' => $recipe['unit'],
-            ]);
+        if ($request->has('recipes')) {
+            foreach ($request->recipes as $recipe) {
+                if (empty($recipe['inventory_id'])) {
+                    continue;
+                }
+
+                $amount = $recipe['amount'];
+
+                if (is_string($amount) && str_contains($amount, '/')) {
+                    [$num, $den] = explode('/', $amount);
+                    $amount = (float) $num / (float) $den;
+                }
+
+                DB::table('menu_item_recipes')->insert([
+                    'menu_item_id' => $item->id,
+                    'inventory_id' => $recipe['inventory_id'],
+                    'amount' => (float) $amount,
+                    'unit' => $recipe['unit'],
+                ]);
+            }
         }
 
         DB::statement('SELECT refresh_menu_availability()');
@@ -232,6 +304,11 @@ class MenuController extends Controller
      */
     public function publicMenu()
     {
-        return response()->json(MenuItem::all());
+        $items = MenuItem::with('recipes')->get();
+
+        // Availability comes from model accessor automatically
+        return response()->json([
+            'items' => $items
+        ]);
     }
 }

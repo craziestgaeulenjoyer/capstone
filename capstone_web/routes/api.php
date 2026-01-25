@@ -101,6 +101,7 @@ Route::prefix('superadmin')->group(function () {
         Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('superadmin.menu.update');
         Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('superadmin.menu.destroy');
         Route::get('/menu-items/{id}/recipes',[MenuController::class, 'getRecipes'])->name('superadmin.menu.recipes');
+        Route::get('/menu-items/{id}/detail', [MenuController::class, 'show'])->name('superadmin.menu.show');
 
         Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('superadmin.inventory.logs');
 
@@ -178,6 +179,7 @@ Route::prefix('admin')->group(function () {
         Route::put('/menu-items/{id}', [MenuController::class, 'update'])->name('admin.menu.update');
         Route::delete('/menu-items/{id}', [MenuController::class, 'destroy'])->name('admin.menu.destroy');
         Route::get('/menu-items/{id}/recipes',[MenuController::class, 'getRecipes'])->name('superadmin.menu.recipes');
+        Route::get('/menu-items/{id}/detail', [MenuController::class, 'show'])->name('admin.menu.show');
 
         Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('admin.inventory.logs');
 
