@@ -33,7 +33,14 @@ dotenv.config({ path: __dirname + '/.env' });
 const JWT_SECRET = process.env.JWT_SECRET || 'CFoJy9csauDWon3fhdTcviGLMZt6afHm'; 
 
 const express = require('express');
+const cors = require('cors');
 const pool = require('./db');
+
+const app = express();
+
+app.use(cors({
+  origin: "*", 
+}));
 
 const setupLoyaltyTrigger = async () => {
   await pool.query(`
@@ -87,11 +94,6 @@ const setupLoyaltyTrigger = async () => {
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cors = require('cors');
-
-app.use(cors({
-  origin: "*", 
-}));
 
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
@@ -105,8 +107,6 @@ const crypto = require("crypto");
 
 console.log("Email user:", process.env.EMAIL_USER);
 console.log("Email pass exists:", !!process.env.EMAIL_PASS);
-
-const app = express();
 
 app.get("/__ping", (req, res) => {
   res.send("PING OK - PAYMONGO SERVER");

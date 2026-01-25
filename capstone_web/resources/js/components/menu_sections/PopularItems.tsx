@@ -32,6 +32,7 @@ interface MenuItem {
   price: { regular: string; large?: string };
   image_path: string;
   availability_status: "Available" | "Sold Out" | "Not Available";
+  max_quantity?: number;
 }
 
 const PopularItems: React.FC = () => {
@@ -48,6 +49,7 @@ const PopularItems: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedFlavor, setSelectedFlavor] = useState("");
   const [selectedAddOn, setSelectedAddOn] = useState("");
+  const [maxQuantity, setMaxQuantity] = useState<number>(1);
 
   const isAvailable = (item: MenuItem) =>
   item.availability_status === "Available";
@@ -207,6 +209,7 @@ const PopularItems: React.FC = () => {
               setSelectedItem(item);
               setSelectedSize("16oz");
               setQuantity(1);
+              setMaxQuantity(item.max_quantity ?? 1); 
               setSelectedFlavor("");
               setSelectedAddOn("");
             }}
@@ -288,18 +291,26 @@ const PopularItems: React.FC = () => {
                   <label className="text-sm font-semibold">Quantity</label>
                   <div className="flex gap-2 mt-1">
                     <button
-                      onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+                      onClick={() =>
+                        setQuantity((q) => Math.max(1, q - 1))
+                      }
                       className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
                     >
                       -
                     </button>
                     <span>{quantity}</span>
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
+                      onClick={() =>
+                        setQuantity((q) => Math.min(q + 1, maxQuantity))
+                      }
                       className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
                     >
                       +
                     </button>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      Max available: {maxQuantity}
+                    </p>
                   </div>
                 </div>
 
