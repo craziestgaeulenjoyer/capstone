@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { router } from "@inertiajs/react";
-import { Utensils, ShoppingBag, Package , Package  } from "lucide-react"; 
+import { Utensils, ShoppingBag, Package } from "lucide-react"; 
 
 export default function PickOrder() {
   const [selectedOption, setSelectedOption] = useState(null);
