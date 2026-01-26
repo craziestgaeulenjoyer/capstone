@@ -1,24 +1,32 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { router } from "@inertiajs/react";
-import { Utensils, ShoppingBag } from "lucide-react"; 
+import { Utensils, ShoppingBag, Package  } from "lucide-react"; 
 
 export default function PickOrder() {
   const [selectedOption, setSelectedOption] = useState(null);
 
 
-  const handleSelect = (option) => {
-    setSelectedOption(option);
+ const handleSelect = (option) => {
+  setSelectedOption(option);
 
-    const fulfillmentMethod =
-      option === "dinein" ? "Dine In" : "Take out";
+  let fulfillmentMethod = "";
+  let redirectTo = "/kioskhome";
 
-    localStorage.setItem("fulfillment_method", fulfillmentMethod);
+  if (option === "dinein") fulfillmentMethod = "Dine In";
+  if (option === "takeout") fulfillmentMethod = "Take out";
+  if (option === "bulk") {
+    fulfillmentMethod = "Bulk Order";
+    redirectTo = "/ordernumber";
+  }
 
-    setTimeout(() => {
-      router.visit("/kioskhome");
-    }, 500);
-  };
+  localStorage.setItem("fulfillment_method", fulfillmentMethod);
+
+  setTimeout(() => {
+    router.visit(redirectTo);
+  }, 500);
+};
+
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#FDFCF8] overflow-hidden p-6 md:p-12">
@@ -131,6 +139,52 @@ export default function PickOrder() {
             Grab & Go
           </p>
         </motion.button>
+        <motion.button
+  whileHover={{ y: -8, scale: 1.02 }}
+  whileTap={{ scale: 0.95 }}
+  onClick={() => handleSelect("bulk")}
+ className={`relative group flex flex-col items-center justify-center p-12 md:p-20 rounded-[50px] transition-all duration-500 border-2 overflow-hidden md:col-span-2 mx-auto ${
+
+    selectedOption === "bulk"
+      ? "bg-[#3D2317] border-[#8CB662] shadow-[0_20px_50px_rgba(61,35,23,0.3)]"
+      : "bg-white border-[#3D2317]/5 shadow-sm hover:border-[#8CB662]/40"
+  }`}
+>
+  <AnimatePresence>
+    {selectedOption === "bulk" && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.1 }}
+        className="absolute inset-0 bg-white"
+      />
+    )}
+  </AnimatePresence>
+
+  <div className={`p-8 rounded-full mb-8 transition-all duration-500 ${
+    selectedOption === "bulk"
+      ? "bg-[#8CB662] scale-110"
+      : "bg-[#F2F4F2] group-hover:bg-[#8CB662]/10"
+  }`}>
+    <Package
+      size={56}
+      className={selectedOption === "bulk" ? "text-white" : "text-[#8CB662]"}
+      strokeWidth={1}
+    />
+  </div>
+
+  <span className={`text-2xl md:text-4xl font-bold italic uppercase tracking-widest transition-colors ${
+    selectedOption === "bulk" ? "text-white" : "text-[#3D2317]"
+  }`}>
+    Bulk Order
+  </span>
+
+  <p className={`text-[10px] md:text-xs uppercase mt-3 tracking-[0.3em] font-bold ${
+    selectedOption === "bulk" ? "text-[#8CB662]" : "text-[#3D2317]/30"
+  }`}>
+    Events & Groups
+  </p>
+</motion.button>
+
 
       </div>
 
