@@ -1,12 +1,10 @@
 import React, { useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
-import axiosClient from '../../axiosClient';
-
-axiosClient.defaults.withCredentials = true;
+import axiosClient from '@/axiosClient';
 
 interface AuthUser {
   id: number;
-  name: string;
+  name: string; 
   email: string;
   role?: 'admin' | 'super_admin';
 }
@@ -30,8 +28,8 @@ function DashboardEmailVerification() {
       try {
         const endpoint =
           role === 'super_admin'
-            ? '/api/superadmin/email/resend'
-            : '/api/admin/email/resend';
+            ? '/superadmin/email/resend'
+            : '/admin/email/resend';
         await axiosClient.post(endpoint, { email });
         console.log('Verification email sent automatically.');
       } catch (err) {

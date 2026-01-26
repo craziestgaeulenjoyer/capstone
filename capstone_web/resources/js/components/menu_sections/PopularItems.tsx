@@ -31,6 +31,8 @@ interface MenuItem {
   subcategories: string[];
   price: { regular: string; large?: string };
   image_path: string;
+  availability_status: "Available" | "Sold Out" | "Not Available";
+  max_quantity?: number;
 }
 
 const PopularItems: React.FC = () => {
@@ -47,6 +49,10 @@ const PopularItems: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedFlavor, setSelectedFlavor] = useState("");
   const [selectedAddOn, setSelectedAddOn] = useState("");
+  const [maxQuantity, setMaxQuantity] = useState<number>(1);
+
+  const isAvailable = (item: MenuItem) =>
+  item.availability_status === "Available";
 
   /* ---------------- FETCH MENU ---------------- */
   useEffect(() => {
@@ -109,6 +115,11 @@ const PopularItems: React.FC = () => {
 
   /* ---------------- CART ---------------- */
   const handleAddToCart = async () => {
+    if (selectedItem?.availability_status !== "Available") {
+      alert("This item is sold out.");
+      return;
+    }
+
     if (!isLoggedIn || !selectedItem) {
       alert("Please log in to order.");
       return;
@@ -142,52 +153,51 @@ const PopularItems: React.FC = () => {
   return (
     <div className="px-6 pt-10 pb-16">
     {/* Tabs & Search Container */}
-<div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-  
-  <div className="w-full lg:flex-1 overflow-hidden relative">
-    <div 
-      className="flex flex-nowrap items-center gap-2 sm:gap-3 pb-3 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing"
-      style={{
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}
-    >
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+        
+        <div className="w-full lg:flex-1 overflow-hidden relative">
+          <div 
+            className="flex flex-nowrap items-center gap-2 sm:gap-3 pb-3 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+          >
+            <style>{`
+              .no-scrollbar::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
 
-      {categories.map((t) => (
-        <button
-          key={t}
-          onClick={() => setActiveTab(t)}
-          className={`whitespace-nowrap text-xs sm:text-sm font-bold px-5 sm:px-6 py-2.5 rounded-full border transition-all duration-300 flex-shrink-0 ${
-            activeTab === t
-              ? "bg-[#8CB662] text-white border-[#8CB662] shadow-md scale-105"
-              : "border-gray-200 text-gray-600 hover:border-[#8CB662] hover:text-[#8CB662] bg-white"
-          }`}
-        >
-          {t}
-        </button>
-      ))}
-    </div>
-  </div>
+            {categories.map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                className={`whitespace-nowrap text-xs sm:text-sm font-bold px-5 sm:px-6 py-2.5 rounded-full border transition-all duration-300 flex-shrink-0 ${
+                  activeTab === t
+                    ? "bg-[#8CB662] text-white border-[#8CB662] shadow-md scale-105"
+                    : "border-gray-200 text-gray-600 hover:border-[#8CB662] hover:text-[#8CB662] bg-white"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
 
-  {/* Search Bar */}
-  <div className="relative w-full lg:w-[300px] xl:w-[400px] flex-shrink-0">
-    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-    <input
-      type="text"
-      placeholder="Search popular item..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      className="w-full pl-11 pr-4 py-2.5 text-sm bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#8CB662]/50 transition-all shadow-sm"
-    />
-  </div>
-</div>
-      
+        {/* Search Bar */}
+        <div className="relative w-full lg:w-[300px] xl:w-[400px] flex-shrink-0">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search popular item..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-11 pr-4 py-2.5 text-sm bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#8CB662]/50 transition-all shadow-sm"
+          />
+        </div>
+      </div> 
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -195,20 +205,37 @@ const PopularItems: React.FC = () => {
           <div
             key={item.id}
             onClick={() => {
+              if (!isAvailable(item)) return;
               setSelectedItem(item);
               setSelectedSize("16oz");
               setQuantity(1);
+              setMaxQuantity(item.max_quantity ?? 1); 
               setSelectedFlavor("");
               setSelectedAddOn("");
             }}
-            className="rounded-2xl shadow hover:shadow-lg transition duration-200 overflow-hidden border border-gray-100 bg-white cursor-pointer"
+            className={`rounded-2xl overflow-hidden border transition duration-200
+              ${isAvailable(item)
+                ? "bg-white shadow hover:shadow-lg cursor-pointer"
+                : "bg-gray-100 opacity-60 cursor-not-allowed"
+              }`}
           >
-            <div className="bg-[#E1E1E1] p-4 flex justify-center">
+            <div className="relative flex justify-center items-center">
               <img
                 src={`/storage/${item.image_path}`}
                 alt={item.name}
-                className="w-60 h-60 object-contain rounded-xl"
+                className={`w-full h-60 object-contain
+                  ${item.availability_status !== "Available" ? "grayscale" : ""}`}
               />
+
+              {item.availability_status !== "Available" && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    {item.availability_status === "Sold Out"
+                      ? "SOLD OUT"
+                      : "NOT AVAILABLE"}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-lg font-bold text-[#2E3A2F]">
@@ -264,18 +291,26 @@ const PopularItems: React.FC = () => {
                   <label className="text-sm font-semibold">Quantity</label>
                   <div className="flex gap-2 mt-1">
                     <button
-                      onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+                      onClick={() =>
+                        setQuantity((q) => Math.max(1, q - 1))
+                      }
                       className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
                     >
                       -
                     </button>
                     <span>{quantity}</span>
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
+                      onClick={() =>
+                        setQuantity((q) => Math.min(q + 1, maxQuantity))
+                      }
                       className="px-3 border rounded-full shadow hover:bg-[#8CB662] hover:text-white"
                     >
                       +
                     </button>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      Max available: {maxQuantity}
+                    </p>
                   </div>
                 </div>
 
@@ -360,9 +395,16 @@ const PopularItems: React.FC = () => {
                   {isLoggedIn ? (
                     <button
                       onClick={handleAddToCart}
-                      className="w-[150px] border border-[#8CB662] text-sm rounded-4xl text-[#8CB662] hover:bg-[#8CB662] hover:text-white font-semibold py-2"
+                      disabled={selectedItem?.availability_status !== "Available"}
+                      className={`w-[150px] text-sm rounded-4xl font-semibold py-2
+                        ${selectedItem?.availability_status === "Available"
+                          ? "border border-[#8CB662] text-[#8CB662] hover:bg-[#8CB662] hover:text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
                     >
-                      Add to Cart
+                      {selectedItem?.availability_status === "Available"
+                        ? "Add to Cart"
+                        : selectedItem?.availability_status}
                     </button>
                   ) : (
                     <div className="text-red-500 font-semibold">

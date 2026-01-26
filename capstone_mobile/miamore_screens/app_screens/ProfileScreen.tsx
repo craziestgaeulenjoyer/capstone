@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Linking
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -16,7 +17,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { launchImageLibrary, ImageLibraryOptions } from "react-native-image-picker";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Header from "../components/Header";
-import { products } from "../data/products";
 import { API_BASE, fixUrl } from "../../config/api";
 import { authFetch } from "../../utils/authFetch";
 
@@ -34,9 +34,9 @@ const ProfileScreen: React.FC = () => {
 
   const [profileImage, setProfileImage] = useState<{ uri?: string | null }>({});
   const [view, setView] = useState<"main" | "viewProfile" | "editProfile" | "favorites" | "pastOrders">("main");
-  const [selectedTab, setSelectedTab] = useState<"completed" | "cancelled">("completed");
+  const [selectedTab, setSelectedTab] = useState<"completed" | "canceled">("completed");
   const [completedOrders, setCompletedOrders] = useState<any[]>([]);
-  const [cancelledOrders, setCancelledOrders] = useState<any[]>([]);
+  const [canceledOrders, setCanceledOrders] = useState<any[]>([]);
   const [viewExpanded, setViewExpanded] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -169,29 +169,44 @@ const ProfileScreen: React.FC = () => {
   
   const fetchPastOrders = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      const [completedRes, cancelledRes] = await Promise.all([
-        fetch("http://10.0.2.2:5000/api/orders/completed", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("http://10.0.2.2:5000/api/orders/cancelled", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [completedRes, canceledRes] = await Promise.all([
+        authFetch(`${API_BASE}/api/orders/completed`),
+        authFetch(`${API_BASE}/api/orders/cancelled`),
       ]);
 
       const completedData = await completedRes.json();
-      const cancelledData = await cancelledRes.json();
+      const canceledData = await canceledRes.json();
+
+      console.log("COMPLETED:", completedData);
+      console.log("CANCELED:", canceledData);
 
       setCompletedOrders(completedData);
-      setCancelledOrders(cancelledData);
+      setCanceledOrders(canceledData);
     } catch (err) {
       console.log("Error fetching past orders:", err);
     }
   };
 
+  const loadFavorites = async () => {
+    try {
+      const stored = await AsyncStorage.getItem("favorites");
+      const favorites = stored ? JSON.parse(stored) : [];
+      setFavorites(favorites);
+    } catch (err) {
+      console.log("Error loading favorites:", err);
+    }
+  };
+
+
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (view === "favorites") {
+      loadFavorites();
+    }
+  }, [view]);
 
   const handleLogout = async () => {
     try {
@@ -238,15 +253,8 @@ const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.actionItem}
               onPress={async () => {
-                const stored = await AsyncStorage.getItem("favorites");
-                if (stored) {
-                  const favoriteIds = JSON.parse(stored);
-                  const favoriteProducts = products.filter((p) =>
-                    favoriteIds.includes(p.id)
-                  );
-                  setFavorites(favoriteProducts);
-                  setView("favorites");
-                }
+                await loadFavorites();
+                setView("favorites");
               }}
             >
               <Icon name="heart-outline" size={22} color="#73C04D" />
@@ -262,11 +270,6 @@ const ProfileScreen: React.FC = () => {
             >
               <Icon name="time-outline" size={22} color="#73C04D" />
               <Text style={styles.actionText}>Past Orders</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionItem}>
-              <Icon name="settings-outline" size={22} color="#73C04D" />
-              <Text style={styles.actionText}>Settings</Text>
             </TouchableOpacity>
           </View>
 
@@ -337,7 +340,6 @@ const ProfileScreen: React.FC = () => {
 
             {/* Other existing items */}
             {[
-              "Frequently asked questions",
               "Share your feedback",
               "Terms of use",
               "Privacy policy",
@@ -347,8 +349,15 @@ const ProfileScreen: React.FC = () => {
                 key={index}
                 style={styles.otherItem}
                 onPress={() => {
-                  if (item === "Logout") handleLogout();
-                  else if (item === "Share your feedback") setShowFeedbackModal(true);
+                  if (item === "Logout") {
+                    handleLogout();
+                  } else if (item === "Share your feedback") {
+                    setShowFeedbackModal(true);
+                  } else if (item === "Terms of use") {
+                    Linking.openURL("https://miamorecafe.com/termsandcondition");
+                  } else if (item === "Privacy policy") {
+                    Linking.openURL("https://miamorecafe.com/privacypolicy");
+                  }
                 }}
               >
                 <Text style={styles.otherText}>{item}</Text>
@@ -603,7 +612,7 @@ const ProfileScreen: React.FC = () => {
                 borderBottomColor: "#73C04D",
                 marginHorizontal: 10,
               }}
-              onPress={() => setSelectedTab(tab as "completed" | "cancelled")}
+              onPress={() => setSelectedTab(tab as "completed" | "canceled")}
             >
               <Text
                 style={{
@@ -618,8 +627,8 @@ const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Orders List */}
-        {(selectedTab === "completed" ? completedOrders : cancelledOrders).length > 0 ? (
-          (selectedTab === "completed" ? completedOrders : cancelledOrders).map((order, idx) => (
+        {(selectedTab === "completed" ? completedOrders : canceledOrders).length > 0 ? (
+          (selectedTab === "completed" ? completedOrders : canceledOrders).map((order, idx) => (
             <View
               key={idx}
               style={{

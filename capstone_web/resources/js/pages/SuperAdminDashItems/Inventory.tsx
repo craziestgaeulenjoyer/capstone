@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import api from "@/apiClient";
 import {
   MoreHorizontal,
   Filter,
@@ -22,6 +22,7 @@ interface InventoryItem {
   supplier?: string | null;
   quantity: number;
   unit: string;
+  base_unit: string; 
   expiry: string | null;
   status: "In Stock" | "Low" | "Expired Soon" | "Expired";
   updated_at: string | null;
@@ -61,6 +62,7 @@ const Inventory: React.FC = () => {
   const [activity, setActivity] = useState<any[]>([]);
   const [activityPage, setActivityPage] = useState(1);
   const [activityTotalPages, setActivityTotalPages] = useState(1);
+  const [baseUnit, setBaseUnit] = useState("");
 
   const calendarRef = React.useRef<HTMLDivElement>(null);
 
@@ -77,20 +79,12 @@ const Inventory: React.FC = () => {
 
   const token = localStorage.getItem("token");
 
-  const axiosInstance = axios.create({
-    baseURL: "http://127.0.0.1:8000",
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-      "Content-Type": "application/json",
-    },
-  });
-
   // ----- Fetch all inventory (single request) -----
   const fetchInventory = async () => {
     try {
       setLoading(true);
 
-      const res = await axiosInstance.get(`${apiPrefix}/inventory`);
+      const res = await api.get(`/${role}/inventory`);
       const data: InventoryItem[] = Array.isArray(res.data) ? res.data : [];
 
       const normalized = data.map((d) => ({
@@ -123,15 +117,9 @@ const Inventory: React.FC = () => {
     try {
       setLoading(true);
 
-      const res = await axiosInstance.get(
-        `${apiPrefix}/inventory`, 
-        {
-          params: {
-            month,
-            year,
-          }
-        }
-      );
+      const res = await api.get(`/${role}/inventory`, {
+        params: { month, year },
+      });
 
       const data: InventoryItem[] = Array.isArray(res.data) ? res.data : [];
 
@@ -226,15 +214,13 @@ const Inventory: React.FC = () => {
     try {
       setLoading(true);
       if (editingItem) {
-        await axiosInstance.put(`${apiPrefix}/inventory/${editingItem.id}`, payload);
+        await api.put(`/${role}/inventory/${editingItem.id}`, payload);
       } else {
-        await axiosInstance.post(`${apiPrefix}/inventory`, payload);
+        await api.post(`/${role}/inventory`, payload);
       }
       await fetchInventory();
       setModalOpen(false);
       setEditingItem(null);
-
-      window.location.reload();
     } catch (err: any) {
       if (err.response && err.response.status === 401) {
         console.error("Unauthorized: Check your token or session role");
@@ -252,7 +238,7 @@ const Inventory: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       setLoading(true);
-      await axiosInstance.delete(`${apiPrefix}/inventory/${id}`);
+      await api.delete(`/${role}/inventory/${id}`);
       await fetchInventory();
       setMenuOpen(null);
     } catch (err) {
@@ -265,7 +251,7 @@ const Inventory: React.FC = () => {
   const handleArchive = async (id: number) => {
     try {
       setLoading(true);
-      await axiosInstance.patch(`${apiPrefix}/inventory/archive/${id}`);
+      await api.patch(`/${role}/inventory/archive/${id}`);
       await fetchInventory();
       setMenuOpen(null);
     } catch (err) {
@@ -359,6 +345,7 @@ const Inventory: React.FC = () => {
     category: "",
     quantity: 0,
     unit: "pcs",
+    base_unit: "pcs", 
     expiry: null,
     status: "In Stock",
   });
@@ -535,16 +522,20 @@ const Inventory: React.FC = () => {
   }, [activeItems]);
 
   const fetchActivity = async (page = 1) => {
-    const res = await axiosInstance.get(
-      `${apiPrefix}/inventory/logs`,
-      {
-        params: { page }
-      }
-    );
+    try {
+      const res = await api.get(
+        `/${role}/inventory/logs`,
+        {
+          params: { page },
+        }
+      );
 
-    setActivity(res.data.data);
-    setActivityPage(res.data.current_page);
-    setActivityTotalPages(res.data.last_page);
+      setActivity(res.data.data);
+      setActivityPage(res.data.current_page);
+      setActivityTotalPages(res.data.last_page);
+    } catch (error) {
+      console.error("Failed to fetch inventory activity logs:", error);
+    }
   };
 
   useEffect(() => {
@@ -1164,9 +1155,8 @@ const Inventory: React.FC = () => {
                   supplier: (e.target as any).supplier.value || null,
                   quantity: parseInt((e.target as any).quantity.value, 10) || 0,
                   unit: (e.target as any).unit.value,
-                  expiry: noExpiry
-                    ? null
-                    : (e.target as any).expiry.value || null,
+                  base_unit: (e.target as any).base_unit.value,
+                  expiry: noExpiry ? null : (e.target as any).expiry.value || null,
                   status: (e.target as any).status.value,
                 };
 
@@ -1217,7 +1207,7 @@ const Inventory: React.FC = () => {
               </div>
 
               {/* Quantity & Unit */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Quantity</label>
                   <input
@@ -1243,6 +1233,21 @@ const Inventory: React.FC = () => {
                     }`}
                   />
                   {errors.unit && <p className="text-sm text-red-500 mt-1">{errors.unit}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Base Unit</label>
+                  <select
+                    name="base_unit"
+                    defaultValue={editingItem?.base_unit || "pcs"}
+                    className="mt-1 w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white shadow-md
+                      focus:outline-none focus:ring-2 focus:ring-[#8cb662] transition"
+                    required
+                  >
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="ml">Milliliters (ml)</option>
+                    <option value="grams">Grams (g)</option>
+                  </select>
                 </div>
               </div>
 

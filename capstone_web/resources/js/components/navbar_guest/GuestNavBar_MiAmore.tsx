@@ -81,7 +81,13 @@ const GuestNavBar_MiAmore: React.FC = () => {
   };
 
   const handleLogout = () => {
-    router.post(route('customer.logout'));
+    router.post(
+      route("customer.logout"),
+      {},
+      {
+        onSuccess: () => router.visit("/home"),
+      }
+    );
   };
 
    const fetchCartCount = async () => {

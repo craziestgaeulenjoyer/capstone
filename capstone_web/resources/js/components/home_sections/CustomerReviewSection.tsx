@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { FaQuoteLeft, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { FaStar } from "react-icons/fa6";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import axios from "axios";
+import apiClient from "@/apiClient";
 
 interface Review {
   name: string;
@@ -31,8 +31,8 @@ const CustomerReviewSection: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    axios
-      .get("/api/feedback/approved")
+    apiClient
+      .get("/feedback/approved")
       .then(res => {
         setReviews(res.data);
       })

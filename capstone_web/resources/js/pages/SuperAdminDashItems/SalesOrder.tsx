@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, SlidersHorizontal, Download, MoreHorizontal, List, History, Utensils, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '@/apiClient';
 
 interface OrderItem {
   name: string;
@@ -91,6 +91,12 @@ const SalesOrder = () => {
       .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
+  const getApiRoleBase = () => {
+    const role = sessionStorage.getItem('dashboard_role') || '';
+    const normalized = role.toLowerCase().replace(/[_\s]/g, '');
+    return normalized === 'superadmin' ? '/superadmin' : '/admin';
+  };
+
   const storedRole = sessionStorage.getItem('dashboard_role');
   const apiRoleSegment =
     storedRole === 'super_admin' ? 'superadmin' : 'admin';
@@ -104,15 +110,11 @@ const SalesOrder = () => {
     }
 
     setLoading(true);
-    const storedRole = sessionStorage.getItem('dashboard_role');
-    const apiRoleSegment = storedRole === 'super_admin' ? 'superadmin' : 'admin';
-    const token = localStorage.getItem('token');
+    const base = getApiRoleBase();
 
     if (activeTab === 'Payment History') {
-      axios
-        .get(`/api/${apiRoleSegment}/sales_orders`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      apiClient
+        .get(`${base}/sales_orders`)
         .then((res) => {
           const mapped: PaymentRow[] = res.data
             .filter((o: any) => o.status === 'completed' || o.status === 'paid')
@@ -137,9 +139,8 @@ const SalesOrder = () => {
     }
 
     // Fetch orders
-    axios.get(`/api/${apiRoleSegment}/sales_orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    apiClient
+      .get(`${base}/sales_orders`)
       .then((res) => {
         let data: OrderRow[] = res.data.map((o: any) => ({
           orderId: o.order_code,
@@ -206,17 +207,9 @@ const SalesOrder = () => {
   };
 
   const fetchArchivedOrders = async () => {
-    const token = localStorage.getItem('token');
-    const storedRole = sessionStorage.getItem('dashboard_role');
-    const apiRoleSegment =
-      storedRole === 'super_admin' ? 'superadmin' : 'admin';
+    const base = getApiRoleBase();
 
-    const res = await axios.get(
-      `/api/${apiRoleSegment}/sales_orders/archived`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const res = await apiClient.get(`${base}/sales_orders/archived`);
 
     const mapped: OrderRow[] = res.data.map((o: any) => ({
       orderId: o.order_code,
@@ -348,11 +341,6 @@ const SalesOrder = () => {
   }, []);
 
   const handleActionClick = async (action: string, id: string) => {
-    const token = localStorage.getItem('token');
-    const storedRole = sessionStorage.getItem('dashboard_role');
-    const apiRoleSegment =
-      storedRole === 'super_admin' ? 'superadmin' : 'admin';
-
     try {
       if (action === 'Edit') {
         const order = tableData.find(
@@ -368,11 +356,9 @@ const SalesOrder = () => {
       }
 
       if (action === 'Archive') {
-        await axios.patch(
-          `/api/${apiRoleSegment}/sales_orders/${id}/archive`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const base = getApiRoleBase();
+
+        await apiClient.patch(`${base}/sales_orders/${id}/archive`);
 
         setTableData((prev) =>
           prev.filter(
@@ -386,10 +372,9 @@ const SalesOrder = () => {
           return;
         }
 
-        await axios.delete(
-          `/api/${apiRoleSegment}/sales_orders/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const base = getApiRoleBase();
+
+        await apiClient.delete(`${base}/sales_orders/${id}`);
 
         setTableData((prev) =>
           prev.filter(
@@ -844,15 +829,11 @@ const SalesOrder = () => {
                 onClick={async () => {
                   try {
                     setSavingStatus(true);
-                    const token = localStorage.getItem('token');
-                    const storedRole = sessionStorage.getItem('dashboard_role');
-                    const apiRoleSegment =
-                      storedRole === 'super_admin' ? 'superadmin' : 'admin';
+                    const base = getApiRoleBase();
 
-                    await axios.put(
-                      `/api/${apiRoleSegment}/sales_orders/${selectedOrder.orderId}/status`,
-                      { status: statusToApiMap[newStatus] },
-                      { headers: { Authorization: `Bearer ${token}` } }
+                    await apiClient.put(
+                      `${base}/sales_orders/${selectedOrder.orderId}/status`,
+                      { status: statusToApiMap[newStatus] }
                     );
 
                     setTableData((prev) =>
@@ -963,9 +944,10 @@ const SalesOrder = () => {
                     if (!row) return;
 
                     try {
-                      const res = await axios.get(
-                        `/api/${apiRoleSegment}/sales_orders/${row.orderId}`,
-                        { headers: { Authorization: `Bearer ${token}` } }
+                      const base = getApiRoleBase();
+
+                      const res = await apiClient.get(
+                        `${base}/sales_orders/${row.orderId}`
                       );
 
                       setDetailsOrder({

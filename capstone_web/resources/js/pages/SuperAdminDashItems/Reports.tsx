@@ -7,7 +7,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { AnimatePresence, motion } from "framer-motion";
-import axios from 'axios';
+import apiClient from "@/apiClient";
 
 // A simple utility function to get the number of days in a month.
 const getDaysInMonth = (year: number, month: number): number => {
@@ -186,20 +186,14 @@ export default function Report() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    axios.get(`http://127.0.0.1:8000${apiPrefix}/reports/daily`, {
+    apiClient.get(`${apiPrefix}/reports/daily`, {
       params: {
-        date: selectedDate.toLocaleDateString('en-US'),
+        date: selectedDate.toLocaleDateString("en-US"),
         range: filterBy.range,
         sortBy,
         fulfillment: filterBy.fulfillment,
       },
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
-    })
-    .then(res => setMetrics(res.data))
-    .catch(err => console.error('Reports API error:', err.response?.data || err));
+    });
   }, [selectedDate, filterBy, sortBy, apiPrefix]);
 
   // Handle month navigation

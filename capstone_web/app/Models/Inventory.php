@@ -14,9 +14,16 @@ class Inventory extends Model
         'category',
         'supplier',
         'quantity',
-        'unit',
+        'unit',  
+        'base_unit',          
+        'conversion_size',   
         'expiry',
         'status',
         'archived',
+    ];
+
+    protected $casts = [
+        'archived' => 'boolean',
+        'quantity' => 'float', 
     ];
 }

@@ -4,7 +4,7 @@ import {
     MapPin, Phone, Eye, Download, Inbox, Filter, CheckCircle2, Clock, AlertCircle,
     SearchX, Users, X
 } from "lucide-react";
-import axios from 'axios';
+import api from "@/apiClient";
 import { createPortal } from "react-dom";
 
 const DropdownPortal = ({ children }: { children: React.ReactNode }) => {
@@ -96,15 +96,9 @@ const EventsTable: React.FC = () => {
     const fetchEvents = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("token");
             const rolePrefix = getApiRolePrefix();
 
-            const response = await axios.get(
-                `/api/${rolePrefix}/events`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
+            const response = await api.get(`/${rolePrefix}/events`);
 
             const mapped = response.data.events.map((item: any) => ({
                 id: item.id,
@@ -132,18 +126,11 @@ const EventsTable: React.FC = () => {
         newStatus: EventItem['status']
     ) => {
         try {
-            const token = localStorage.getItem("token");
             const rolePrefix = getApiRolePrefix();
 
-            await axios.patch(
-                `/api/${rolePrefix}/events/${id}/status`,
-                { status: newStatus },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        Accept: 'application/json',
-                    },
-                }
+            await api.patch(
+                `/${rolePrefix}/events/${id}/status`,
+                { status: newStatus }
             );
 
             setTableData(prev =>

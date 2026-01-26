@@ -8,6 +8,7 @@ import ReportsContent from "@/pages/SuperAdminDashItems/Reports";
 import AnalyticsContent from "@/pages/SuperAdminDashItems/Analytics";
 import ManageItemsContent from "@/pages/SuperAdminDashItems/Manage_Items";
 import ReviewDashboard from "../SuperAdminDashItems/Reviews";
+import DeliveryOrdersPage from "@/pages/SuperAdminDashItems/DeliveryOrdersPage";
 import TeamsContent from "@/pages/SuperAdminDashItems/Teams";
 
 interface DashboardLayoutProps {
@@ -20,6 +21,7 @@ export default function DashboardLayout({ subpage }: DashboardLayoutProps) {
     switch(subpage) {
       case "inventory": return <Inventory />;
       case "salesorder": return <SalesOrder />;
+      case "delivery-orders": return <DeliveryOrdersPage />;
       case "customers": return <CustomersContent />;
       case "events": return <EventsTable />;
       case "reports": return <ReportsContent />;

@@ -17,6 +17,16 @@ const CheckoutReviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const address = localStorage.getItem("address");
+    const phone = localStorage.getItem("phone");
+    const paymentType = localStorage.getItem("payment_type");
+
+    if (!address || !phone || !paymentType) {
+      router.visit("/payment");
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const profileRes = await axiosClient.get("/customer/profile");

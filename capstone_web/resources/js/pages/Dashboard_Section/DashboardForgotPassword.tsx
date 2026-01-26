@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../axiosClient';
+import axiosClient from '@/axiosClient';
 import { Link, router } from '@inertiajs/react';
 
 type Step = 1 | 2 | 3;

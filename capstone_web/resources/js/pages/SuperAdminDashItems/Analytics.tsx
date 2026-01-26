@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import axios, { AxiosInstance } from 'axios';
+import api from "@/apiClient";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -159,26 +159,6 @@ interface PeakHour {
 }
 
 /* ---------- Helpers ---------- */
-const getStoredToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token') || null;
-};
-
-const createApiClient = (): AxiosInstance => {
-  const baseURL = "http://127.0.0.1:8000/api";
-  const token = getStoredToken();
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  return axios.create({
-    baseURL,
-    headers,
-    withCredentials: !!baseURL,
-    timeout: 15000,
-  });
-};
 
 function isTruthyString(s: any): s is string {
   return typeof s === 'string' && s.length > 0;
@@ -266,7 +246,6 @@ type BreakdownPopoverProps = {
 
 /* ---------- Component ---------- */
 const Analytics: React.FC = () => {
-  const api = useMemo(() => createApiClient(), []);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -331,15 +310,11 @@ const Analytics: React.FC = () => {
 
       const role = sessionStorage.getItem("dashboard_role");
       const apiRole = role === "super_admin" ? "superadmin" : "admin";
-      const token = localStorage.getItem("token");
 
-      const url = `/api/${apiRole}/analytics/peak-hours`;
+      const url = `/${apiRole}/analytics/peak-hours`;
 
-      const res = await axios.get(url, {
+      const res = await api.get(url, {
         params: { filter, date: selectedDate },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       console.log("Peak Hours API Response:", res.data);

@@ -72,7 +72,29 @@ class InventoryController extends Controller
         DB::beginTransaction();
 
         try {
-            $item = Inventory::create($request->all());
+            $data = $request->validate([
+                'name'            => 'required|string',
+                'category'        => 'required|string',
+                'supplier'        => 'nullable|string',
+                'quantity'        => 'required|numeric',
+                'unit'            => 'nullable|string',
+                'base_unit'       => 'required|string', 
+                'conversion_size' => 'nullable|numeric', 
+                'expiry'          => 'nullable|date',
+                'status'          => 'nullable|string',
+            ]);
+
+            $item = Inventory::create([
+                'name'            => $data['name'],
+                'category'        => $data['category'],
+                'supplier'        => $data['supplier'],
+                'quantity'        => $data['quantity'], 
+                'unit'            => $data['unit'],       
+                'base_unit'       => $data['base_unit'],
+                'conversion_size' => $data['conversion_size'] ?? null,
+                'expiry'          => $data['expiry'],
+                'status'          => $data['status'] ?? 'In Stock',
+            ]);
 
             InventoryLog::create([
                 'inventory_id' => $item->id,
@@ -122,20 +144,36 @@ class InventoryController extends Controller
                 'category',
                 'supplier',
                 'quantity',
-                'unit',
+                'base_unit',
                 'expiry',
                 'status',
             ]);
 
             $data = $request->validate([
-                'name'     => 'sometimes|string',
-                'category' => 'sometimes|string',
-                'supplier' => 'nullable|string',
-                'quantity' => 'sometimes|integer',
-                'unit'     => 'nullable|string',
-                'expiry'   => 'nullable|date',
-                'status'   => 'sometimes|in:In Stock,Low,Expired Soon,Expired',
+                'name'            => 'sometimes|string',
+                'category'        => 'sometimes|string',
+                'supplier'        => 'nullable|string',
+                'quantity'        => 'sometimes|numeric',
+                'unit'            => 'nullable|string',
+                'conversion_size' => 'sometimes|numeric',
+                'base_unit'       => 'sometimes|string',
+                'expiry'          => 'nullable|date',
+                'status'          => 'sometimes|in:In Stock,Low,Expired Soon,Expired',
             ]);
+
+            if (isset($data['quantity'])) {
+                $item->quantity = $data['quantity'];
+                unset($data['quantity']);
+            }
+
+            if (!isset($data['unit']) && isset($data['base_unit'])) {
+                $data['unit'] = match ($data['base_unit']) {
+                    'ml'    => 'ml',
+                    'g'     => 'g',
+                    'grams' => 'g',
+                    default => 'pcs',
+                };
+            }
 
             $item->update($data);
 
@@ -307,5 +345,79 @@ class InventoryController extends Controller
         $notification->update(['is_read' => true]);
 
         return response()->json(['message' => 'Notification marked as read']);
+    }
+
+    /**
+     * Inventory list for recipe selection
+     */
+    public function recipeIngredients()
+    {
+        return response()->json(
+            Inventory::where('archived', false)
+                ->where('quantity', '>', 0)
+                ->whereNotIn('status', ['Expired'])
+                ->orderBy('name')
+                ->get([
+                        'id',
+                        'name',
+                        'base_unit',
+                        'quantity',
+                        'status'
+                    ])
+        );
+    }
+
+    /**
+     * Convert recipe unit to inventory base unit
+     */
+    private function convertToBaseUnit(
+        float $amount,
+        string $fromUnit,
+        string $baseUnit
+    ): float {
+        $map = [
+            // SPOONS
+            'tbsp' => [
+                'ml' => 15,
+                'g'  => 12,
+            ],
+            'tsp' => [
+                'ml' => 5,
+                'g'  => 4,
+            ],
+
+            // CUPS
+            'cup' => [
+                'ml' => 240,
+                'g'  => 120,
+            ],
+
+            // OUNCES (NEW)
+            'oz' => [
+                'ml' => 29.5735,  // fluid ounce
+                'g'  => 28.3495,  // weight ounce
+            ],
+
+            // BASE UNITS
+            'ml' => [
+                'ml' => 1,
+            ],
+            'g' => [
+                'g' => 1,
+            ],
+            'pcs' => [
+                'pcs' => 1,
+            ],
+        ];
+
+        // Normalize units (safety)
+        $fromUnit = strtolower(trim($fromUnit));
+        $baseUnit = strtolower(trim($baseUnit));
+
+        if (!isset($map[$fromUnit][$baseUnit])) {
+            throw new \Exception("Unsupported unit conversion: $fromUnit → $baseUnit");
+        }
+
+        return $amount * $map[$fromUnit][$baseUnit];
     }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import apiClient from '@/apiClient';
 import { FaArrowLeft, FaRegEnvelopeOpen } from 'react-icons/fa';
 
 const VerificationCode = () => {
@@ -53,9 +53,9 @@ const VerificationCode = () => {
         setError("");
         
         try {
-            await axios.post("/api/customer/verify-code", { 
-                email, 
-                otp_code: fullCode 
+            await apiClient.post('/customer/verify-code', {
+                email,
+                otp_code: fullCode,
             });
             window.location.href = "/resetpasswordform";
         } catch (err: any) {
@@ -69,7 +69,7 @@ const VerificationCode = () => {
         if (!email) return;
         setLoading(true);
         try {
-            await axios.post("/api/customer/resend-code", { email });
+            await apiClient.post('/customer/resend-code', { email });
             alert("A new premium security code has been sent to your email.");
             setCode(["", "", "", "", "", ""]);
             inputRefs[0].current?.focus();

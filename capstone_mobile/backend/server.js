@@ -33,7 +33,14 @@ dotenv.config({ path: __dirname + '/.env' });
 const JWT_SECRET = process.env.JWT_SECRET || 'CFoJy9csauDWon3fhdTcviGLMZt6afHm'; 
 
 const express = require('express');
+const cors = require('cors');
 const pool = require('./db');
+
+const app = express();
+
+app.use(cors({
+  origin: "*", 
+}));
 
 const setupLoyaltyTrigger = async () => {
   await pool.query(`
@@ -87,7 +94,7 @@ const setupLoyaltyTrigger = async () => {
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cors = require('cors');
+
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client('1018371869413-d6k2ancgs59ujstbuu8j6b38lo6foec8.apps.googleusercontent.com');
@@ -100,8 +107,6 @@ const crypto = require("crypto");
 
 console.log("Email user:", process.env.EMAIL_USER);
 console.log("Email pass exists:", !!process.env.EMAIL_PASS);
-
-const app = express();
 
 app.get("/__ping", (req, res) => {
   res.send("PING OK - PAYMONGO SERVER");
@@ -279,7 +284,7 @@ app.post("/api/register", async (req, res) => {
 });
 
 // Login route
-app.post('/api/login', async (req, res) => {
+  app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
 
@@ -638,6 +643,16 @@ app.get('/api/menu-items', async (req, res) => {
   } catch (err) {
     console.error("Error fetching menu items:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/api/products", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM menu_items");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch products" });
   }
 });
 
@@ -1806,16 +1821,9 @@ async function applyLoyaltyForCompletedOrders(userId) {
   );
 }
 
-const PORT = 5000;
-
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log('Server running on all interfaces');
-
-  try {
-    await setupLoyaltyTrigger();
-  } catch (err) {
-    console.error("❌ Failed to setup loyalty trigger:", err);
-  }
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 

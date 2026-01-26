@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/apiClient";
 import {
   ShoppingBag,
   Users,
@@ -45,8 +45,6 @@ interface OrderOverviewData {
     backgroundColor: string[];
   }[];
 }
-
-const BASE_URL = "http://127.0.0.1:8000/api";
 
 const Dashboard: React.FC = () => {
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -100,15 +98,10 @@ const Dashboard: React.FC = () => {
           : "/admin/analytics";
 
       const date = `${year}-${String(month).padStart(2, "0")}-01`;
-      const token = localStorage.getItem("token");
 
       // MAIN DASHBOARD ANALYTICS (monthly)
-      const { data } = await axios.get(`${BASE_URL}${endpoint}`, {
-        params: {
-          view: "month",
-          date,
-        },
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+      const { data } = await api.get(endpoint, {
+        params: { view: "month", date },
       });
 
       // Populate cards
@@ -162,9 +155,8 @@ const Dashboard: React.FC = () => {
       });
 
       // DAILY REVENUE FOR FULL MONTH CHART
-      const revenueRes = await axios.get(`${BASE_URL}${endpoint}/revenue-per-day`, {
+      const revenueRes = await api.get(`${endpoint}/revenue-per-day`, {
         params: { date },
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
       });
 
       const dailyRevenue = revenueRes.data.revenue || [];
@@ -209,16 +201,13 @@ const Dashboard: React.FC = () => {
     const fetchProfile = async () => {
       try {
         const role = sessionStorage.getItem("dashboard_role");
-        const token = localStorage.getItem("token");
 
         const endpoint =
           role === "super_admin"
-            ? "/api/superadmin/profile"
-            : "/api/admin/profile";
+            ? "/superadmin/profile"
+            : "/admin/profile";
 
-        const res = await axios.get(`http://127.0.0.1:8000${endpoint}`, {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
-        });
+        const res = await api.get(endpoint);
 
         setAdminName(res.data.user.name || res.data.user.username);
       } catch (err) {

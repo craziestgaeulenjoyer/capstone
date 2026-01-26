@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from "react-dom";
 import { MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
-import axios from 'axios'; 
+import apiClient from "@/apiClient";
 
 interface MenuItem {
   id: number;
@@ -37,6 +37,12 @@ const Manage_Items = () => {
   const buttonRefs = useRef<{ [key: number]: HTMLElement | null }>({});
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<"details" | "recipes">("details");
+  const [inventories, setInventories] = useState<any[]>([]);
+
+  const [recipes, setRecipes] = useState<
+    { inventory_id: number | null; amount: string; unit: string }[]
+  >([]);
 
   const DropdownPortal = ({ children }: any) => {
     const el = document.getElementById("dropdown-root");
@@ -101,19 +107,14 @@ const Manage_Items = () => {
 
   const getApiBase = () => {
     const role = sessionStorage.getItem("dashboard_role") || "";
-    const normalizedRole = role.toLowerCase().replace(/[_\s]/g, ""); 
-    return normalizedRole === "superadmin" ? "/api/superadmin" : "/api/admin";
+    const normalizedRole = role.toLowerCase().replace(/[_\s]/g, "");
+    return normalizedRole === "superadmin" ? "/superadmin" : "/admin";
   };
 
   const fetchItems = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
       const base = getApiBase(); 
-      const response = await axios.get(`${base}/menu-items`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(`${base}/menu-items`);
 
       setTableData(response.data.items || []);
     } catch (error: any) {
@@ -123,6 +124,15 @@ const Manage_Items = () => {
 
   useEffect(() => {
     fetchItems();
+  }, []);
+
+  useEffect(() => {
+    const base = getApiBase();
+
+    apiClient
+      .get(`${base}/inventory/recipe-ingredients`)
+      .then(res => setInventories(res.data))
+      .catch(() => setInventories([]));
   }, []);
 
   useEffect(() => {
@@ -279,6 +289,21 @@ const Manage_Items = () => {
     });
   };
 
+  const parseAmountToDecimal = (value: string): number => {
+    if (!value.trim()) throw new Error("Amount is required");
+
+    if (value.includes("/")) {
+      const [num, den] = value.split("/").map(Number);
+      if (!num || !den) throw new Error("Invalid fraction");
+      return num / den;
+    }
+
+    const parsed = Number(value);
+    if (isNaN(parsed)) throw new Error("Invalid amount");
+
+    return parsed;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -316,6 +341,29 @@ const Manage_Items = () => {
       }
     }
 
+    // --- RECIPE VALIDATION ---
+    for (let i = 0; i < recipes.length; i++) {
+      const r = recipes[i];
+
+      if (!r.inventory_id || isNaN(Number(r.inventory_id))) {
+        alert(`Please select a valid ingredient for recipe #${i + 1}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!r.amount.trim()) {
+        alert(`Amount is required for recipe #${i + 1}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!r.unit.trim()) {
+        alert(`Unit is required for recipe #${i + 1}`);
+        setLoading(false);
+        return;
+      }
+    }
+
     if (hasError) {
       setErrors(newErrors);
       setLoading(false);
@@ -347,6 +395,18 @@ const Manage_Items = () => {
       // --- CATEGORIES & SUBCATEGORIES ---
       formData.categories.forEach(cat => form.append("categories[]", cat));
       formData.subcategories.forEach(sub => form.append("subcategories[]", sub));
+      const normalizedRecipes = recipes.map(r => ({
+        ...r,
+        amount: parseAmountToDecimal(r.amount), 
+      }));
+
+      normalizedRecipes.forEach((recipe, i) => {
+        if (!recipe.inventory_id) return; 
+
+        form.append(`recipes[${i}][inventory_id]`, recipe.inventory_id.toString());
+        form.append(`recipes[${i}][amount]`, recipe.amount.toString());
+        form.append(`recipes[${i}][unit]`, recipe.unit);
+      });
 
       // --- IMAGE ---
       if (formData.image) form.append("image", formData.image);
@@ -356,8 +416,10 @@ const Manage_Items = () => {
         form.append("_method", "PUT");
         await updateMenuItem(editingItemId, form);
       } else {
-        await axios.post(`${base}/menu-items`, form, {
-          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+        await apiClient.post(`${base}/menu-items`, form, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         });
         alert("Menu item created successfully!");
         setIsAddingMenu(false);
@@ -380,8 +442,10 @@ const Manage_Items = () => {
       console.log(`PUT ${base}/menu-items/${id}`);
       console.log("FormData for update:", form);
 
-      await axios.post(`${base}/menu-items/${id}`, form, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+      await apiClient.post(`${base}/menu-items/${id}`, form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       alert("Menu item updated successfully!");
@@ -402,9 +466,7 @@ const Manage_Items = () => {
       if (!token) throw new Error("No token found.");
 
       const base = getApiBase();
-      await axios.delete(`${base}/menu-items/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await apiClient.delete(`${base}/menu-items/${id}`);
 
       alert("Menu item deleted successfully!");
       fetchItems();
@@ -476,52 +538,69 @@ const Manage_Items = () => {
     return rangeWithDots;
   };
 
-  const handleEditClick = (item: MenuItem) => {
-    setEditingItemId(item.id);
+  const handleEditClick = async (item: MenuItem) => {
+    try {
+      const base = getApiBase();
 
-    let regular = "";
-    let large = "";
-    let regularEnabled = false;
-    let largeEnabled = false;
+      const res = await apiClient.get(
+        `${base}/menu-items/${item.id}/detail`
+      );
 
-    // DRINK & FOOD LOGIC
-    if ((item.type === "drink" || item.type === "food") && typeof item.price !== "string") {
-      regular = item.price.regular || "";
-      large = item.price.large || "";
+      const fullItem = res.data;
 
-      // Enable inputs if price exists
-      if (regular) regularEnabled = true;
-      if (large) largeEnabled = true;
-    } else if (item.type === "food" && typeof item.price === "string") {
-      // fallback: old food price stored as string -> set as regular
-      regular = item.price;
-      regularEnabled = true;
+      setEditingItemId(fullItem.id);
+
+      // ----- PRICE HANDLING (UNCHANGED LOGIC) -----
+      let regular = "";
+      let large = "";
+      let regularEnabled = false;
+      let largeEnabled = false;
+
+      if (
+        (fullItem.type === "drink" || fullItem.type === "food") &&
+        typeof fullItem.price !== "string"
+      ) {
+        regular = fullItem.price.regular || "";
+        large = fullItem.price.large || "";
+
+        if (regular) regularEnabled = true;
+        if (large) largeEnabled = true;
+      }
+
+      setRegularPrice(regular);
+      setLargePrice(large);
+      setRegularEnabled(regularEnabled);
+      setLargeEnabled(largeEnabled);
+
+      // ----- MAIN FORM DATA -----
+      setFormData({
+        image: null,
+        name: fullItem.name,
+        type: fullItem.type,
+        price: "",
+        regularPrice: regular,
+        largePrice: large,
+        categories: fullItem.categories || [],
+        subcategories: fullItem.subcategories || [],
+        description: fullItem.description || "",
+        existingImagePath: fullItem.image_path || null,
+      });
+
+      // ✅ LOAD RECIPES
+      setRecipes(
+        (fullItem.recipes || []).map((r: any) => ({
+          inventory_id: r.id,
+          amount: r.pivot.amount.toString(),
+          unit: r.pivot.unit,
+        }))
+      );
+
+      setIsAddingMenu(true);
+      setActiveDropdown(null);
+    } catch (err) {
+      console.error("Failed to load menu item:", err);
+      alert("Failed to load item for editing.");
     }
-
-    setRegularPrice(regular);
-    setLargePrice(large);
-    setRegularEnabled(regularEnabled);
-    setLargeEnabled(largeEnabled);
-
-    // Main form data
-    setFormData({
-      image: null, 
-      name: item.name,
-      type: item.type,
-      price: "", // keep empty, using regular/large instead
-      regularPrice: regular,
-      largePrice: large,
-      categories: Array.isArray(item.categories)
-        ? item.categories
-        : String(item.categories).split(",").map((s) => s.trim()),
-      subcategories: Array.isArray(item.subcategories)
-        ? item.subcategories
-        : String(item.subcategories).split(",").map((s) => s.trim()),
-      description: item.description,
-      existingImagePath: item.image_path || null,
-    });
-
-    setIsAddingMenu(true);
   };
 
   const discardModal = (
@@ -767,295 +846,462 @@ const Manage_Items = () => {
         </h2>
       </div>
 
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab("details")}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold
+            ${activeTab === "details"
+              ? "bg-[#8CB662] text-white"
+              : "bg-gray-200"
+            }`}
+        >
+          Details
+        </button>
+
+        <button
+          onClick={() => setActiveTab("recipes")}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold
+            ${activeTab === "recipes"
+              ? "bg-[#8CB662] text-white"
+              : "bg-gray-200"
+            }`}
+        >
+          Recipes
+        </button>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4 p-4">
-        {/* Image Upload */}
-        <div className={`mb-4 ${errors.image ? "border border-red-500 rounded-md p-1" : ""}`}>
-          <label className="block text-sm font-medium text-gray-700">Upload Image</label>
 
-          {formData.image ? (
-            <div className="relative w-32 h-32 mt-2">
-              <img
-                src={URL.createObjectURL(formData.image)}
-                alt="Preview"
-                className="w-full h-full object-cover rounded-md border"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData(prev => ({ ...prev, image: null }));
-                  setErrors(prev => ({ ...prev, image: "Please upload a new image." }));
-                }}
-                className="cursor-pointer absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        {activeTab === "details" && (
+          <>
+            {/* Image Upload */}
+            <div className={`mb-4 ${errors.image ? "border border-red-500 rounded-md p-1" : ""}`}>
+              <label className="block text-sm font-medium text-gray-700">Upload Image</label>
+
+              {formData.image ? (
+                <div className="relative w-32 h-32 mt-2">
+                  <img
+                    src={URL.createObjectURL(formData.image)}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-md border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, image: null }));
+                      setErrors(prev => ({ ...prev, image: "Please upload a new image." }));
+                    }}
+                    className="cursor-pointer absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : formData.existingImagePath ? (
+                <div className="relative w-32 h-32 mt-2">
+                  <img
+                    src={`/storage/${formData.existingImagePath}`}
+                    alt="Existing"
+                    className="w-full h-full object-cover rounded-md border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, existingImagePath: null }));
+                      setErrors(prev => ({ ...prev, image: "Please upload a new image." }));
+                    }}
+                    className="cursor-pointer absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    onChange={handleInputChange}
+                    className="mt-1 text-sm text-gray-600 file:bg-[#8cb662] file:text-white file:rounded-full file:px-4 file:py-2"
+                  />
+
+                  {errors.image && (
+                    <p className="text-red-500 text-xs mt-1">{errors.image}</p>
+                  )}
+                </>
+              )}
             </div>
-          ) : formData.existingImagePath ? (
-            <div className="relative w-32 h-32 mt-2">
-              <img
-                src={`/storage/${formData.existingImagePath}`}
-                alt="Existing"
-                className="w-full h-full object-cover rounded-md border"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData(prev => ({ ...prev, existingImagePath: null }));
-                  setErrors(prev => ({ ...prev, image: "Please upload a new image." }));
-                }}
-                className="cursor-pointer absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <>
+
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Name</label>
               <input
-                type="file"
-                name="image"
-                accept="image/*"
+                type="text"
+                name="name"
+                placeholder="e.g., Caramel Iced Coffee"
+                value={formData.name}
                 onChange={handleInputChange}
-                className="mt-1 text-sm text-gray-600 file:bg-[#8cb662] file:text-white file:rounded-full file:px-4 file:py-2"
+                className={`mt-1 w-full border rounded-md p-2 focus:ring-[#8cb662] text-gray-900 
+                  ${errors.name ? "border-red-500" : "border-gray-300"}`}
               />
-
-              {errors.image && (
-                <p className="text-red-500 text-xs mt-1">{errors.image}</p>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Name</label>
-          <input
-            type="text"
-            name="name"
-            placeholder="e.g., Caramel Iced Coffee"
-            value={formData.name}
-            onChange={handleInputChange}
-            className={`mt-1 w-full border rounded-md p-2 focus:ring-[#8cb662] text-gray-900 
-              ${errors.name ? "border-red-500" : "border-gray-300"}`}
-          />
-          {errors.name && (
-            <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-          )}
-        </div>
-
-        {/* Type */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Type</label>
-          <select
-            name="type"
-            value={formData.type}
-            onChange={handleInputChange}
-            className={`mt-1 w-full border rounded-md p-2 focus:ring-[#8cb662] text-gray-700
-              ${errors.name ? "border-red-500" : "border-gray-300"}`}
-          >
-            <option value="" disabled>Select Type</option>
-            <option value="food">Food</option>
-            <option value="drink">Drink</option>
-          </select>
-          {errors.type && (
-            <p className="text-red-500 text-xs mt-1">{errors.type}</p>
-          )}
-        </div>
-
-        {/* Price Inputs */}
-        {(formData.type === "drink" || formData.type === "food") ? (
-          <div className="grid grid-cols-2 gap-4">
-            {/* REGULAR PRICE */}
-            <div className="flex flex-col w-full min-h-[90px]">
-              <label className="text-sm font-medium mb-2 text-gray-900">
-                Regular Price
-              </label>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={regularPrice}
-                  onChange={(e) => {
-                    setRegularPrice(e.target.value);
-                    setErrors(prev => ({ ...prev, regularPrice: "" }));
-                  }}
-                  placeholder="e.g., 120"
-                  disabled={!regularEnabled}
-                  className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
-                    ${errors.regularPrice ? "border-red-500" : ""}
-                    ${
-                      !regularEnabled
-                        ? "bg-gray-200 text-gray-500 placeholder-gray-500 cursor-not-allowed"
-                        : "bg-white text-gray-900 placeholder-gray-400"
-                    }
-                  `}
-                />
-
-                <input
-                  type="checkbox"
-                  checked={regularEnabled}
-                  onChange={() => {
-                    setRegularEnabled(!regularEnabled);
-                    setErrors(prev => ({ ...prev, regularPrice: "" }));
-                    if (regularEnabled) setRegularPrice("");
-                  }}
-                  className="w-5 h-5 cursor-pointer"
-                />
-              </div>
-
-              {errors.regularPrice && (
-                <p className="text-red-600 text-xs mt-1">{errors.regularPrice}</p>
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
               )}
             </div>
 
-            {/* LARGE PRICE */}
-            <div className="flex flex-col w-full min-h-[90px]">
-              <label className="text-sm font-medium mb-2 text-gray-900">
-                Large Price
-              </label>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={largePrice}
-                  onChange={(e) => {
-                    setLargePrice(e.target.value);
-                    setErrors(prev => ({ ...prev, largePrice: "" }));
-                  }}
-                  placeholder="e.g., 150"
-                  disabled={!largeEnabled}
-                  className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
-                    ${errors.largePrice ? "border-red-500" : ""}
-                    ${
-                      !largeEnabled
-                        ? "bg-gray-200 text-gray-500 placeholder-gray-500 cursor-not-allowed"
-                        : "bg-white text-gray-900 placeholder-gray-400"
-                    }
-                  `}
-                />
-
-                <input
-                  type="checkbox"
-                  checked={largeEnabled}
-                  onChange={() => {
-                    setLargeEnabled(!largeEnabled);
-                    setErrors(prev => ({ ...prev, largePrice: "" }));
-                    if (largeEnabled) setLargePrice("");
-                  }}
-                  className="w-5 h-5 cursor-pointer"
-                />
-              </div>
-
-              {errors.largePrice && (
-                <p className="text-red-600 text-xs mt-1">{errors.largePrice}</p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Price</label>
-            <input
-              type="text"
-              name="price"
-              placeholder="e.g., 150"
-              value={formData.price}
-              onChange={handleInputChange}
-              className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
-                errors.price ? "border-red-500" : ""
-              }`}
-            />
-            {errors.price && <p className="text-red-600 text-xs mt-1">{errors.price}</p>}
-          </div>
-        )}
-
-        {/* Categories */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Categories</label>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {categories.map(cat => (
-              <button
-                type="button"
-                key={cat}
-                onClick={() => handleMultiSelect('categories', cat)}
-                className={`px-3 py-1 text-sm border rounded-full text-gray-900 ${
-                  formData.categories.includes(cat)
-                    ? 'bg-[#8cb662] text-white border-[#8cb662]'
-                    : 'border-gray-300 hover:bg-gray-100'
-                }`}
+            {/* Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className={`mt-1 w-full border rounded-md p-2 focus:ring-[#8cb662] text-gray-700
+                  ${errors.name ? "border-red-500" : "border-gray-300"}`}
               >
-                {cat}
-              </button>
-            ))}
-          </div>
-          {errors.categories && (
-            <p className="text-red-600 text-xs mt-1">{errors.categories}</p>
-          )}
-        </div>
+                <option value="" disabled>Select Type</option>
+                <option value="food">Food</option>
+                <option value="drink">Drink</option>
+              </select>
+              {errors.type && (
+                <p className="text-red-500 text-xs mt-1">{errors.type}</p>
+              )}
+            </div>
 
-        {/* Subcategories */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Subcategories</label>
+            {/* Price Inputs */}
+            {(formData.type === "drink" || formData.type === "food") ? (
+              <div className="grid grid-cols-2 gap-4">
+                {/* REGULAR PRICE */}
+                <div className="flex flex-col w-full min-h-[90px]">
+                  <label className="text-sm font-medium mb-2 text-gray-900">
+                    Regular Price
+                  </label>
 
-          {formData.categories.map(category => {
-            const subcats = subcategoriesMap[category.toLowerCase()] || [];
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={regularPrice}
+                      onChange={(e) => {
+                        setRegularPrice(e.target.value);
+                        setErrors(prev => ({ ...prev, regularPrice: "" }));
+                      }}
+                      placeholder="e.g., 120"
+                      disabled={!regularEnabled}
+                      className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
+                        ${errors.regularPrice ? "border-red-500" : ""}
+                        ${
+                          !regularEnabled
+                            ? "bg-gray-200 text-gray-500 placeholder-gray-500 cursor-not-allowed"
+                            : "bg-white text-gray-900 placeholder-gray-400"
+                        }
+                      `}
+                    />
 
-            return (
-              <div key={category} className="mt-4 rounded-md p-3 bg-gray-50">
-                {/* Category header */}
-                <div className="bg-[#8cb662] text-white px-3 py-1 rounded-md inline-block mb-2 text-sm font-medium">
-                  {category}
+                    <input
+                      type="checkbox"
+                      checked={regularEnabled}
+                      onChange={() => {
+                        setRegularEnabled(!regularEnabled);
+                        setErrors(prev => ({ ...prev, regularPrice: "" }));
+                        if (regularEnabled) setRegularPrice("");
+                      }}
+                      className="w-5 h-5 cursor-pointer"
+                    />
+                  </div>
+
+                  {errors.regularPrice && (
+                    <p className="text-red-600 text-xs mt-1">{errors.regularPrice}</p>
+                  )}
                 </div>
 
-                {/* Subcategory list */}
-                <div className="flex flex-wrap gap-2">
-                  {subcats.length === 0 ? (
-                    <span className="text-gray-500 text-sm">No subcategories</span>
-                  ) : (
-                    subcats.map(sub => {
-                      const key = `${category}:${sub}`;
-                      const isSelected = formData.subcategories.includes(key);
+                {/* LARGE PRICE */}
+                <div className="flex flex-col w-full min-h-[90px]">
+                  <label className="text-sm font-medium mb-2 text-gray-900">
+                    Large Price
+                  </label>
 
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => handleSubcategorySelect(category, sub)}
-                          className={`px-3 py-1 text-sm border rounded-full ${
-                            isSelected
-                              ? "bg-[#8cb662] text-white border-[#8cb662]"
-                              : "border-gray-300 text-gray-900 hover:bg-gray-100"
-                          }`}
-                        >
-                          {sub}
-                        </button>
-                      );
-                    })
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={largePrice}
+                      onChange={(e) => {
+                        setLargePrice(e.target.value);
+                        setErrors(prev => ({ ...prev, largePrice: "" }));
+                      }}
+                      placeholder="e.g., 150"
+                      disabled={!largeEnabled}
+                      className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
+                        ${errors.largePrice ? "border-red-500" : ""}
+                        ${
+                          !largeEnabled
+                            ? "bg-gray-200 text-gray-500 placeholder-gray-500 cursor-not-allowed"
+                            : "bg-white text-gray-900 placeholder-gray-400"
+                        }
+                      `}
+                    />
+
+                    <input
+                      type="checkbox"
+                      checked={largeEnabled}
+                      onChange={() => {
+                        setLargeEnabled(!largeEnabled);
+                        setErrors(prev => ({ ...prev, largePrice: "" }));
+                        if (largeEnabled) setLargePrice("");
+                      }}
+                      className="w-5 h-5 cursor-pointer"
+                    />
+                  </div>
+
+                  {errors.largePrice && (
+                    <p className="text-red-600 text-xs mt-1">{errors.largePrice}</p>
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Price</label>
+                <input
+                  type="text"
+                  name="price"
+                  placeholder="e.g., 150"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  className={`mt-1 w-full border border-gray-400 rounded-md p-2 focus:ring-[#8cb662] text-gray-700
+                    errors.price ? "border-red-500" : ""
+                  }`}
+                />
+                {errors.price && <p className="text-red-600 text-xs mt-1">{errors.price}</p>}
+              </div>
+            )}
 
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            placeholder='e.g., A delicious blend of...'
-            onChange={handleInputChange}
-            rows={3}
-            className={`mt-1 w-full border rounded-md p-2 focus:ring-[#8cb662] text-gray-900
-              ${errors.description ? "border-red-500" : "border-gray-300"}`}
-          ></textarea>
-          {errors.description && (
-            <p className="text-red-500 text-xs mt-1">{errors.description}</p>
-          )}
-        </div>
+            {/* Categories */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Categories</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {categories.map(cat => (
+                  <button
+                    type="button"
+                    key={cat}
+                    onClick={() => handleMultiSelect('categories', cat)}
+                    className={`px-3 py-1 text-sm border rounded-full text-gray-900 ${
+                      formData.categories.includes(cat)
+                        ? 'bg-[#8cb662] text-white border-[#8cb662]'
+                        : 'border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              {errors.categories && (
+                <p className="text-red-600 text-xs mt-1">{errors.categories}</p>
+              )}
+            </div>
+
+            {/* Subcategories */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Subcategories</label>
+
+              {formData.categories.map(category => {
+                const subcats = subcategoriesMap[category.toLowerCase()] || [];
+
+                return (
+                  <div key={category} className="mt-4 rounded-md p-3 bg-gray-50">
+                    {/* Category header */}
+                    <div className="bg-[#8cb662] text-white px-3 py-1 rounded-md inline-block mb-2 text-sm font-medium">
+                      {category}
+                    </div>
+
+                    {/* Subcategory list */}
+                    <div className="flex flex-wrap gap-2">
+                      {subcats.length === 0 ? (
+                        <span className="text-gray-500 text-sm">No subcategories</span>
+                      ) : (
+                        subcats.map(sub => {
+                          const key = `${category}:${sub}`;
+                          const isSelected = formData.subcategories.includes(key);
+
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => handleSubcategorySelect(category, sub)}
+                              className={`px-3 py-1 text-sm border rounded-full ${
+                                isSelected
+                                  ? "bg-[#8cb662] text-white border-[#8cb662]"
+                                  : "border-gray-300 text-gray-900 hover:bg-gray-100"
+                              }`}
+                            >
+                              {sub}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                placeholder='e.g., A delicious blend of...'
+                onChange={handleInputChange}
+                rows={3}
+                className={`mt-1 w-full border rounded-md p-2 focus:ring-[#8cb662] text-gray-900
+                  ${errors.description ? "border-red-500" : "border-gray-300"}`}
+              ></textarea>
+              {errors.description && (
+                <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === "recipes" && (
+          <div className="space-y-6">
+
+            {/* SECTION TITLE */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Recipe Ingredients
+              </h3>
+              <p className="text-sm text-gray-500">
+                Define which inventory items are consumed when this menu item is ordered.
+              </p>
+            </div>
+
+            {/* INGREDIENT LIST */}
+            <div className="space-y-4">
+              {recipes.map((recipe, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+
+                    {/* INGREDIENT */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ingredient
+                      </label>
+                      <select
+                        value={recipe.inventory_id ?? ""}
+                        onChange={(e) => {
+                          const inventoryId = Number(e.target.value);
+                          const selectedInventory = inventories.find(
+                            (inv) => inv.id === inventoryId
+                          );
+
+                          const copy = [...recipes];
+                          copy[index] = {
+                            ...copy[index],
+                            inventory_id: inventoryId,
+                            unit: selectedInventory?.base_unit || "",
+                          };
+
+                          setRecipes(copy);
+                        }}
+                        className="text-gray-900 w-full border rounded-md p-2"
+                      >
+                        <option value="" disabled>
+                          Select ingredient
+                        </option>
+                        {inventories.map((inv) => (
+                          <option key={inv.id} value={inv.id}>
+                            {inv.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* AMOUNT */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Amount
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={recipe.amount}
+                        onChange={(e) => {
+                          const copy = [...recipes];
+                          copy[index].amount = e.target.value;
+                          setRecipes(copy);
+                        }}
+                        onBlur={(e) => {
+                          const parsed = parseAmountToDecimal(e.target.value);
+                          const copy = [...recipes];
+                          copy[index].amount = parsed.toString();
+                          setRecipes(copy);
+                        }}
+                        placeholder="e.g. 1, 1.25, 1/2"
+                        className="text-gray-900 w-full border rounded-md p-2"
+                      />
+                    </div>
+
+                    {/* UNIT */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit
+                      </label>
+
+                      <input
+                        type="text"
+                        value={recipe.unit}
+                        onChange={(e) => {
+                          const copy = [...recipes];
+                          copy[index].unit = e.target.value;
+                          setRecipes(copy);
+                        }}
+                        placeholder="e.g. ml, L, oz, scoop, shot"
+                        className="w-full border rounded-md p-2 text-gray-900 focus:ring-[#8cb662]"
+                      />
+
+                      {recipe.inventory_id !== 0 && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Will be converted when order is marked as completed
+                        </p>
+                      )}
+                    </div>
+
+                    {/* REMOVE */}
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRecipes(recipes.filter((_, i) => i !== index))
+                        }
+                        className="text-red-500 text-sm hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ADD BUTTON */}
+            <button
+              type="button"
+              onClick={() =>
+                setRecipes([...recipes, { inventory_id: null, amount: "", unit: "" }])
+              }
+              className="px-4 py-2 bg-[#8CB662] text-white rounded-lg text-sm font-semibold hover:bg-[#7a9d59]"
+            >
+              + Add Ingredient
+            </button>
+
+          </div>
+        )}
 
         <div className="flex justify-end gap-4 mt-6">
           <button
