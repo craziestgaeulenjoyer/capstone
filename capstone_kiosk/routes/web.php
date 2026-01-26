@@ -1,15 +1,16 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Kiosk\KioskCartController;
 use App\Http\Controllers\Kiosk\KioskOrderController;
+use App\Http\Controllers\Kiosk\KioskMenuStatusController;
 
 Route::post('/kiosk/cart/add', [KioskCartController::class, 'add']);
 Route::get('/kiosk/cart', [KioskCartController::class, 'get']);
 Route::delete('/kiosk/cart/clear', [KioskCartController::class, 'clear']);
+
+Route::get('/kiosk/menu-status', [KioskMenuStatusController::class, 'index']);
 
 Route::post('/kioskorder', [KioskOrderController::class, 'store']);
 

@@ -523,18 +523,24 @@ const Inventory: React.FC = () => {
 
   const fetchActivity = async (page = 1) => {
     try {
-      const res = await api.get(
-        `/${role}/inventory/logs`,
-        {
-          params: { page },
-        }
-      );
+      const res = await api.get(`/${role}/inventory/logs`, {
+        params: { page },
+      });
 
-      setActivity(res.data.data);
-      setActivityPage(res.data.current_page);
-      setActivityTotalPages(res.data.last_page);
+      const logs = Array.isArray(res.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+
+      setActivity(logs);
+      setActivityPage(res.data?.current_page ?? 1);
+      setActivityTotalPages(res.data?.last_page ?? 1);
     } catch (error) {
       console.error("Failed to fetch inventory activity logs:", error);
+      setActivity([]);
+      setActivityPage(1);
+      setActivityTotalPages(1);
     }
   };
 
@@ -994,7 +1000,6 @@ const Inventory: React.FC = () => {
         <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4">
           <h3 className="font-bold text-lg mb-3 text-[#6CB74A]">Upcoming Expiry / Restock</h3>
           <div className="space-y-3 text-sm">
-
             {activeItems.length === 0 ? (
               <p className="text-gray-500">No data.</p>
             ) : (
@@ -1036,7 +1041,7 @@ const Inventory: React.FC = () => {
         <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4">
           <h3 className="font-bold text-lg mb-3 text-[#6CB74A]">Recent Inventory Activities</h3>
           <ul className="space-y-3 text-sm">
-            {activity.length === 0 ? (
+            {(activity?.length ?? 0) === 0 ? (
               <p className="text-gray-500">No activity.</p>
             ) : (
               activity.map((log, i) => (

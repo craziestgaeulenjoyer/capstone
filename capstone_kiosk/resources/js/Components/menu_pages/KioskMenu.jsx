@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, ReceiptText } from "lucide-react";
 import { router } from '@inertiajs/react';
 import { usePage } from "@inertiajs/react";
+import axios from "axios";
 
 export default function KioskMenu() {
   // --- STATES ---
@@ -20,148 +21,147 @@ export default function KioskMenu() {
   const [showCartPanel, setShowCartPanel] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [menuStatus, setMenuStatus] = useState({});
+  const [menuItems, setMenuItems] = useState({});
 
   const scrollRef = useRef(null);
   const goBack = () => {
-  axios.post("/kiosk/cart/clear").finally(() => {
-    setCartItems([]);
-    setSelectedItem(null);
-    setSelectedAddOns([]);
-    setQuantity(1);
-    setEditingId(null);
-    setShowCartPanel(false);
-    router.visit("/kioskhome"); // safer than history.back() for kiosks
-  });
-};
-
+    axios.post("/kiosk/cart/clear").finally(() => {
+      setCartItems([]);
+      setSelectedItem(null);
+      setSelectedAddOns([]);
+      setQuantity(1);
+      setEditingId(null);
+      setShowCartPanel(false);
+      router.visit("/kioskhome"); // safer than history.back() for kiosks
+    });
+  };
 
   // --- DATA STRUCTURE ---
+
+  // Main categories
   const categories = [
-    { id: 1, name: "Specialty Coffee", image: "/images/SpecialtyCoffee.png" },
-    { id: 2, name: "Milk Tea", image: "/images/MilkTea.png" },
-    { id: 3, name: "Lemonade & Fruit Juices", image: "/images/Lemonade_FruitJuices.png" },
-    { id: 4, name: "Coffee", image: "/images/Coffee.png" },
-    { id: 5, name: "Premium Matcha", image: "/images/PremiumMatcha.png" },
-    { id: 6, name: "Snacks", image: "/images/Snacks.png" },
-    { id: 7, name: "Croffles", image: "/images/Croffles.png" },
-    { id: 8, name: "Quesadillas & Corndogs", image: "/images/Quesadillas_Corndogs.png" },
-    { id: 9, name: "Platters", image: "/images/Platter3.png" },
+    { id: "c1", name: "Popular", image: "/images/SpecialtyCoffee.png" },
+    { id: "c2", name: "Coffees", image: "/images/Coffee.png" },
+    { id: "c3", name: "Milktea", image: "/images/MilkTea.png" },
+    { id: "c4", name: "Lemonade and Fruitti Juice", image: "/images/Lemonade_FruitJuices.png" },
+    { id: "c5", name: "Premium Matcha", image: "/images/PremiumMatcha.png" },
+    { id: "c6", name: "Foods", image: "/images/Snacks.png" },
   ];
 
-  const allMenuItems = {
-    "Coffee": [
-      { id: 101, name: "Classic Iced Coffee", price16oz: 70, price22oz: 80, hasSize: true, image: "/images/ClassicIcedCoffee.png" },
-      { id: 102, name: "Vanilla Iced Coffee", price16oz: 80, price22oz: 90, hasSize: true, image: "/images/VanillaIcedCoffee.png" },
-      { id: 103, name: "Caramel Iced Coffee", price16oz: 80, price22oz: 90, hasSize: true, image: "/images/CaramelIcedCoffee.png" },
-      { id: 104, name: "Hazelnut Iced Coffee", price16oz: 80, price22oz: 90, hasSize: true, image: "/images/HazelnutIcedCoffee.png" },
-      { id: 105, name: "French Vanilla Iced Coffee", price16oz: 80, price22oz: 90, hasSize: true, image: "/images/FrenchVanillaIced.png" },
-      { id: 106, name: "Iced Snow Coffee", price: 120, hasSize: false, image: "/images/IceSnowCoffee.png" },
-      { id: 107, name: "Brewed Coffee", price: 60, hasSize: false, hasTemp: true, image: "/images/BrewedCoffee.png" },
-    ],
-    "Snacks": [
-      { id: 601, name: "French Fries", price: 70, priceLarge: 90, isFries: true, image: "/images/Fries.png" },
-      { id: 602, name: "Cheese Sticks", price: 60, priceLarge: 80, isSticks: true, image: "/images/CheeseSticks.png" },
-      { id: 603, name: "Hash Brown", price: 70, priceLarge: 100, isHash: true, image: "/images/HashBrown.png" },
-      { id: 604, name: "Chicken Nuggets (5pcs)", price: 135, image: "/images/ChickenNuggets.png" },
-      { id: 605, name: "Twister Fries", price: 100, image: "/images/TwisterFries.png" },
-      { id: 606, name: "Mojos", price: 100, image: "/images/Mojos.png" },
-    ],
-    "Specialty Coffee": [
-      { id: 401, name: "Americano", price: 90, hasTemp: true, hasSize: false, image: "/images/Americano.png" },
-      { id: 402, name: "Spanish Latte", price: 170, hasTemp: true, hasSize: false, image: "/images/SpanishLatte.png" },
-      { id: 403, name: "Sea Salt Honey", price: 170, hasTemp: true, hasSize: false, image: "/images/SeaSaltHoney.png" },
-      { id: 404, name: "White Chocolate Mocha", price: 180, hasTemp: true, hasSize: false, image: "/images/WhiteChocolateMocha.png" },
-      { id: 405, name: "Dulce De Leche", price: 180, hasTemp: true, hasSize: false, image: "/images/DulceDeLeche.png" },
-    ],
-    "Premium Matcha": [
-      { id: 501, name: "Pure Matcha Latte", price: 120, hasTemp: true, hasSize: false, image: "/images/PureMatchaLatte.png" },
-      { id: 502, name: "Pure Matcha Oat Latte", price: 160, hasTemp: true, hasSize: false, image: "/images/PureMatchaOatLatte.png" },
-      { id: 503, name: "Matcha Ichigo (Iced Only)", price: 180, hasSize: false, image: "/images/MatchaIchigo.png" },
-      { id: 504, name: "Specialty Matcha", price: 250, hasSize: false, isSpecialMatcha: true, image: "/images/SpecialtyMatcha.png" },
-    ],
-    "Milk Tea": [
-      { id: 201, name: "Classic Bubble", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/ClassicBubble.png" },
-      { id: 202, name: "Okinawa", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/Okinawa.png" },
-      { id: 203, name: "Wintermelon", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/Wintermelon.png" },
-      { id: 204, name: "Chocolate", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/Chocolate.png" },
-      { id: 205, name: "Oreo", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/Oreo.png" },
-      { id: 206, name: "Caramel", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/Caramel.png" },
-      { id: 207, name: "Java Chip", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/JavaChip.png" },
-      { id: 208, name: "Matcha", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/Matcha.png" },
-      { id: 209, name: "Oreo Cheesecake Overload", price: 140, hasSize: false, image: "/images/OreoCheesecakeOverload.png" },
-      { id: 210, name: "Oreo Cream Cheese", price: 130, hasSize: false, image: "/images/OreoCreamCheese.png" },
-      { id: 211, name: "Matcha Cheesecake", price: 130, hasSize: false, image: "/images/MatchaCheesecake.png" },
-      { id: 212, name: "Bobbatella", price: 130, hasSize: false, image: "/images/Bobbatella.png" },
-      { id: 213, name: "Meiji Apollo (Choco-Berry)", price: 130, hasSize: false, image: "/images/MeijiApollo.png" },
-    ],
-    "Lemonade & Fruit Juices": [
-      { id: 301, name: "Classic Lemonade", price16oz: 60, price22oz: 70, hasSize: true, image: "/images/ClassicLemonade.png" },
-      { id: 302, name: "Strawberry Lemonade", price16oz: 70, price22oz: 80, hasSize: true, image: "/images/StrawberryLemonade.png" },
-      { id: 303, name: "Charcoal Lemonade", price16oz: 70, price22oz: 80, hasSize: true, image: "/images/CharcoalLemonade.png" },
-      { id: 304, name: "Cucumber Lemonade", price16oz: 90, price22oz: 100, hasSize: true, image: "/images/CucumberLemonade.png" },
-      { id: 305, name: "Sugar-Free Lemonade", price16oz: 65, price22oz: 75, hasSize: true, image: "/images/SugarFreeLemonade.png" },
-      { id: 306, name: "Citro Fruitti", price: 80, hasSize: false, image: "/images/CitroFrutti.png" },
-      { id: 307, name: "Mango Fruitti", price: 80, hasSize: false, image: "/images/MangoFrutti.png" },
-      { id: 308, name: "Punch Tropicale", price: 80, hasSize: false, image: "/images/PunchTropical.png" },
-      { id: 309, name: "Watermelon w/ Popping Bobba", price: 100, hasSize: false, image: "/images/PoppingBobba.png" },
-      { id: 310, name: "Peach Iced Tea", price: 100, hasSize: false, image: "/images/PeachIcedTea.png" },
-    ],
-    "Croffles": [
-      { id: 701, name: "Plain Croffle", price: 100, image: "/images/PlainCroffle.png" },
-      { id: 702, name: "Croffle with syrup", price: 110, image: "/images/SyrupCroffle.png" },
-      { id: 703, name: "Croffle w/ Whipped Cream & Syrup", price: 120, image: "/images/WhipppedCroffle.png" },
-      { id: 704, name: "Oreo Croffle", price: 150, image: "/images/OreoCroffle.png" },
-      { id: 705, name: "Matcha Croffle", price: 150, image: "/images/MatchaCroffle.png" },
-      { id: 706, name: "Blueberry Croffle", price: 150, image: "/images/BlueberryGraham.png" },
-      { id: 707, name: "Strawberry Croffle", price: 150, image: "/images/StrawberryGraham.png" },
-      { id: 708, name: "Mango Graham Croffle", price: 150, image: "/images/MangoGraham.png" },
-      { id: 709, name: "Banana Nutella Croffle", price: 160, image: "/images/BananaNutella.png" },
-      { id: 710, name: "Biscoff Croffle", price: 160, image: "/images/BiscoffCroffle.png" },
-    ],
-    "Platters": [
-      { id: 901, name: "Platter #1", price: 120, image: "/images/Platter1.png" },
-      { id: 902, name: "Platter #2", price: 160, image: "/images/Platter2.png" },
-      { id: 903, name: "Platter #3", price: 210, image: "/images/Platter3.png" },
-    ],
-    "Quesadillas & Corndogs": [
-      { id: 801, name: "Beef Quesadillas", price: 130, isBeefQ: true, image: "/images/BeefQuesadilla.png" },
-      { id: 802, name: "Cheese Quesadillas", price: 120, image: "/images/CheeseQuesadilla.png" },
-      { id: 803, name: "Frenchfry Corndog", price: 130, image: "/images/FrenchfryCorndogs.png" },
-      { id: 804, name: "Mozza Corndog", price: 130, image: "/images/MozzaCorndogs.png" },
-      { id: 805, name: "Cheesy Corndogs", price: 135, image: "/images/CheesyCorndogs.png" },
-      { id: 806, name: "Mozza Ramyeon Corndog", price: 145, image: "/images/MozzaRamyeonCorndogs.png" },
-    ]
+  // Optional: Local images for fallback
+  const localImages = {
+    'Coffee': '/images/Coffee.png',
+    'Specialty Coffee': '/images/SpecialtyCoffee.png',
+    'Milk Tea': '/images/MilkTea.png',
+    'Lemonade and Fruit Juices': '/images/Lemonade_FruitJuices.png',
+    'Premium Matcha': '/images/PremiumMatcha.png',
+    'Snacks': '/images/Snacks.png',
+    'Croffles': '/images/Croffles.png',
+    'Quesadillas & Korean Corndogs': '/images/Quesadillas_Corndogs.png',
+    'Platters': '/images/Platter3.png',
   };
-  useEffect(() => {
-  axios.get("/kiosk/cart").then(res => {
-    setCartItems(res.data);
-  });
-}, []);
-useEffect(() => {
-  const params = new URLSearchParams(url.split("?")[1]);
-  const categoryFromUrl = params.get("category");
 
-  if (categoryFromUrl && allMenuItems[categoryFromUrl]) {
-    setSelectedCategory(categoryFromUrl);
-  } else {
-    setSelectedCategory("Specialty Coffee"); // fallback
-  }
-}, [url]);
+  useEffect(() => {
+    axios.get("/kiosk/cart").then(res => {
+      setCartItems(res.data);
+    });
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(url.split("?")[1]);
+    const categoryFromUrl = params.get("category");
+
+    if (categoryFromUrl && menuItems[categoryFromUrl]) {
+      setSelectedCategory(categoryFromUrl);
+    } else {
+      setSelectedCategory("Popular"); // default category
+    }
+  }, [url, menuItems]);
+
+  const normalizeCategory = (cat) => {
+    if (!cat) return "";
+    const lower = cat.toLowerCase().trim();
+    switch (lower) {
+      case 'milktea': return 'Milk Tea';
+      case 'coffees': return 'Coffee';
+      case 'lemonade and fruitti juice': return 'Lemonade and Fruit Juices';
+      case 'premium matcha': return 'Premium Matcha';
+      case 'popular': return 'Specialty Coffee';
+      case 'foods': return 'Snacks';
+      default: return cat;
+    }
+  };
+  
+  useEffect(() => {
+    axios.get("/kiosk/menu-status")
+      .then(res => {
+        const apiMenu = res.data; // grouped by category from backend
+
+        // Merge API menu with local images
+        const mergedMenu = {};
+        Object.keys(apiMenu).forEach(category => {
+          mergedMenu[category] = apiMenu[category].map(item => {
+            const categoryName = normalizeCategory(item.category);
+
+            return {
+              ...item,
+
+              image: item.image
+                ? `http://127.0.0.1:8000/storage/${item.image}`
+                : localImages[normalizeCategory(item.category)] || "",
+
+              status: item.is_available ? "available" : "not_available",
+              maxQuantity: Number(item.max_quantity ?? 0),
+            };
+          });
+        });
+        setMenuItems(mergedMenu);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (selectedItem) {
+      setQuantity(1);
+    }
+  }, [selectedItem]);
+
+  const getMenuItemsForCategory = (category) => {
+    if (!category) return [];
+
+    return Object.values(menuItems)
+      .flat()
+      .filter(item => item.category === category);
+  };
 
   // --- LOGIC ---
   const getCurrentPrice = (item) => {
-    if (!item) return 0;
+    if (!item || !item.price) return 0;
+
     let base = 0;
-    if (item.hasSize) {
-      base = selectedSize === "Regular 16oz" ? item.price16oz : item.price22oz;
-    } else if (item.isFries || item.isSticks || item.isHash) {
-      base = (selectedSize === "Regular" || selectedSize === "10 pcs" || selectedSize === "2 pcs") ? item.price : item.priceLarge;
-    } else {
-      base = item.price || 0;
+
+    // DRINKS WITH SIZES
+    if (item.sizes && item.sizes.length > 1) {
+      if (selectedSize?.toLowerCase().includes("large")) {
+        base = Number(item.price.large ?? item.price.regular ?? 0);
+      } else {
+        base = Number(item.price.regular ?? item.price.large ?? 0);
+      }
+    } 
+    // SINGLE SIZE ITEMS (foods, single-size drinks)
+    else {
+      base = Number(item.price.regular ?? item.price.large ?? 0);
     }
-    const addOns = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
-    const flavorPlus = (item.isFries && selectedFlavor === "Honey Butter") ? 5 : 0;
-    return (base + addOns + flavorPlus) * quantity;
+
+    const addOnsTotal = selectedAddOns.reduce(
+      (sum, a) => sum + Number(a.price || 0),
+      0
+    );
+
+    const flavorPlus =
+      item.isFries && selectedFlavor === "Honey Butter" ? 5 : 0;
+
+    return (base + addOnsTotal + flavorPlus) * quantity;
   };
 
   const toggleAddOn = (addon) => {
@@ -169,7 +169,7 @@ useEffect(() => {
   };
 
   const handleAddToCart = () => {
-    const pricePerUnit = getCurrentPrice(selectedItem) / quantity;
+    const pricePerUnit = Number(getCurrentPrice(selectedItem) / quantity);
     const details = {
         size: (selectedItem.hasSize || selectedItem.isFries || selectedItem.isSticks || selectedItem.isHash) ? selectedSize : null,
         temp: selectedItem.hasTemp ? selectedTemp : null,
@@ -214,7 +214,7 @@ useEffect(() => {
     setShowCartPanel(false);
   };
 
-  const totalPrice = cartItems.reduce((s, i) => s + (i.price * i.quantity), 0);
+  const totalPrice = cartItems.reduce((s, i) => s + (Number(i.price) * i.quantity), 0);
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-serif flex flex-col text-[#3D2317]">
@@ -233,14 +233,29 @@ useEffect(() => {
       {/* CATEGORY NAV */}
       <nav className="px-6 py-6 bg-[#8CB662]/50 border-b flex items-center">
         <button onClick={() => scrollRef.current.scrollBy({left: -200, behavior:'smooth'})} className="p-2 text-[#8CB662]"><FaChevronLeft/></button>
+        
         <div ref={scrollRef} className="flex-1 flex overflow-x-auto no-scrollbar gap-8 px-4">
           {categories.map(cat => (
-            <div key={cat.id} onClick={() => setSelectedCategory(cat.name)} className={`flex flex-col items-center min-w-[120px] cursor-pointer border-b-2 ${selectedCategory === cat.name ? "border-[#7C8B7C]" : "border-transparent opacity-40"}`}>
-              <img src={cat.image} className="w-12 h-12 object-contain mb-2" alt=""/>
+            <div
+              key={cat.id} 
+              onClick={() => setSelectedCategory(cat.name)}
+              className={`flex flex-col items-center min-w-[120px] cursor-pointer border-b-2 
+                ${selectedCategory === cat.name 
+                  ? "border-[#7C8B7C]" 
+                  : "border-transparent opacity-40"}`}
+            >
+              {/* Category Image */}
+              <img 
+                src={cat.image || localImages[cat.name]} 
+                className="w-12 h-12 object-contain mb-2" 
+                alt={cat.name} 
+              />
+              {/* Category Name */}
               <span className="text-[9px] font-black uppercase tracking-widest mb-2">{cat.name}</span>
             </div>
           ))}
         </div>
+
         <button onClick={() => scrollRef.current.scrollBy({left: 200, behavior:'smooth'})} className="p-2 text-[#7C8B7C]"><FaChevronRight/></button>
       </nav>
 
@@ -248,17 +263,42 @@ useEffect(() => {
       <main className="flex-1 overflow-y-auto px-10 pt-10 pb-40">
         <h2 className="text-4xl font-black italic uppercase mb-10 border-l-4 border-[#8CB662] pl-6">{selectedCategory}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
-          {allMenuItems[selectedCategory]?.map(item => (
-            <motion.div key={item.id} whileTap={{scale:0.95}} onClick={() => {
+          {getMenuItemsForCategory(selectedCategory).map(item => (
+            <motion.div
+              key={item.id}
+              whileTap={item.status === "available" ? { scale: 0.95 } : {}}
+              onClick={() => {
+                if (item.status !== "available") return;
+
                 setSelectedItem(item);
-                if(item.isFries) setSelectedSize("Regular");
-                else if(item.isSticks) setSelectedSize("10 pcs");
-                else if(item.isHash) setSelectedSize("2 pcs");
-                else if(item.hasSize) setSelectedSize("Regular 16oz");
-            }} className="bg-white p-6 border border-[#8CB662]/10 text-center cursor-pointer shadow-sm">
+                setQuantity(1);
+
+                setSelectedSize(item.sizes && item.sizes.length > 0 ? item.sizes[0] : "Regular 16oz");
+              }}
+              className={`
+                bg-white p-6 border border-[#8CB662]/10 text-center shadow-sm relative
+                ${item.status !== "available"
+                  ? "opacity-40 grayscale cursor-not-allowed"
+                  : "cursor-pointer"}
+              `}
+            >
               <img src={item.image} className="w-full h-32 object-contain mb-4" alt=""/>
               <h3 className="font-black uppercase text-[10px] tracking-widest h-8 mb-2">{item.name}</h3>
-              <p className="font-bold text-[#8CB662] text-xs">₱{item.hasSize ? `${item.price16oz}/${item.price22oz}` : (item.price || "—")}</p>
+              <p className="font-bold text-[#8CB662] text-xs">
+                {item.price?.regular && item.price?.large
+                  ? `₱${item.price.regular} / ₱${item.price.large}`
+                  : item.price?.regular
+                    ? `₱${item.price.regular}`
+                    : item.price?.large
+                      ? `₱${item.price.large}`
+                      : "₱—"}
+              </p>
+            
+              {item.status !== "available" && (
+                <div className="absolute top-2 right-2 bg-red-700 text-white text-[9px] px-2 py-1 font-black uppercase">
+                  {item.status === "sold_out" ? "Sold Out" : "Not Available"}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
@@ -276,15 +316,18 @@ useEffect(() => {
                   <h2 className="text-2xl font-black uppercase italic text-center mb-2">{selectedItem.name}</h2>
                   
                   <div className="w-full max-w-sm space-y-8 mt-6">
-                    {(selectedItem.hasSize || selectedItem.isFries || selectedItem.isSticks || selectedItem.isHash) && (
+                    {selectedItem.sizes && selectedItem.sizes.length > 0 && (
                       <div className="space-y-3">
                         <label className="text-[9px] font-black uppercase tracking-widest text-[#7C8B7C]">Select Size/Quantity</label>
                         <div className="grid grid-cols-2 gap-3">
-                          {(selectedItem.hasSize ? ["Regular 16oz", "Large 22oz"] : 
-                            selectedItem.isFries ? ["Regular", "Large"] :
-                            selectedItem.isSticks ? ["10 pcs", "15 pcs"] : ["2 pcs", "3 pcs"]
-                          ).map(sz => (
-                            <button key={sz} onClick={() => setSelectedSize(sz)} className={`py-3 text-[10px] font-black border ${selectedSize === sz ? 'bg-[#7C8B7C] text-white border-[#7C8B7C]' : 'border-[#7C8B7C]/20'}`}>{sz}</button>
+                          {selectedItem.sizes.map(sz => (
+                            <button 
+                              key={sz} 
+                              onClick={() => setSelectedSize(sz)} 
+                              className={`py-3 text-[10px] font-black border ${selectedSize === sz ? 'bg-[#7C8B7C] text-white border-[#7C8B7C]' : 'border-[#7C8B7C]/20'}`}
+                            >
+                              {sz}
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -342,7 +385,19 @@ useEffect(() => {
                       <div className="flex items-center gap-8">
                         <button onClick={() => setQuantity(Math.max(1, quantity-1))} className="w-10 h-10 border flex items-center justify-center font-bold text-xl">-</button>
                         <span className="text-3xl font-black italic">{quantity}</span>
-                        <button onClick={() => setQuantity(quantity+1)} className="w-10 h-10 bg-[#8CB662] text-white flex items-center justify-center font-bold text-xl">+</button>
+                        <button
+                          onClick={() =>
+                            setQuantity(q => Math.min(q + 1, selectedItem.maxQuantity))
+                          }
+                          disabled={quantity >= selectedItem.maxQuantity}
+                          className="w-10 h-10 bg-[#8CB662] text-white flex items-center justify-center font-bold text-xl disabled:opacity-30"
+                        >
+                          +
+                        </button>
+
+                        <p className="text-[9px] uppercase font-black text-[#8CB662] mt-2 text-center">
+                          Available: {selectedItem.maxQuantity}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -351,7 +406,11 @@ useEffect(() => {
               
               <div className="bg-white p-8 border-t flex gap-4">
                 <button onClick={() => {setSelectedItem(null); setSelectedAddOns([]); setEditingId(null);}} className="flex-1 py-4 uppercase font-black tracking-widest text-[10px] border">Cancel</button>
-                <button onClick={handleAddToCart} className="flex-[2] bg-[#3D2317] text-white py-4 uppercase font-black tracking-widest text-[10px] shadow-lg">
+                <button
+                  disabled={selectedItem.status !== "available"}
+                  onClick={handleAddToCart}
+                  className="flex-[2] bg-[#3D2317] disabled:opacity-40 text-white py-4 uppercase font-black tracking-widest text-[10px] shadow-lg"
+                >
                   {editingId ? 'Update Item' : 'Add to Order'} • ₱{getCurrentPrice(selectedItem).toFixed(2)}
                 </button>
               </div>
@@ -411,12 +470,12 @@ useEffect(() => {
                     <span className="text-3xl font-black italic">₱{totalPrice.toFixed(2)}</span>
                 </div>
                 <button onClick={() => { axios.post("/kiosk/cart/add", {
-  cartItems
-}).then(() => {
-  router.visit("/paymentselect", {
-   
-  });
-});}} className="w-full bg-[#3D2317] text-white py-5 uppercase font-black tracking-[0.2em] text-[11px] shadow-xl flex justify-center items-center gap-2">
+                          cartItems
+                        }).then(() => {
+                          router.visit("/paymentselect", {
+                          
+                          });
+                        });}} className="w-full bg-[#3D2317] text-white py-5 uppercase font-black tracking-[0.2em] text-[11px] shadow-xl flex justify-center items-center gap-2">
                   Confirm & Pay <IoIosArrowForward size={16}/>
                 </button>
               </div>
@@ -448,4 +507,4 @@ useEffect(() => {
       </footer>
     </div>
   );
-}
+} 

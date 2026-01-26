@@ -141,6 +141,13 @@ Route::prefix('superadmin')->group(function () {
             [SalesOrderController::class, 'destroy']
         )->name('superadmin.sales_orders.destroy');
 
+        Route::get('/delivery-orders', [SalesOrderController::class, 'getDeliveryOrders']);
+        Route::post('/delivery-orders', [SalesOrderController::class, 'storeDeliveryOrder']);
+        Route::patch(
+            '/delivery-orders/{orderCode}/assign-rider',
+            [SalesOrderController::class, 'assignDeliveryRider']
+        );
+
         /* Analytics */
         Route::get('/analytics', [AnalyticsController::class, 'index']);
         Route::get('/analytics/revenue-per-day', [AnalyticsController::class, 'revenuePerDay']);
@@ -221,6 +228,13 @@ Route::prefix('admin')->group(function () {
             '/sales_orders/{orderCode}',
             [SalesOrderController::class, 'destroy']
         )->name('admin.sales_orders.destroy');
+
+        Route::get('/delivery-orders', [SalesOrderController::class, 'getDeliveryOrders']);
+        Route::post('/delivery-orders', [SalesOrderController::class, 'storeDeliveryOrder']);
+        Route::patch(
+            '/delivery-orders/{orderCode}/assign-rider',
+            [SalesOrderController::class, 'assignDeliveryRider']
+        );
 
         /* Analytics */
         Route::get('/analytics', [AnalyticsController::class, 'index']);

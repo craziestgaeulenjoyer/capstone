@@ -9,6 +9,7 @@ use App\Models\Notification;
 use App\Models\Inventory;
 use App\Models\InventoryLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class SalesOrderController extends Controller
@@ -134,6 +135,12 @@ class SalesOrderController extends Controller
 
         $order = Order::where('order_code', $orderCode)->firstOrFail();
 
+        if ($order->fulfillment_method === 'delivery') {
+            return response()->json([
+                'message' => 'Delivery order inventory already deducted'
+            ], 200);
+        }
+
         $oldStatus = $order->status;
 
         // Update status
@@ -156,10 +163,40 @@ class SalesOrderController extends Controller
                         continue;
                     }
 
-                    // Get menu item recipes
-                    $recipes = DB::table('menu_item_recipes')
-                        ->where('menu_item_id', $item['id'])
-                        ->get();
+                    // MENU ITEM (kiosk / POS)
+                    if (!empty($item['id'])) {
+                        $menuItemId = $item['id']
+                            ?? DB::table('menu_items')
+                                ->whereRaw('LOWER(name) = ?', [strtolower($item['name'])])
+                                ->value('id');
+
+                        if (!$menuItemId) {
+                            throw new \Exception("Menu item not found: {$item['name']}");
+                        }
+
+                        $recipes = DB::table('menu_item_recipes')
+                            ->where('menu_item_id', $menuItemId)
+                            ->get();
+                    }
+                    // CUSTOM / DELIVERY / APP ITEM
+                    else {
+                        $inventoryId = Inventory::whereRaw(
+                            'LOWER(name) = ?',
+                            [strtolower($item['name'])]
+                        )->value('id');
+
+                        if (!$inventoryId) {
+                            throw new \Exception("No inventory mapping for {$item['name']}");
+                        }
+
+                        $recipes = collect([
+                            (object) [
+                                'inventory_id' => $inventoryId,
+                                'amount' => 1,
+                                'unit' => 'pcs',
+                            ]
+                        ]);
+                    }
 
                     foreach ($recipes as $recipe) {
 
@@ -289,5 +326,99 @@ class SalesOrderController extends Controller
         return response()->json([
             'message' => 'Order deleted successfully'
         ]);
+    }
+
+    public function getDeliveryOrders()
+    {
+        return DB::table('orders')
+            ->where('fulfillment_method', 'delivery')
+            ->whereNull('archived_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_code' => $order->order_code,
+                    'customer_name' => $order->customer_name,
+                    'customer_address' => $order->customer_address,
+                    'payment_method' => $order->payment_method,
+                    'total_amount' => $order->total_amount,
+                    'status' => $order->status,
+                    'items' => $order->items ?? [],
+                    'fulfillment_method' => $order->fulfillment_method,
+                    'created_at' => $order->created_at,
+                ];
+            });
+    }
+
+    public function storeDeliveryOrder(Request $request)
+    {
+        $request->validate([
+            'customer.name' => 'required|string|max:100',
+            'customer.address' => 'required|string',
+            'items' => 'required|array|min:1',
+            'items.*.itemName' => 'required|string',
+            'items.*.qty' => 'required|integer|min:1',
+            'items.*.price' => 'required|numeric|min:0',
+            'totalPrice' => 'required|numeric|min:0',
+        ]);
+
+        $orderCode = 'ORD-' . rand(100000, 999999);
+
+        $products = collect($request->items)->map(function ($item) {
+            return [
+                'id' => null, // IMPORTANT: menu_item_id resolved later
+                'name' => $item['itemName'],
+                'quantity' => (int) $item['qty'],
+                'price' => (float) $item['price'],
+                'is_free' => false,
+            ];
+        })->values()->all();
+
+        $orderId = DB::table('orders')->insertGetId([
+            'user_id' => null,
+            'payment_method' => 'Cash',
+            'total_amount' => $request->totalPrice,
+            'status' => 'pending', // ✅ STAYS PENDING
+            'order_code' => $orderCode,
+            'customer_name' => $request->customer['name'],
+            'customer_address' => $request->customer['address'],
+            'items' => json_encode($products),
+            'fulfillment_method' => 'delivery',
+            'source_id' => 'admin',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(
+            DB::table('orders')->where('id', $orderId)->first(),
+            201
+        );
+    }
+
+    public function assignDeliveryRider(Request $request, $orderCode)
+    {
+        $request->validate([
+            'rider_name' => 'required|string|max:100',
+        ]);
+
+        $order = DB::table('orders')
+            ->where('order_code', $orderCode)
+            ->where('fulfillment_method', 'delivery')
+            ->first();
+
+        if (!$order) {
+            return response()->json(['error' => 'Delivery order not found'], 404);
+        }
+
+        DB::table('orders')
+            ->where('order_code', $orderCode)
+            ->where('fulfillment_method', 'delivery')
+            ->update([
+                'status' => 'paid', 
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['success' => true]);
     }
 }

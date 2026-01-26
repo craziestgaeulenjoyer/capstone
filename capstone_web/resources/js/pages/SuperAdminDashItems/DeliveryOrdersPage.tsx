@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, Search, MapPin, ClipboardList, PlusCircle, Printer, Coffee, CheckCircle, Trash2, UserCheck, Phone, Users, Plus, Package, AlertCircle, X } from 'lucide-react';
+import apiClient from '@/apiClient';
 
 interface OrderItem {
   itemName: string;
@@ -34,20 +35,7 @@ interface Rider {
 }
 
 const DeliveryOrdersPage = () => {
-  const [orders, setOrders] = useState<DeliveryOrder[]>([
-    {
-      id: 8821,
-      name: "Juan Dela Cruz",
-      phone: "09123456789",
-      address: "Brgy. Hall, Santa Rosa, Laguna",
-      itemsList: [{ itemName: 'Matcha Latte', qty: 2, price: 110 }],
-      selectedAddOns: [{ name: 'Extra Pearl', price: 30 }],
-      deliveryFee: 0,
-      totalPrice: 250.00,
-      status: "Pending",
-      timestamp: new Date().toLocaleString()
-    }
-  ]);
+  const [orders, setOrders] = useState<DeliveryOrder[]>([]);
 
   const [riders, setRiders] = useState<Rider[]>([
     { id: 101, name: "Marco Polo", status: 'Available' },
@@ -67,6 +55,82 @@ const DeliveryOrdersPage = () => {
     msg: '', 
     type: 'success' 
   });
+
+  const getRolePrefix = () => {
+    const role = sessionStorage.getItem('dashboard_role');
+
+    if (role === 'super_admin') return '/superadmin';
+    if (role === 'admin') return '/admin';
+
+    throw new Error('Invalid dashboard role');
+  };
+
+  useEffect(() => {
+    fetchDeliveryOrders();
+  }, []);
+
+  const fetchDeliveryOrders = async () => {
+    try {
+      const prefix = getRolePrefix();
+
+      const res = await apiClient.get(`${prefix}/delivery-orders`);
+
+      console.log('DELIVERY ORDERS RESPONSE (first item):', res.data[0]);
+
+      if (!Array.isArray(res.data)) {
+        console.error('Unexpected response:', res.data);
+        setOrders([]);
+        return;
+      }
+
+      const mappedOrders: DeliveryOrder[] = res.data.map((o: any) => {
+        // items is already an array of products
+        let products: any[] = [];
+
+        try {
+          products = typeof o.items === 'string'
+            ? JSON.parse(o.items)
+            : Array.isArray(o.items)
+            ? o.items
+            : [];
+        } catch {
+          products = [];
+        }
+
+        return {
+          id: o.id,
+          name: o.customer_name,
+          phone: '',
+          address: o.customer_address,
+
+          // map backend product → frontend item shape
+          itemsList: products.map((p: any) => ({
+            itemName: p.name,
+            qty: p.quantity,
+            price: Number(p.price),
+          })),
+
+          selectedAddOns: [],        // delivery orders have no addons
+          deliveryFee: 0,            // already included in total
+          totalPrice: Number(o.total_amount),
+
+          status:
+            o.status === 'pending'
+              ? 'Pending'
+              : o.status === 'paid'
+              ? 'Rider Assigned'
+              : 'Delivered',
+
+          timestamp: o.created_at,
+        };
+      });
+
+      setOrders(mappedOrders);
+    } catch (err) {
+      console.error('Failed to fetch delivery orders', err);
+      setOrders([]);
+    }
+  };
 
   const showStatus = (msg: string, type: 'success' | 'error') => {
     setNotification({ show: true, msg, type });
@@ -107,26 +171,62 @@ const updateAddOn = (index: number, field: keyof AddOn, value: any) => {
     return itemsTotal + addOnsTotal + deliveryFee;
   };
 
-  const handleAddOrder = () => {
+  const handleAddOrder = async () => {
     const total = calculateTotal();
-    if (customerInfo.name && itemList[0].itemName) {
-      const orderToAdd: DeliveryOrder = { 
-        id: Math.floor(1000 + Math.random() * 9000), 
-        ...customerInfo, 
-        itemsList: itemList,
-        selectedAddOns: customAddOns.filter(a => a.name !== ''),
-        deliveryFee: deliveryFee,
+
+    if (!customerInfo.name || !itemList[0].itemName) {
+      showStatus("Submission Failed: Please provide Customer Name and Item.", "error");
+      return;
+    }
+
+    try {
+      const prefix = getRolePrefix();
+
+      const res = await apiClient.post(`${prefix}/delivery-orders`, {
+        customer: {
+          name: customerInfo.name,
+          address: customerInfo.address,
+        },
+        items: itemList.map(item => ({
+          itemName: item.itemName,  
+          qty: item.qty,
+          price: item.price
+        })),
         totalPrice: total,
-        status: "Pending",
-        timestamp: new Date().toLocaleString()
+      });
+
+      const o = res.data;
+      const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+
+      const newOrder: DeliveryOrder = {
+        id: o.id,
+        name: o.customer_name,
+        phone: '',
+        address: o.customer_address,
+
+        itemsList: items.map((p: any) => ({
+          itemName: p.name,
+          qty: p.quantity,
+          price: Number(p.price),
+        })),
+
+        selectedAddOns: [],
+        deliveryFee: 0,
+        totalPrice: Number(o.total_amount),
+        status: 'Pending',
+        timestamp: o.created_at,
       };
-      setOrders([orderToAdd, ...orders]);
+
+      setOrders(prev => [newOrder, ...prev]);
+
       setCustomerInfo({ name: '', phone: '', address: '' });
       setItemList([{ itemName: '', qty: 1, price: 0 }]);
       setCustomAddOns([]);
+
       showStatus("Order successfully created!", "success");
-    } else { 
-      showStatus("Submission Failed: Please provide Customer Name and at least one Item.", "error");
+    } catch (err) {
+      console.error(err);
+      showStatus("Failed to create delivery order", "error");
     }
   };
 
@@ -244,9 +344,9 @@ const updateAddOn = (index: number, field: keyof AddOn, value: any) => {
   const miniInputStyle = "relative z-10 p-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 placeholder:text-slate-400 bg-white focus:border-[#76B13A] focus:ring-1 focus:ring-[#76B13A] outline-none shadow-sm";
   const actionButtonStyle = "bg-[#76B13A] hover:bg-[#659a32] text-white px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-1 transition-transform active:scale-95 shadow-md";
 
-    function removeAddOnRow(idx: number): void {
-        throw new Error('Function not implemented.');
-    }
+    const removeAddOnRow = (index: number) => {
+      setCustomAddOns(customAddOns.filter((_, i) => i !== index));
+    };
 
   return (
     <div className="p-4 md:p-8 bg-slate-100 min-h-screen font-sans">
@@ -324,7 +424,18 @@ const updateAddOn = (index: number, field: keyof AddOn, value: any) => {
                   <div className="space-y-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
                     {itemList.map((item, idx) => (
                       <div key={idx} className="flex gap-2 group animate-in slide-in-from-right-2 duration-200">
-                        <input type="number" className={`${miniInputStyle} w-14 text-center`} placeholder="Qty" value={item.qty || ''} onChange={(e) => updateItem(idx, 'qty', parseInt(e.target.value) || 0)} />
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          onWheel={(e) => e.currentTarget.blur()} 
+                          className={`${miniInputStyle} w-14 text-center`}
+                          placeholder="Qty"
+                          value={item.qty}
+                          onChange={(e) =>
+                            updateItem(idx, 'qty', Math.max(1, Number(e.target.value) || 1))
+                          }
+                        />
                         <input className={`${miniInputStyle} flex-1`} placeholder="Item name (e.g. Latte)" value={item.itemName} onChange={(e) => updateItem(idx, 'itemName', e.target.value)} />
                         <input type="number" className={`${miniInputStyle} w-20`} placeholder="Price" value={item.price || ''} onChange={(e) => updateItem(idx, 'price', parseFloat(e.target.value) || 0)} />
                         <button onClick={() => removeItemRow(idx)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
@@ -410,7 +521,12 @@ const updateAddOn = (index: number, field: keyof AddOn, value: any) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {orders.filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase())).map(order => (
+                    {Array.isArray(orders) &&
+                    orders
+                      .filter(o =>
+                        o.name.toLowerCase().includes(searchTerm.toLowerCase())
+                      )
+                      .map(order => (
                       <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-5">
                           <p className="font-black text-slate-800 text-sm">{order.name}</p>
