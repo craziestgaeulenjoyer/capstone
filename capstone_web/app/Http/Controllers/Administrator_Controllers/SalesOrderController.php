@@ -135,9 +135,9 @@ class SalesOrderController extends Controller
 
         $order = Order::where('order_code', $orderCode)->firstOrFail();
 
-        if ($order->fulfillment_method === 'delivery') {
+        if ($order->status === 'completed') {
             return response()->json([
-                'message' => 'Delivery order inventory already deducted'
+                'message' => 'Order already completed'
             ], 200);
         }
 
@@ -163,53 +163,32 @@ class SalesOrderController extends Controller
                         continue;
                     }
 
-                    // MENU ITEM (kiosk / POS)
-                    if (!empty($item['id'])) {
-                        $menuItemId = $item['id']
-                            ?? DB::table('menu_items')
-                                ->whereRaw('LOWER(name) = ?', [strtolower($item['name'])])
-                                ->value('id');
+                    $menuItemId = $this->resolveMenuId($item);
 
-                        if (!$menuItemId) {
-                            throw new \Exception("Menu item not found: {$item['name']}");
-                        }
-
-                        $recipes = DB::table('menu_item_recipes')
-                            ->where('menu_item_id', $menuItemId)
-                            ->get();
+                    if (!$menuItemId) {
+                        throw new \Exception("Menu item not found for item: " . ($item['name'] ?? 'unknown'));
                     }
-                    // CUSTOM / DELIVERY / APP ITEM
-                    else {
-                        $inventoryId = Inventory::whereRaw(
-                            'LOWER(name) = ?',
-                            [strtolower($item['name'])]
-                        )->value('id');
 
-                        if (!$inventoryId) {
-                            throw new \Exception("No inventory mapping for {$item['name']}");
-                        }
-
-                        $recipes = collect([
-                            (object) [
-                                'inventory_id' => $inventoryId,
-                                'amount' => 1,
-                                'unit' => 'pcs',
-                            ]
-                        ]);
+                    $recipes = DB::table('menu_item_recipes')
+                        ->where('menu_item_id', $menuItemId)
+                        ->get();
+                        
+                    if ($recipes->isEmpty()) {
+                        throw new \Exception(
+                            "No recipe found for menu item ID {$menuItemId}"
+                        );
                     }
 
                     foreach ($recipes as $recipe) {
 
-                        // Lock inventory row
                         $inventory = Inventory::lockForUpdate()
                             ->findOrFail($recipe->inventory_id);
 
-                        $requiredAmount = $recipe->amount * $item['quantity'];
+                        $requiredAmount = $recipe->amount * ($item['quantity'] ?? 1);
                         $requiredUnit   = strtolower($recipe->unit);
                         $inventoryUnit  = strtolower($inventory->unit);
                         $baseUnit       = strtolower($inventory->base_unit);
 
-                        // Same unit → direct compare
                         if ($requiredUnit === $inventoryUnit) {
                             if ($inventory->quantity < $requiredAmount) {
                                 throw new \Exception(
@@ -219,7 +198,6 @@ class SalesOrderController extends Controller
 
                             $inventory->decrement('quantity', $requiredAmount);
                         } else {
-                            // Convert to base unit
                             $requiredBase = $this->convertToBaseUnit(
                                 $requiredAmount,
                                 $requiredUnit,
@@ -420,5 +398,33 @@ class SalesOrderController extends Controller
             ]);
 
         return response()->json(['success' => true]);
+    }
+
+    private function resolveMenuId(array $item): ?int
+    {
+        /**
+         * KIOSK ORDER (rawItem.id is the REAL menu_items.id)
+         */
+        if (!empty($item['rawItem']['id'])) {
+            return (int) $item['rawItem']['id'];
+        }
+
+        /**
+         * MOBILE APP ORDER
+         */
+        if (!empty($item['id']) && is_numeric($item['id'])) {
+            return (int) $item['id'];
+        }
+
+        /**
+         * DELIVERY ORDER (fallback by name)
+         */
+        if (!empty($item['name'])) {
+            return DB::table('menu_items')
+                ->where('name', $item['name'])
+                ->value('id');
+        }
+
+        return null;
     }
 }
